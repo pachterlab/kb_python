@@ -1,8 +1,12 @@
+import os
 import re
+import shutil
 import subprocess as sp
 import sys
+import tarfile
 import time
 
+from .config import TECHNOLOGIES_MAPPING, WHITELIST_DIR
 from .constants import MINIMUM_REQUIREMENTS
 
 TECHNOLOGY_PARSER = re.compile(r'^(?P<name>\S+)')
@@ -12,6 +16,8 @@ VERSION_PARSERS = {
     for requirement in MINIMUM_REQUIREMENTS
 }
 
+class NotImplementedException(Exception):
+    pass
 
 class UnmetDependencyException(Exception):
     pass
@@ -132,10 +138,18 @@ def get_supported_technologies():
     return parse_technologies(p.stdout)
 
 
-def download_whitelist(technology):
-    """Downloads public whitelist barcodes for specified technology.
+def copy_whitelist(technology):
+    """Copies provided whitelist barcodes for specified technology.
     """
-    pass
+    if not TECHNOLOGIES_MAPPING[technology.upper()]:
+        raise NotImplementedException('whitelist for {} is not yet provided by kb_python'.format(technology))
+
+    technology = TECHNOLOGIES_MAPPING[technology.upper()]
+    archive_path = os.path.join(os.path.dirname(__file__), WHITELIST_DIR, technology.whitelist_archive)
+    whitelist_filename = technology.whitelist_filename
+    with tarfile.open(archive_path, 'r:gz') as f:
+        f.extract(whitelist_filename)
+    return whitelist_filename
 
 
 def create_transcript_list(gtf_path, use_name=True, use_version=False):

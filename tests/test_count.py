@@ -100,7 +100,7 @@ class TestCount(TestMixin, TestCase):
             count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, whitelist_path=self.whitelist_path, temp_dir=temp_dir, threads=threads, memory=memory)
 
             kallisto_bus.assert_called_once_with(
-                self.index_path, self.technology, out_dir, self.fastqs, threads=threads
+                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([call(
@@ -154,7 +154,7 @@ class TestCount(TestMixin, TestCase):
             count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, temp_dir=temp_dir, threads=threads, memory=memory)
 
             kallisto_bus.assert_called_once_with(
-                self.index_path, self.technology, out_dir, self.fastqs, threads=threads
+                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([call(
@@ -208,7 +208,7 @@ class TestCount(TestMixin, TestCase):
             count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, temp_dir=temp_dir, threads=threads, memory=memory)
 
             kallisto_bus.assert_called_once_with(
-                self.index_path, self.technology, out_dir, self.fastqs, threads=threads
+                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([call(

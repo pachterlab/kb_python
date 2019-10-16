@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from .constants import (
     BUS_FILENAME,
@@ -12,7 +13,7 @@ from .constants import (
     WHITELIST_FILENAME,
 )
 from .utils import (
-    download_whitelist,
+    copy_whitelist,
     get_supported_technologies,
     run_executable,
 )
@@ -83,11 +84,25 @@ def count(
         whitelist_path=None,
         temp_dir='tmp',
         threads=8,
-        memory='4G'
+        memory='4G',
+        keep_temp=False,
+        overwrite=False,
 ):
-    bus_result = kallisto_bus(
-        index_path, technology, out_dir, fastqs, threads=threads
-    )
+    # Make temporary directory.
+    os.makedirs(temp_dir, exist_ok=True)
+
+    bus_result = {
+        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+    }
+    if any(not os.path.exists(path) for name, path in bus_result.items()) or overwrite:
+        bus_result = kallisto_bus(
+            fastqs, index_path, technology, out_dir, threads=threads
+        )
+    else:
+        print('Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.')
+
     sort_result = bustools_sort(
         bus_result['bus'],
         os.path.join(temp_dir, BUS_S_FILENAME),
@@ -97,7 +112,8 @@ def count(
     # Download/generate whitelist if not provided.
     if not whitelist_path:
         if technology.upper() in [t.upper() for t in get_supported_technologies()]:
-            whitelist_path = download_whitelist(technology)  # TODO: implement
+            print('Whitelist not provided. Copying pre-packaged {} whitelist to current directory'.format(technology.upper()))
+            whitelist_path = copy_whitelist(technology)
         else:
             whitelist_path = bustools_whitelist(
                 sort_result['bus'], os.path.join(out_dir, WHITELIST_FILENAME)
@@ -117,10 +133,14 @@ def count(
     counts_dir = os.path.join(out_dir, COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
     counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-    return bustools_count(
+    count_result = bustools_count(
         sort2_result['bus'],
         counts_prefix,
         t2g_path,
         bus_result['ecmap'],
         bus_result['txnames'],
     )
+
+    # Remove temporary directory.
+    if not keep_temp:
+        shutil.rmtree(temp_dir, ignore_errors=True)

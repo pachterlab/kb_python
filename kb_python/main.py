@@ -18,7 +18,9 @@ def parse_count(args):
         args.fastqs,
         args.w,
         threads=args.t,
-        memory=args.m
+        memory=args.m,
+        keep_temp=args.keep_tmp,
+        overwrite=args.overwrite,
     )
 
 COMMAND_TO_FUNCTION = {
@@ -63,6 +65,8 @@ def main():
     parser_count.add_argument('-w', help='Path to file of whitelisted barcodes to correct to. If not provided and bustools supports the technology, the correct whitelist is downloaded. If not, the bustools whitelist command is used.', type=str)
     parser_count.add_argument('-t', help='Number of threads to use (default: 8)', type=int, default=8)
     parser_count.add_argument('-m', help='Maximum memory used (default: 4G)', type=str, default='4G')
+    parser_count.add_argument('--keep-tmp', help='Do not delete the tmp directory', action='store_true')
+    parser_count.add_argument('--overwrite', help='Overwrite existing output.bus file', action='store_true')
     parser_count.add_argument('fastqs', help='FASTQ files', nargs='+')
 
     command_to_parser = {
@@ -73,7 +77,10 @@ def main():
         parser.print_help(sys.stderr)
         sys.exit(1)
     if len(sys.argv) == 2:
-        command_to_parser[sys.argv[1]].print_help(sys.stderr)
+        if sys.argv[1] in command_to_parser:
+            command_to_parser[sys.argv[1]].print_help(sys.stderr)
+        else:
+            parser.print_help(sys.stderr)
         sys.exit(1)
 
     args = parser.parse_args()
