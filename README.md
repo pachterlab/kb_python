@@ -1,5 +1,5 @@
 # kb_python
-Version: v0.0.0
+Version: v0.0.1
 
 A friendly wrapper around the kallisto | bustools pipeline for scRNA-seq analysis.
 
