@@ -16,6 +16,7 @@ setup(
     maintainer_email='lsledd@caltech.edu',
     description='Python wrapper around kallisto | bustools for scRNA-seq analysis',
     long_description=long_description,
+    long_description_content_type='text/markdown',
     keywords='kallisto bustools',
     python_requires='>=3.5',
     license='BSD',
