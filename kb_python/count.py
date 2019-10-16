@@ -34,9 +34,10 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     }
 
 
-def bustools_sort(bus_path, out_path, threads=8, memory='4G'):
+def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     command = ['bustools', 'sort']
     command += ['-o', out_path]
+    command += ['-T', temp_dir]
     command += ['-t', threads]
     command += ['-m', memory]
     command += [bus_path]
@@ -96,23 +97,31 @@ def count(
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
     }
-    if any(not os.path.exists(path) for name, path in bus_result.items()) or overwrite:
+    if any(not os.path.exists(path)
+           for name, path in bus_result.items()) or overwrite:
         bus_result = kallisto_bus(
             fastqs, index_path, technology, out_dir, threads=threads
         )
     else:
-        print('Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.')
+        print(
+            'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
+        )
 
     sort_result = bustools_sort(
         bus_result['bus'],
         os.path.join(temp_dir, BUS_S_FILENAME),
+        temp_dir=temp_dir,
         threads=threads,
         memory=memory
     )
     # Download/generate whitelist if not provided.
     if not whitelist_path:
-        if technology.upper() in [t.upper() for t in get_supported_technologies()]:
-            print('Whitelist not provided. Copying pre-packaged {} whitelist to current directory'.format(technology.upper()))
+        if technology.upper() in [t.upper()
+                                  for t in get_supported_technologies()]:
+            print(
+                'Whitelist not provided. Copying pre-packaged {} whitelist to current directory'
+                .format(technology.upper())
+            )
             whitelist_path = copy_whitelist(technology)
         else:
             whitelist_path = bustools_whitelist(
@@ -126,6 +135,7 @@ def count(
     sort2_result = bustools_sort(
         correct_result['bus'],
         os.path.join(out_dir, BUS_SCS_FILENAME),
+        temp_dir=temp_dir,
         threads=threads,
         memory=memory
     )
@@ -144,3 +154,5 @@ def count(
     # Remove temporary directory.
     if not keep_temp:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+    return count_result

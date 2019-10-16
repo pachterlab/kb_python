@@ -1,4 +1,5 @@
 import subprocess as sp
+import sys
 from unittest import mock, TestCase
 from unittest.mock import call
 
@@ -29,7 +30,7 @@ class TestUtils(TestMixin, TestCase):
         with mock.patch('kb_python.utils.print') as print_mock:
             utils.run_executable(['echo', 'TEST'], stream=True)
             print_mock.assert_has_calls([
-                call('echo TEST'),
+                call('echo TEST', file=sys.stderr),
                 call('TEST\n', end=''),
             ])
 
@@ -65,7 +66,6 @@ class TestUtils(TestMixin, TestCase):
             with self.assertRaises(utils.UnmetDependencyException):
                 utils.check_dependencies()
 
-
     def test_parse_technologies(self):
         lines = [
             'short name       description',
@@ -78,9 +78,9 @@ class TestUtils(TestMixin, TestCase):
     def test_get_supported_technologies(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable,\
            mock.patch('kb_python.utils.parse_technologies') as parse_technologies:
-           run_executable().stdout = 'TEST'
-           utils.get_supported_technologies()
-           parse_technologies.assert_called_once_with('TEST')
+            run_executable().stdout = 'TEST'
+            utils.get_supported_technologies()
+            parse_technologies.assert_called_once_with('TEST')
 
     def test_download_whitelist(self):
         pass
@@ -88,13 +88,13 @@ class TestUtils(TestMixin, TestCase):
     def test_create_transcript_list(self):
         r = utils.create_transcript_list(self.small_gtf_path)
         self.assertEqual({
-            'ENSMUST00000193812': ('ENSMUSG00000102693', '4933401J01Rik'),
-            'ENSMUST00000082908': ('ENSMUSG00000064842', 'Gm26206'),
+            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', '4933401J01Rik'),
+            'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', 'Gm26206'),
         }, r)
 
     def test_create_transcript_list_without_name(self):
         r = utils.create_transcript_list(self.small_gtf_path, use_name=False)
         self.assertEqual({
-            'ENSMUST00000193812': ('ENSMUSG00000102693', None),
-            'ENSMUST00000082908': ('ENSMUSG00000064842', None),
+            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', None),
+            'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', None),
         }, r)

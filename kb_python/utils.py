@@ -1,6 +1,5 @@
 import os
 import re
-import shutil
 import subprocess as sp
 import sys
 import tarfile
@@ -16,8 +15,10 @@ VERSION_PARSERS = {
     for requirement in MINIMUM_REQUIREMENTS
 }
 
+
 class NotImplementedException(Exception):
     pass
+
 
 class UnmetDependencyException(Exception):
     pass
@@ -109,8 +110,9 @@ def check_dependencies():
         version = get_version(requirement)
         if version < minimum_version:
             raise UnmetDependencyException(
-                '{} version {} is less than the minimum requirement {}'.
-                format(requirement, version, minimum_version)
+                '{} version {} is less than the minimum requirement {}'.format(
+                    requirement, version, minimum_version
+                )
             )
 
 
@@ -142,17 +144,22 @@ def copy_whitelist(technology):
     """Copies provided whitelist barcodes for specified technology.
     """
     if not TECHNOLOGIES_MAPPING[technology.upper()]:
-        raise NotImplementedException('whitelist for {} is not yet provided by kb_python'.format(technology))
+        raise NotImplementedException(
+            'whitelist for {} is not yet provided by kb_python'.
+            format(technology)
+        )
 
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = os.path.join(os.path.dirname(__file__), WHITELIST_DIR, technology.whitelist_archive)
+    archive_path = os.path.join(
+        os.path.dirname(__file__), WHITELIST_DIR, technology.whitelist_archive
+    )
     whitelist_filename = technology.whitelist_filename
     with tarfile.open(archive_path, 'r:gz') as f:
         f.extract(whitelist_filename)
     return whitelist_filename
 
 
-def create_transcript_list(gtf_path, use_name=True, use_version=False):
+def create_transcript_list(gtf_path, use_name=True, use_version=True):
     r = {}
     with open(gtf_path, 'r') as f:
         for line in f:

@@ -68,8 +68,8 @@ class TestCount(TestMixin, TestCase):
     def test_count_with_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
-            mock.patch('kb_python.count.get_supported_technologies') as get_supported_technologies,\
-            mock.patch('kb_python.count.download_whitelist') as download_whitelist,\
+            mock.patch('kb_python.count.get_supported_technologies'),\
+            mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count:
@@ -89,7 +89,11 @@ class TestCount(TestMixin, TestCase):
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
             }
-            bustools_sort.side_effect = [{'bus': bus_s_path}, {'bus': bus_scs_path}]
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
             bustools_correct.return_value = {'bus': bus_sc_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -97,31 +101,57 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
 
-            count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, whitelist_path=self.whitelist_path, temp_dir=temp_dir, threads=threads, memory=memory)
+            count.count(
+                self.index_path,
+                self.t2g_path,
+                self.technology,
+                out_dir,
+                self.fastqs,
+                whitelist_path=self.whitelist_path,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
 
             kallisto_bus.assert_called_once_with(
-                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
-            bustools_sort.assert_has_calls([call(
-                bus_path, bus_s_path, threads=threads, memory=memory
-            ), call(
-                bus_sc_path, bus_scs_path, threads=threads, memory=memory
-            )])
-            download_whitelist.assert_not_called()
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            copy_whitelist.assert_not_called()
             bustools_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path, txnames_path
+                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
+                txnames_path
             )
 
     def test_count_without_whitelist_supported(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.get_supported_technologies') as get_supported_technologies,\
-            mock.patch('kb_python.count.download_whitelist') as download_whitelist,\
+            mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count:
@@ -141,9 +171,13 @@ class TestCount(TestMixin, TestCase):
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
             }
-            bustools_sort.side_effect = [{'bus': bus_s_path}, {'bus': bus_scs_path}]
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
             get_supported_technologies.return_value = [self.technology]
-            download_whitelist.return_value = self.whitelist_path
+            copy_whitelist.return_value = self.whitelist_path
             bustools_correct.return_value = {'bus': bus_sc_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -151,31 +185,56 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
 
-            count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, temp_dir=temp_dir, threads=threads, memory=memory)
+            count.count(
+                self.index_path,
+                self.t2g_path,
+                self.technology,
+                out_dir,
+                self.fastqs,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
 
             kallisto_bus.assert_called_once_with(
-                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
-            bustools_sort.assert_has_calls([call(
-                bus_path, bus_s_path, threads=threads, memory=memory
-            ), call(
-                bus_sc_path, bus_scs_path, threads=threads, memory=memory
-            )])
-            download_whitelist.assert_called_once_with(self.technology)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            copy_whitelist.assert_called_once_with(self.technology)
             bustools_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path, txnames_path
+                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
+                txnames_path
             )
 
     def test_count_without_whitelist_unsupported(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.get_supported_technologies') as get_supported_technologies,\
-            mock.patch('kb_python.count.download_whitelist') as download_whitelist,\
+            mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count:
@@ -195,7 +254,11 @@ class TestCount(TestMixin, TestCase):
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
             }
-            bustools_sort.side_effect = [{'bus': bus_s_path}, {'bus': bus_scs_path}]
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
             get_supported_technologies.return_value = ['UNSUPPORTED']
             bustools_whitelist.return_value = self.whitelist_path
             bustools_correct.return_value = {'bus': bus_sc_path}
@@ -205,18 +268,42 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
 
-            count.count(self.index_path, self.t2g_path, self.technology, out_dir, self.fastqs, temp_dir=temp_dir, threads=threads, memory=memory)
+            count.count(
+                self.index_path,
+                self.t2g_path,
+                self.technology,
+                out_dir,
+                self.fastqs,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
 
             kallisto_bus.assert_called_once_with(
-                self.fastqs, self.index_path, self.technology, out_dir, threads=threads
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 2)
-            bustools_sort.assert_has_calls([call(
-                bus_path, bus_s_path, threads=threads, memory=memory
-            ), call(
-                bus_sc_path, bus_scs_path, threads=threads, memory=memory
-            )])
-            download_whitelist.assert_not_called()
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            copy_whitelist.assert_not_called()
             bustools_whitelist.assert_called_once_with(
                 bus_s_path, os.path.join(out_dir, WHITELIST_FILENAME)
             )
@@ -224,5 +311,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path, txnames_path
+                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
+                txnames_path
             )

@@ -1,8 +1,10 @@
 from setuptools import setup
 
+
 def read(path):
     with open(path, 'r') as f:
         return f.read()
+
 
 long_description = read('README.md')
 
@@ -14,7 +16,7 @@ setup(
     author_email='phoenixter96@gmail.com',
     maintainer='Pachter Lab',
     maintainer_email='lsledd@caltech.edu',
-    description='Python wrapper around kallisto | bustools for scRNA-seq analysis',
+    description='Python wrapper around kallisto | bustools for scRNA-seq analysis',  # noqa
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords='kallisto bustools',
@@ -27,7 +29,7 @@ setup(
         'console_scripts': ['kb=kb_python.main:main'],
     },
     extras_require={
-        'loom':  ["loompy>=3.0.6"],
+        'loom': ["loompy>=3.0.6"],
         'h5ad': ["scanpy>=1.4.4"],
     },
     classifiers=[
