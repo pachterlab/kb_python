@@ -3,7 +3,7 @@ import tempfile
 import uuid
 from unittest import TestCase
 
-import kb_python
+import kb_python.ref as ref
 from tests.mixins import TestMixin
 
 
@@ -14,7 +14,7 @@ class TestRef(TestMixin, TestCase):
             tempfile.gettempdir(), '{}.idx'.format(uuid.uuid4())
         )
         self.assertFalse(os.path.exists(index_path))
-        result = kb_python.kallisto_index(self.fasta_path, index_path)
+        result = ref.kallisto_index(self.fasta_path, index_path)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -23,6 +23,6 @@ class TestRef(TestMixin, TestCase):
             tempfile.gettempdir(), '{}.t2g'.format(uuid.uuid4())
         )
         self.assertFalse(os.path.exists(t2g_path))
-        result = kb_python.create_t2g(self.gtf_path, t2g_path)
+        result = ref.create_t2g(self.gtf_path, t2g_path)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))

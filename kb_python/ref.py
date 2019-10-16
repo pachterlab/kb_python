@@ -1,4 +1,5 @@
 import os
+import sys
 
 from .constants import INDEX_FILENAME, T2G_FILENAME
 from .utils import create_transcript_list, run_executable
@@ -23,19 +24,11 @@ def create_t2g(gtf_path, t2g_path, use_name=True, use_version=False):
     return {'t2g': t2g_path}
 
 
-def ref(fasta_path, gtf_path, index_path, t2g_path):
+def ref(fasta_path, gtf_path, index_path, t2g_path, overwrite=False):
+    print('Generating transcript-to-gene mapping at {}'.format(t2g_path), file=sys.stderr)
     create_t2g(gtf_path, t2g_path)
-    if not os.path.exists(index_path):
+    if not os.path.exists(index_path) or overwrite:
+        print('Generating kallisto index at {}'.format(index_path), file=sys.stderr)
         kallisto_index(fasta_path, index_path)
-
-
-if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', type=str, default=INDEX_FILENAME)
-    parser.add_argument('-g', type=str, default=T2G_FILENAME)
-    parser.add_argument('fasta', type=str)
-    parser.add_argument('gtf', type=str)
-    args = parser.parse_args()
-
-    ref(args.fasta, args.gtf, args.i, args.g)
+    else:
+        print('Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'.format(index_path), file=sys.stderr)

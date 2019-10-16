@@ -31,7 +31,7 @@ def run_executable(
     """
     command = [str(c) for c in command]
     if not quiet:
-        print(' '.join(command))
+        print(' '.join(command), file=sys.stderr)
     p = sp.Popen(
         command,
         stdin=stdin,
@@ -93,7 +93,7 @@ def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
 def get_version(requirement):
     p = run_executable([requirement], quiet=True, returncode=1)
     match = VERSION_PARSERS[requirement].match(p.stdout.read())
-    return (int(ver) for ver in match.groups()) if match else None
+    return tuple(int(ver) for ver in match.groups()) if match else None
 
 
 def check_dependencies():
@@ -101,12 +101,11 @@ def check_dependencies():
     """
     for requirement, minimum_version in MINIMUM_REQUIREMENTS.items():
         version = get_version(requirement)
-        for ver, req in zip(version, minimum_version):
-            if ver < req:
-                raise UnmetDependencyException(
-                    '{} version {} is less than the minimum requirement {}'.
-                    format(requirement, version, minimum_version)
-                )
+        if version < minimum_version:
+            raise UnmetDependencyException(
+                '{} version {} is less than the minimum requirement {}'.
+                format(requirement, version, minimum_version)
+            )
 
 
 def parse_technologies(lines):
@@ -135,12 +134,6 @@ def get_supported_technologies():
 
 def download_whitelist(technology):
     """Downloads public whitelist barcodes for specified technology.
-    """
-
-
-def check_whitelist(whitelist_path, technology):
-    """Checks whether the provided whitelist is the correct one for the
-    specified technology.
     """
     pass
 

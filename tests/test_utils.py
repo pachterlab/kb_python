@@ -45,6 +45,46 @@ class TestUtils(TestMixin, TestCase):
         with self.assertRaises(sp.SubprocessError):
             utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
 
+    def test_get_version(self):
+        with mock.patch('kb_python.utils.run_executable') as run_executable:
+            run_executable().stdout.read.return_value = 'kallisto 1.2.3'
+            self.assertEqual(utils.get_version('kallisto'), (1, 2, 3))
+
+    def test_check_dependencies(self):
+        with mock.patch('kb_python.utils.MINIMUM_REQUIREMENTS') as minimum_requirements,\
+            mock.patch('kb_python.utils.get_version') as get_version:
+            minimum_requirements.items.return_value = [('TEST', (0, 0, 0))]
+            get_version.return_value = (0, 0, 1)
+            utils.check_dependencies()
+
+    def test_check_dependencies_fail(self):
+        with mock.patch('kb_python.utils.MINIMUM_REQUIREMENTS') as minimum_requirements,\
+            mock.patch('kb_python.utils.get_version') as get_version:
+            minimum_requirements.items.return_value = [('TEST', (1, 0, 0))]
+            get_version.return_value = (0, 0, 1)
+            with self.assertRaises(utils.UnmetDependencyException):
+                utils.check_dependencies()
+
+
+    def test_parse_technologies(self):
+        lines = [
+            'short name       description',
+            '----------       -----------',
+            '10xv1            10x version 1 chemistry',
+            '10xv2            10x version 2 chemistry',
+        ]
+        self.assertEqual(utils.parse_technologies(lines), {'10xv1', '10xv2'})
+
+    def test_get_supported_technologies(self):
+        with mock.patch('kb_python.utils.run_executable') as run_executable,\
+           mock.patch('kb_python.utils.parse_technologies') as parse_technologies:
+           run_executable().stdout = 'TEST'
+           utils.get_supported_technologies()
+           parse_technologies.assert_called_once_with('TEST')
+
+    def test_download_whitelist(self):
+        pass
+
     def test_create_transcript_list(self):
         r = utils.create_transcript_list(self.small_gtf_path)
         self.assertEqual({

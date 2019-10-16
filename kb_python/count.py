@@ -94,11 +94,9 @@ def count(
         threads=threads,
         memory=memory
     )
-
     # Download/generate whitelist if not provided.
     if not whitelist_path:
-        if whitelist_path in get_supported_technologies():
-            raise Exception()
+        if technology.upper() in [t.upper() for t in get_supported_technologies()]:
             whitelist_path = download_whitelist(technology)  # TODO: implement
         else:
             whitelist_path = bustools_whitelist(
@@ -118,37 +116,11 @@ def count(
 
     counts_dir = os.path.join(out_dir, COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
-    counts_path = os.path.join(counts_dir, COUNTS_PREFIX)
-    bustools_count(
+    counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
+    return bustools_count(
         sort2_result['bus'],
-        counts_path,
+        counts_prefix,
         t2g_path,
         bus_result['ecmap'],
         bus_result['txnames'],
-    )
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', type=str, required=True)
-    parser.add_argument('-g', type=str, required=True)
-    parser.add_argument('-x', type=str, required=True)
-    parser.add_argument('-o', type=str, required=True)
-    parser.add_argument('-w', type=str)
-    parser.add_argument('-t', type=int, default=8)
-    parser.add_argument('-m', type=str, default='4G')
-    parser.add_argument('fastqs', nargs='+')
-    args = parser.parse_args()
-
-    count(
-        args.i,
-        args.g,
-        args.x,
-        args.o,
-        args.fastqs,
-        args.w,
-        threads=args.t,
-        memory=args.m
     )
