@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@master
+      - name: Install kallisto, bustools
+        run: make install
       - name: Setup python
         uses: actions/setup-python@v1
         with:
