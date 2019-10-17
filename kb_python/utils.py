@@ -5,6 +5,10 @@ import sys
 import tarfile
 import time
 
+import anndata
+import pandas as pd
+import scipy.io
+
 from .config import TECHNOLOGIES_MAPPING, WHITELIST_DIR
 from .constants import MINIMUM_REQUIREMENTS
 
@@ -202,3 +206,28 @@ def create_transcript_list(gtf_path, use_name=True, use_version=True):
 
                 r[tid] = (gid, gname)
     return r
+
+
+def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
+    df_barcodes = pd.read_csv(
+        barcodes_path, index_col=0, header=None, names=['barcode']
+    )
+    df_genes = pd.read_csv(
+        genes_path, header=None, index_col=0, names=['ensembl_id'], sep='\t'
+    )
+    df_genes.index = df_genes.index.str.slice(0, 18)  # slice off version number
+    return anndata.AnnData(
+        X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
+    )
+
+
+def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):
+    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
+    adata.write_loom(out_path)
+    return out_path
+
+
+def convert_matrix_to_h5ad(matrix_path, barcodes_path, genes_path, out_path):
+    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
+    adata.write(out_path)
+    return out_path

@@ -88,6 +88,8 @@ def count(
         memory='4G',
         keep_temp=False,
         overwrite=False,
+        loom=False,
+        h5ad=False,
 ):
     # Make temporary directory.
     os.makedirs(temp_dir, exist_ok=True)

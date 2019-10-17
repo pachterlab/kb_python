@@ -20,17 +20,14 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords='kallisto bustools',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     license='BSD',
     packages=['kb_python'],
     zip_safe=False,
     include_package_data=True,
+    install_requires=read('requirements.txt').strip().split('\n'),
     entry_points={
         'console_scripts': ['kb=kb_python.main:main'],
-    },
-    extras_require={
-        'loom': ["loompy>=3.0.6"],
-        'h5ad': ["scanpy>=1.4.4"],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -38,7 +35,6 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Topic :: Scientific/Engineering :: Bio-Informatics',

@@ -1,5 +1,8 @@
+import os
 import subprocess as sp
 import sys
+import tempfile
+import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
 
@@ -98,3 +101,26 @@ class TestUtils(TestMixin, TestCase):
             'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', None),
             'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', None),
         }, r)
+
+    def test_import_matrix_as_anndata(self):
+        utils.import_matrix_as_anndata(
+            self.matrix_path, self.barcodes_path, self.genes_path
+        )
+
+    def test_convert_matrix_to_loom(self):
+        out_path = os.path.join(
+            tempfile.mkdtemp(), '{}.loom'.format(uuid.uuid4())
+        )
+        utils.convert_matrix_to_loom(
+            self.matrix_path, self.barcodes_path, self.genes_path, out_path
+        )
+        self.assertTrue(os.path.exists(out_path))
+
+    def test_convert_matrix_to_h5ad(self):
+        out_path = os.path.join(
+            tempfile.mkdtemp(), '{}.h5ad'.format(uuid.uuid4())
+        )
+        utils.convert_matrix_to_h5ad(
+            self.matrix_path, self.barcodes_path, self.genes_path, out_path
+        )
+        self.assertTrue(os.path.exists(out_path))
