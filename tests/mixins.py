@@ -27,3 +27,10 @@ class TestMixin(TestCase):
         cls.bus_s_path = os.path.join(cls.fixtures_dir, 'output.s.bus')
         cls.bus_sc_path = os.path.join(cls.fixtures_dir, 'output.s.c.bus')
         cls.bus_scs_path = os.path.join(cls.fixtures_dir, 'output.s.c.s.bus')
+
+        cls.counts_path = os.path.join(cls.fixtures_dir, 'counts')
+        cls.matrix_path = os.path.join(cls.counts_path, 'genes.mtx')
+        cls.barcodes_path = os.path.join(cls.counts_path, 'genes.barcodes.txt')
+        cls.genes_path = os.path.join(cls.counts_path, 'genes.genes.txt')
+        cls.loom_path = os.path.join(cls.counts_path, 'genes.loom')
+        cls.h5ad_path = os.path.join(cls.counts_path, 'genes.h5ad')

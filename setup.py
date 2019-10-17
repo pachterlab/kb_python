@@ -25,12 +25,9 @@ setup(
     packages=['kb_python'],
     zip_safe=False,
     include_package_data=True,
+    install_requires=read('requirements.txt').strip().split('\n'),
     entry_points={
         'console_scripts': ['kb=kb_python.main:main'],
-    },
-    extras_require={
-        'loom': ["loompy>=3.0.6"],
-        'h5ad': ["scanpy>=1.4.4"],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',

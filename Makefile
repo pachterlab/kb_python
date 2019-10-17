@@ -1,7 +1,7 @@
 .PHONY : test check build clean upload-test
 
 test:
-	nosetests -v -s
+	nosetests --verbose --with-coverage --cover-package kb_python
 
 check:
 	flake8 kb_python && echo OK
