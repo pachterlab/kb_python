@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 
@@ -9,6 +10,7 @@ from .constants import (
     COUNTS_DIR,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    INSPECT_FILENAME,
     TXNAMES_FILENAME,
     WHITELIST_FILENAME,
 )
@@ -17,6 +19,8 @@ from .utils import (
     get_supported_technologies,
     run_executable,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
@@ -43,6 +47,16 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     command += [bus_path]
     run_executable(command)
     return {'bus': out_path}
+
+
+def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
+    command = ['bustools', 'inspect']
+    command += ['-o', out_path]
+    command += ['-w', whitelist_path]
+    command += ['-e', ecmap_path]
+    command += [bus_path]
+    run_executable(command)
+    return {'inspect': out_path}
 
 
 def bustools_correct(bus_path, out_path, whitelist_path):
@@ -93,6 +107,7 @@ def count(
 ):
     # Make temporary directory.
     os.makedirs(temp_dir, exist_ok=True)
+    results = {}
 
     bus_result = {
         'bus': os.path.join(out_dir, BUS_FILENAME),
@@ -105,9 +120,10 @@ def count(
             fastqs, index_path, technology, out_dir, threads=threads
         )
     else:
-        print(
+        logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
         )
+    results.update(bus_result)
 
     sort_result = bustools_sort(
         bus_result['bus'],
@@ -120,7 +136,7 @@ def count(
     if not whitelist_path:
         if technology.upper() in [t.upper()
                                   for t in get_supported_technologies()]:
-            print(
+            logger.info(
                 'Whitelist not provided. Copying pre-packaged {} whitelist to current directory'
                 .format(technology.upper())
             )
@@ -128,8 +144,14 @@ def count(
         else:
             whitelist_path = bustools_whitelist(
                 sort_result['bus'], os.path.join(out_dir, WHITELIST_FILENAME)
-            )
+            )['whitelist']
+    results.update({'whitelist': whitelist_path})
 
+    inspect_result = bustools_inspect(
+        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+        whitelist_path, bus_result['ecmap']
+    )
+    results.update(inspect_result)
     correct_result = bustools_correct(
         sort_result['bus'], os.path.join(temp_dir, BUS_SC_FILENAME),
         whitelist_path
@@ -141,20 +163,22 @@ def count(
         threads=threads,
         memory=memory
     )
+    results.update({'bus_scs': sort2_result['bus']})
 
     counts_dir = os.path.join(out_dir, COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
     counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-    count_result = bustools_count(
+    counts_result = bustools_count(
         sort2_result['bus'],
         counts_prefix,
         t2g_path,
         bus_result['ecmap'],
         bus_result['txnames'],
     )
+    results.update(counts_result)
 
     # Remove temporary directory.
     if not keep_temp:
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    return count_result
+    return results
