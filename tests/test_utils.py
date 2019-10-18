@@ -1,6 +1,5 @@
 import os
 import subprocess as sp
-import sys
 import tempfile
 import uuid
 from unittest import mock, TestCase
@@ -30,12 +29,10 @@ class TestUtils(TestMixin, TestCase):
             sp_mock.Popen().poll.assert_not_called()
 
     def test_run_executable_with_stream(self):
-        with mock.patch('kb_python.utils.print') as print_mock:
+        with mock.patch('kb_python.utils.logger.info') as info_mock:
             utils.run_executable(['echo', 'TEST'], stream=True)
-            print_mock.assert_has_calls([
-                call('echo TEST', file=sys.stderr),
-                call('TEST\n', end=''),
-            ])
+            self.assertEqual(info_mock.call_count, 2)
+            info_mock.assert_has_calls([call('echo TEST'), call('TEST')])
 
     def test_run_chain(self):
         ps = utils.run_chain(['echo', 'TEST'], ['grep', 'T'])
