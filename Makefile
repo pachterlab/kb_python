@@ -20,11 +20,12 @@ check:
 	yapf -r --diff kb_python && echo OK
 
 build:
-	python3 setup.py sdist bdist_wheel
+	python setup.py sdist bdist_wheel
 
 clean:
-	rm -r build
-	rm -r dist
+	rm -rf build
+	rm -rf dist
+	rm -rf kb_python.egg-info
 
 bump_patch:
 	bumpversion patch
