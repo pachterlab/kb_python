@@ -12,6 +12,7 @@ from kb_python.constants import (
     COUNTS_DIR,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    INSPECT_FILENAME,
     TXNAMES_FILENAME,
     WHITELIST_FILENAME,
 )
@@ -33,6 +34,15 @@ class TestCount(TestMixin, TestCase):
         out_path = os.path.join(out_dir, BUS_S_FILENAME)
         result = count.bustools_sort(
             self.bus_path, out_path, threads=1, memory='1G'
+        )
+        for key, path in result.items():
+            self.assertTrue(os.path.exists(path))
+
+    def test_bustools_inspect(self):
+        out_dir = tempfile.mkdtemp()
+        out_path = os.path.join(out_dir, INSPECT_FILENAME)
+        result = count.bustools_inspect(
+            self.bus_s_path, out_path, self.whitelist_path, self.ecmap_path
         )
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
@@ -68,6 +78,7 @@ class TestCount(TestMixin, TestCase):
     def test_count_with_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.get_supported_technologies'),\
             mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
@@ -81,6 +92,7 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
@@ -137,6 +149,9 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
             copy_whitelist.assert_not_called()
             bustools_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -150,6 +165,7 @@ class TestCount(TestMixin, TestCase):
     def test_count_without_whitelist_supported(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.get_supported_technologies') as get_supported_technologies,\
             mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
@@ -163,6 +179,7 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
@@ -220,6 +237,9 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
             copy_whitelist.assert_called_once_with(self.technology)
             bustools_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -233,6 +253,7 @@ class TestCount(TestMixin, TestCase):
     def test_count_without_whitelist_unsupported(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.get_supported_technologies') as get_supported_technologies,\
             mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
@@ -246,6 +267,7 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
@@ -260,7 +282,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_scs_path
             }]
             get_supported_technologies.return_value = ['UNSUPPORTED']
-            bustools_whitelist.return_value = self.whitelist_path
+            bustools_whitelist.return_value = {'whitelist': self.whitelist_path}
             bustools_correct.return_value = {'bus': bus_sc_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -303,6 +325,9 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
             copy_whitelist.assert_not_called()
             bustools_whitelist.assert_called_once_with(
                 bus_s_path, os.path.join(out_dir, WHITELIST_FILENAME)

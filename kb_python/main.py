@@ -1,9 +1,15 @@
 import argparse
+import logging
 import sys
 
 from . import __version__
 from .count import count
 from .ref import ref
+
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)7s %(message)s',
+    level=logging.INFO,
+)
 
 
 def parse_ref(args):

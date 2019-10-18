@@ -1,7 +1,7 @@
+import logging
 import os
 import re
 import subprocess as sp
-import sys
 import tarfile
 import time
 
@@ -11,6 +11,8 @@ import scipy.io
 
 from .config import TECHNOLOGIES_MAPPING, WHITELIST_DIR
 from .constants import MINIMUM_REQUIREMENTS
+
+logger = logging.getLogger(__name__)
 
 TECHNOLOGY_PARSER = re.compile(r'^(?P<name>\S+)')
 VERSION_PARSERS = {
@@ -42,7 +44,7 @@ def run_executable(
     """
     command = [str(c) for c in command]
     if not quiet:
-        print(' '.join(command), file=sys.stderr)
+        logger.info(' '.join(command))
     p = sp.Popen(
         command,
         stdin=stdin,
@@ -56,9 +58,9 @@ def run_executable(
         while p.poll() is None:
             if stream:
                 for line in p.stdout:
-                    print(line, end='')
+                    logger.info(line.strip())
                 for line in p.stdout:
-                    print(line, end='', file=sys.stderr)
+                    logger.debug(line.strip())
             else:
                 time.sleep(1)
 

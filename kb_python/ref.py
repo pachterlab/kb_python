@@ -1,7 +1,10 @@
+import logging
 import os
 import sys
 
 from .utils import create_transcript_list, run_executable
+
+logger = logging.getLogger(__name__)
 
 
 def kallisto_index(fasta_path, index_path, k=31):
@@ -24,19 +27,11 @@ def create_t2g(gtf_path, t2g_path, use_name=True, use_version=True):
 
 
 def ref(fasta_path, gtf_path, index_path, t2g_path, overwrite=False):
-    print(
-        'Generating transcript-to-gene mapping at {}'.format(t2g_path),
-        file=sys.stderr
-    )
     create_t2g(gtf_path, t2g_path)
     if not os.path.exists(index_path) or overwrite:
-        print(
-            'Generating kallisto index at {}'.format(index_path),
-            file=sys.stderr
-        )
         kallisto_index(fasta_path, index_path)
     else:
-        print(
+        logger.info(
             'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
             .format(index_path),
             file=sys.stderr
