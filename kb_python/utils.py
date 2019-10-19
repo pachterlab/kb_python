@@ -1,3 +1,4 @@
+import gzip
 import logging
 import os
 import re
@@ -36,7 +37,7 @@ def run_executable(
         stdout=sp.PIPE,
         stderr=sp.PIPE,
         wait=True,
-        stream=False,
+        stream=True,
         quiet=False,
         returncode=0
 ):
@@ -56,10 +57,10 @@ def run_executable(
     # Wait if desired.
     if wait:
         while p.poll() is None:
-            if stream:
+            if stream and not quiet:
                 for line in p.stdout:
-                    logger.info(line.strip())
-                for line in p.stdout:
+                    logger.debug(line.strip())
+                for line in p.stderr:
                     logger.debug(line.strip())
             else:
                 time.sleep(1)
@@ -165,7 +166,24 @@ def copy_whitelist(technology):
     return whitelist_filename
 
 
-def create_transcript_list(gtf_path, use_name=True, use_version=True):
+def get_transcripts_from_fasta(fasta_path):
+    """Parse out a list of transcript ids from a fasta file by inspecting
+    each header.
+
+    Gzip-compressed files are allowed.
+    """
+    transcripts = []
+    with gzip.open(fasta_path, 'rt') if fasta_path.endswith('.gz') else open(
+            fasta_path, 'r') as f:
+        for line in f:
+            if line.startswith('>'):
+                transcripts.append(line.split(' ')[0][1:])
+    return transcripts
+
+
+def create_transcript_list(
+        gtf_path, use_name=True, use_version=True, transcripts=None
+):
     r = {}
     with open(gtf_path, 'r') as f:
         for line in f:
@@ -203,11 +221,27 @@ def create_transcript_list(gtf_path, use_name=True, use_version=True):
                         continue
                     gname = d['gene_name']
 
-                if tid in r:
+                if tid in r or (transcripts and tid not in transcripts):
                     continue
 
                 r[tid] = (gid, gname)
     return r
+
+
+def concatenate_files(*paths, out_path, temp_dir='tmp'):
+    """Concatenates an arbitrary number of files into one TEXT file.
+
+    Only supports text and gzip files.
+    """
+    with open(out_path, 'w') as out:
+        for path in paths:
+            with gzip.open(path, 'rt') if path.endswith('.gz') else open(
+                    path, 'r') as f:
+                for line in f:
+                    if not line.isspace():
+                        out.write(line.strip() + '\n')
+
+    return out_path
 
 
 def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
@@ -215,9 +249,10 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
     df_genes = pd.read_csv(
-        genes_path, header=None, index_col=0, names=['ensembl_id'], sep='\t'
+        genes_path, header=None, index_col=0, names=['gene_id'], sep='\t'
     )
-    df_genes.index = df_genes.index.str.slice(0, 18)  # slice off version number
+    df_genes.index = df_genes.index.str.split('.').str[
+        0]  # slice off version number
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )

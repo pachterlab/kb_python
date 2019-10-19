@@ -1,3 +1,4 @@
+import gzip
 import os
 import subprocess as sp
 import tempfile
@@ -82,9 +83,6 @@ class TestUtils(TestMixin, TestCase):
             utils.get_supported_technologies()
             parse_technologies.assert_called_once_with('TEST')
 
-    def test_download_whitelist(self):
-        pass
-
     def test_create_transcript_list(self):
         r = utils.create_transcript_list(self.small_gtf_path)
         self.assertEqual({
@@ -97,6 +95,14 @@ class TestUtils(TestMixin, TestCase):
         self.assertEqual({
             'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', None),
             'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', None),
+        }, r)
+
+    def test_create_transcript_list_filter(self):
+        r = utils.create_transcript_list(
+            self.small_gtf_path, transcripts=['ENSMUST00000193812.1']
+        )
+        self.assertEqual({
+            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', '4933401J01Rik'),
         }, r)
 
     def test_import_matrix_as_anndata(self):
@@ -121,3 +127,48 @@ class TestUtils(TestMixin, TestCase):
             self.matrix_path, self.barcodes_path, self.genes_path, out_path
         )
         self.assertTrue(os.path.exists(out_path))
+
+    def test_copy_whitelist(self):
+        whitelist_filename = utils.copy_whitelist('10xv1')
+        try:
+            self.assertTrue(os.path.exists(whitelist_filename))
+        finally:
+            os.remove(whitelist_filename)
+
+    def test_get_transcripts_from_fasta(self):
+        transcripts = utils.get_transcripts_from_fasta(self.cdna_small_path)
+        self.assertEqual({
+            'ENST00000456328.1',
+            'ENST00000450305.2',
+            'ENST00000488147.3',
+        }, set(transcripts))
+
+    def test_get_transcripts_from_fasta_gzip(self):
+        transcripts = utils.get_transcripts_from_fasta(
+            self.cdna_small_gzip_path
+        )
+        self.assertEqual({
+            'ENST00000456328.1',
+            'ENST00000450305.2',
+            'ENST00000488147.3',
+        }, set(transcripts))
+
+    def test_concatenate_files(self):
+        temp_dir = tempfile.mkdtemp()
+        file1_path = os.path.join(temp_dir, str(uuid.uuid4()))
+        file2_path = os.path.join(temp_dir, '{}.gz'.format(uuid.uuid4()))
+
+        with open(file1_path, 'w') as f:
+            f.write('TEST1')
+        with gzip.open(file2_path, 'wt') as f:
+            f.write('TEST2')
+
+        out_path = utils.concatenate_files(
+            file1_path,
+            file2_path,
+            out_path=str(uuid.uuid4()),
+            temp_dir=tempfile.mkdtemp()
+        )
+
+        with open(out_path, 'r') as f:
+            self.assertEqual(f.read(), 'TEST1\nTEST2\n')

@@ -4,16 +4,24 @@ import sys
 
 from . import __version__
 from .count import count
-from .ref import ref
-
-logging.basicConfig(
-    format='[%(asctime)s] %(levelname)7s %(message)s',
-    level=logging.INFO,
-)
+from .ref import ref, ref_velocity
 
 
 def parse_ref(args):
-    ref(args.fasta, args.gtf, args.i, args.g, overwrite=args.overwrite)
+    if args.velocity:
+        ref_velocity(
+            args.fasta[0],
+            args.fasta[1],
+            args.gtf,
+            args.i,
+            args.g,
+            args.c,
+            args.n,
+            keep_temp=args.keep_tmp,
+            overwrite=args.overwrite
+        )
+    else:
+        ref(args.fasta[0], args.gtf, args.i, args.g, overwrite=args.overwrite)
 
 
 def parse_count(args):
@@ -39,11 +47,12 @@ COMMAND_TO_FUNCTION = {
 }
 
 
-def setup_ref_args(parser):
+def setup_ref_args(parser, parent):
     parser_ref = parser.add_parser(
         'ref',
         description='Build a kallisto index and transcript-to-gene mapping',
         help='Build a kallisto index and transcript-to-gene mapping',
+        parents=[parent],
     )
     required_ref = parser_ref.add_argument_group('required arguments')
     required_ref.add_argument(
@@ -58,22 +67,36 @@ def setup_ref_args(parser):
         type=str,
         required=True
     )
+    required_velocity = parser_ref.add_argument_group(
+        'required arguments for --velocity'
+    )
+    required_velocity.add_argument(
+        '-c', help='', type=str, required='--velocity' in sys.argv
+    )
+    required_velocity.add_argument(
+        '-n', help='', type=str, required='--velocity' in sys.argv
+    )
+
+    parser_ref.add_argument(
+        '--velocity', help='Build index for RNA velocity', action='store_true'
+    )
     parser_ref.add_argument(
         '--overwrite',
         help='Overwrite existing kallisto index',
         action='store_true'
     )
-    parser_ref.add_argument('fasta', help='Reference FASTA file', type=str)
+    parser_ref.add_argument('fasta', help='Reference FASTA file(s)', nargs='+')
     parser_ref.add_argument('gtf', help='Reference GTF file', type=str)
     return parser_ref
 
 
-def setup_count_args(parser):
+def setup_count_args(parser, parent):
     # count
     parser_count = parser.add_parser(
         'count',
         description='Generate count matrices from a set of single-cell FASTQ files',  # noqa
         help='Generate count matrices from a set of single-cell FASTQ files',
+        parents=[parent],
     )
     required_count = parser_count.add_argument_group('required arguments')
     required_count.add_argument(
@@ -108,11 +131,6 @@ def setup_count_args(parser):
         '-m', help='Maximum memory used (default: 4G)', type=str, default='4G'
     )
     parser_count.add_argument(
-        '--keep-tmp',
-        help='Do not delete the tmp directory',
-        action='store_true'
-    )
-    parser_count.add_argument(
         '--overwrite',
         help='Overwrite existing output.bus file',
         action='store_true'
@@ -133,22 +151,37 @@ def setup_count_args(parser):
 
 
 def main():
+    # Main parser
     parser = argparse.ArgumentParser(
-        description='kb_python {}'.format(__version__),
+        description='kb_python {}'.format(__version__)
     )
     subparsers = parser.add_subparsers(
         dest='command',
         title='Where <CMD> can be one of',
         required=True,
     )
-    parser_ref = setup_ref_args(subparsers)
-    parser_count = setup_count_args(subparsers)
+
+    # Add common options to this parent parser
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        '--keep-tmp',
+        help='Do not delete the tmp directory',
+        action='store_true'
+    )
+    parent.add_argument(
+        '--verbose', help='Print debugging information', action='store_true'
+    )
+
+    # Command parsers
+    parser_ref = setup_ref_args(subparsers, parent)
+    parser_count = setup_count_args(subparsers, parent)
 
     command_to_parser = {
         'ref': parser_ref,
         'count': parser_count,
     }
 
+    # Show help when no arguments are given
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -161,4 +194,9 @@ def main():
 
     args = parser.parse_args()
 
+    logging.basicConfig(
+        format='[%(asctime)s] %(levelname)7s %(message)s',
+        level=logging.DEBUG if args.verbose else logging.INFO,
+    )
+    logging.getLogger(__name__).debug('Printing verbose output')
     COMMAND_TO_FUNCTION[args.command](args)

@@ -4,8 +4,8 @@ MINIMUM_REQUIREMENTS = {
     'kallisto': (0, 46, 0),
 }
 # Default filenames.
+COMBINED_FILENAME = 'combined.fa'
 INDEX_FILENAME = 'transcriptome.idx'
-T2G_FILENAME = 'transcripts_to_genes.txt'
 WHITELIST_FILENAME = 'whitelist.txt'
 INSPECT_FILENAME = 'inspect.json'
 
