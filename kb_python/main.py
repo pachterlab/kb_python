@@ -71,10 +71,16 @@ def setup_ref_args(parser, parent):
         'required arguments for --velocity'
     )
     required_velocity.add_argument(
-        '-c', help='', type=str, required='--velocity' in sys.argv
+        '-c',
+        help='Path to generate cDNA transcripts to be captured',
+        type=str,
+        required='--velocity' in sys.argv
     )
     required_velocity.add_argument(
-        '-n', help='', type=str, required='--velocity' in sys.argv
+        '-n',
+        help='Path to generate intron transcripts to be captured',
+        type=str,
+        required='--velocity' in sys.argv
     )
 
     parser_ref.add_argument(
