@@ -31,8 +31,12 @@ class TestRef(TestMixin, TestCase):
 
     def test_create_t2c(self):
         t2c_path = os.path.join(tempfile.mkdtemp(), str(uuid.uuid4()))
-        self.assertEqual({'t2c': t2c_path},
-                         ref.create_t2c(self.cdna_path, t2c_path))
+        self.assertEqual({
+            't2c':
+                t2c_path,
+            'transcripts':
+                ['ENST00000456328.1', 'ENST00000450305.2', 'ENST00000488147.3']
+        }, ref.create_t2c(self.cdna_small_path, t2c_path))
         self.assertTrue(os.path.exists(t2c_path))
 
     def test_ref(self):
@@ -104,9 +108,11 @@ class TestRef(TestMixin, TestCase):
             combined_path = mock.MagicMock()
             create_t2g.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': cdna_t2c_path,
+                'transcripts': ['A'],
             }, {
-                't2c': intron_t2c_path
+                't2c': intron_t2c_path,
+                'transcripts': ['B'],
             }]
             concatenate_files.return_value = combined_path
             kallisto_index.return_value = {'index': index_path}
@@ -126,7 +132,9 @@ class TestRef(TestMixin, TestCase):
                                  intron_t2c_path,
                                  temp_dir=temp_dir
                              ))
-            create_t2g.assert_called_once_with(self.gtf_path, t2g_path)
+            create_t2g.assert_called_once_with(
+                self.gtf_path, t2g_path, transcripts={'A', 'B'}
+            )
             self.assertEqual(create_t2c.call_count, 2)
             create_t2c.assert_has_calls([
                 call(self.cdna_path, cdna_t2c_path),
@@ -155,9 +163,11 @@ class TestRef(TestMixin, TestCase):
             combined_path = mock.MagicMock()
             create_t2g.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': cdna_t2c_path,
+                'transcripts': ['A'],
             }, {
-                't2c': intron_t2c_path
+                't2c': intron_t2c_path,
+                'transcripts': ['B'],
             }]
             concatenate_files.return_value = combined_path
             kallisto_index.return_value = {'index': index_path}
@@ -176,7 +186,9 @@ class TestRef(TestMixin, TestCase):
                                  intron_t2c_path,
                                  temp_dir=temp_dir
                              ))
-            create_t2g.assert_called_once_with(self.gtf_path, t2g_path)
+            create_t2g.assert_called_once_with(
+                self.gtf_path, t2g_path, transcripts={'A', 'B'}
+            )
             self.assertEqual(create_t2c.call_count, 2)
             create_t2c.assert_has_calls([
                 call(self.cdna_path, cdna_t2c_path),
@@ -200,9 +212,11 @@ class TestRef(TestMixin, TestCase):
             combined_path = mock.MagicMock()
             create_t2g.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': cdna_t2c_path,
+                'transcripts': ['A'],
             }, {
-                't2c': intron_t2c_path
+                't2c': intron_t2c_path,
+                'transcripts': ['B'],
             }]
             concatenate_files.return_value = combined_path
             kallisto_index.return_value = {'index': index_path}
@@ -223,7 +237,9 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir,
                                  overwrite=True
                              ))
-            create_t2g.assert_called_once_with(self.gtf_path, t2g_path)
+            create_t2g.assert_called_once_with(
+                self.gtf_path, t2g_path, transcripts={'A', 'B'}
+            )
             self.assertEqual(create_t2c.call_count, 2)
             create_t2c.assert_has_calls([
                 call(self.cdna_path, cdna_t2c_path),

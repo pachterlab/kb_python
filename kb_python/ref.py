@@ -37,21 +37,10 @@ def create_t2g(
     return {'t2g': t2g_path}
 
 
-def create_t2c(fasta_path, t2c_path, intron=False):
+def create_t2c(fasta_path, t2c_path):
     transcripts = get_transcripts_from_fasta(fasta_path)
-    if intron:
-        transcripts_without_prefix = [
-            t for t in transcripts if not t.endswith('-I')
-        ]
-        if transcripts_without_prefix:
-            logger.warning((
-                'Found {} intron transcript IDs that do not have the "-I" prefix. '
-                'Downstream analyses may be compromised.'
-            ).format(len(transcripts_without_prefix)))
     with open(t2c_path, 'w') as f:
-        f.write(
-            '\n'.join(t[:-2] if t.endswith('-I') else t for t in transcripts)
-        )
+        f.write('\n'.join(transcripts))
     return {'t2c': t2c_path, 'transcripts': transcripts}
 
 
@@ -88,7 +77,15 @@ def ref_velocity(
 
     cdna_t2c_result = create_t2c(cdna_path, cdna_t2c_path)
     results.update({'cdna_t2c': cdna_t2c_result['t2c']})
-    intron_t2c_result = create_t2c(intron_path, intron_t2c_path, intron=True)
+    intron_t2c_result = create_t2c(intron_path, intron_t2c_path)
+    intron_without_prefix = [
+        t for t in intron_t2c_result['transcripts'] if not t.endswith('-I')
+    ]
+    if intron_without_prefix:
+        logger.warning((
+            'Found {} intron transcript IDs that do not have the "-I" prefix. '
+            'Downstream analyses may be compromised.'
+        ).format(len(intron_without_prefix)))
     results.update({'intron_t2c': intron_t2c_result['t2c']})
 
     transcripts = set(

@@ -4,7 +4,6 @@ import subprocess as sp
 import tempfile
 import uuid
 from unittest import mock, TestCase
-from unittest.mock import call
 
 import kb_python.utils as utils
 from tests.mixins import TestMixin
@@ -13,8 +12,10 @@ from tests.mixins import TestMixin
 class TestUtils(TestMixin, TestCase):
 
     def test_run_executable(self):
-        p = utils.run_executable(['echo', 'TEST'])
-        self.assertEqual(p.stdout.read(), 'TEST\n')
+        with mock.patch('kb_python.utils.logger.info') as info_mock:
+            p = utils.run_executable(['echo', 'TEST'], stream=False)
+            info_mock.assert_called_once_with('echo TEST')
+            self.assertEqual(p.stdout.read(), 'TEST\n')
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):
@@ -30,10 +31,9 @@ class TestUtils(TestMixin, TestCase):
             sp_mock.Popen().poll.assert_not_called()
 
     def test_run_executable_with_stream(self):
-        with mock.patch('kb_python.utils.logger.info') as info_mock:
+        with mock.patch('kb_python.utils.logger.debug') as debug_mock:
             utils.run_executable(['echo', 'TEST'], stream=True)
-            self.assertEqual(info_mock.call_count, 2)
-            info_mock.assert_has_calls([call('echo TEST'), call('TEST')])
+            debug_mock.assert_called_once_with('TEST')
 
     def test_run_chain(self):
         ps = utils.run_chain(['echo', 'TEST'], ['grep', 'T'])
@@ -166,7 +166,7 @@ class TestUtils(TestMixin, TestCase):
         out_path = utils.concatenate_files(
             file1_path,
             file2_path,
-            out_path=str(uuid.uuid4()),
+            out_path=os.path.join(temp_dir, str(uuid.uuid4())),
             temp_dir=tempfile.mkdtemp()
         )
 
