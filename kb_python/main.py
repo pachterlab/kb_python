@@ -3,7 +3,7 @@ import logging
 import sys
 
 from . import __version__
-from .count import count
+from .count import count, count_velocity
 from .ref import ref, ref_velocity
 
 
@@ -25,20 +25,38 @@ def parse_ref(args):
 
 
 def parse_count(args):
-    count(
-        args.i,
-        args.g,
-        args.x,
-        args.o,
-        args.fastqs,
-        args.w,
-        threads=args.t,
-        memory=args.m,
-        keep_temp=args.keep_tmp,
-        overwrite=args.overwrite,
-        loom=args.loom,
-        h5ad=args.h5ad,
-    )
+    if args.velocity:
+        count_velocity(
+            args.i,
+            args.g,
+            args.c,
+            args.n,
+            args.x,
+            args.o,
+            args.fastqs,
+            args.w,
+            threads=args.t,
+            memory=args.m,
+            keep_temp=args.keep_tmp,
+            overwrite=args.overwrite,
+            loom=args.loom,
+            h5ad=args.h5ad,
+        )
+    else:
+        count(
+            args.i,
+            args.g,
+            args.x,
+            args.o,
+            args.fastqs,
+            args.w,
+            threads=args.t,
+            memory=args.m,
+            keep_temp=args.keep_tmp,
+            overwrite=args.overwrite,
+            loom=args.loom,
+            h5ad=args.h5ad,
+        )
 
 
 COMMAND_TO_FUNCTION = {
@@ -84,7 +102,9 @@ def setup_ref_args(parser, parent):
     )
 
     parser_ref.add_argument(
-        '--velocity', help='Build index for RNA velocity', action='store_true'
+        '--velocity',
+        help='Prepare files for RNA velocity',
+        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
@@ -135,6 +155,25 @@ def setup_count_args(parser, parent):
     )
     parser_count.add_argument(
         '-m', help='Maximum memory used (default: 4G)', type=str, default='4G'
+    )
+    required_velocity = parser_count.add_argument_group(
+        'required arguments for --velocity'
+    )
+    required_velocity.add_argument(
+        '-c',
+        help='Path to cDNA transcripts to be captured',
+        type=str,
+        required='--velocity' in sys.argv
+    )
+    required_velocity.add_argument(
+        '-n',
+        help='Path to intron transcripts to be captured',
+        type=str,
+        required='--velocity' in sys.argv
+    )
+
+    parser_count.add_argument(
+        '--velocity', help='Calculate RNA velocity', action='store_true'
     )
     parser_count.add_argument(
         '--overwrite',

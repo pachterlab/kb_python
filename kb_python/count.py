@@ -182,3 +182,23 @@ def count(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     return results
+
+
+def count_velocity(
+        index_path,
+        t2g_path,
+        cdna_t2c_path,
+        intron_t2c_path,
+        technology,
+        out_dir,
+        fastqs,
+        whitelist_path=None,
+        temp_dir='tmp',
+        threads=8,
+        memory='4G',
+        keep_temp=False,
+        overwrite=False,
+        loom=False,
+        h5ad=False,
+):
+    pass
