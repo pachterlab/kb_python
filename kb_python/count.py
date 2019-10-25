@@ -1,6 +1,7 @@
 import logging
 import os
 
+from .config import get_bustools_binary_path, get_kallisto_binary_path
 from .constants import (
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
-    command = ['kallisto', 'bus']
+    command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
     command += ['-x', technology]
@@ -42,7 +43,7 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
 
 
 def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
-    command = ['bustools', 'sort']
+    command = [get_bustools_binary_path(), 'sort']
     command += ['-o', out_path]
     command += ['-T', temp_dir]
     command += ['-t', threads]
@@ -53,7 +54,7 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
 
 
 def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
-    command = ['bustools', 'inspect']
+    command = [get_bustools_binary_path(), 'inspect']
     command += ['-o', out_path]
     command += ['-w', whitelist_path]
     command += ['-e', ecmap_path]
@@ -63,7 +64,7 @@ def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
 
 
 def bustools_correct(bus_path, out_path, whitelist_path):
-    command = ['bustools', 'correct']
+    command = [get_bustools_binary_path(), 'correct']
     command += ['-o', out_path]
     command += ['-w', whitelist_path]
     command += [bus_path]
@@ -72,7 +73,7 @@ def bustools_correct(bus_path, out_path, whitelist_path):
 
 
 def bustools_count(bus_path, out_prefix, t2g_path, ecmap_path, txnames_path):
-    command = ['bustools', 'count']
+    command = [get_bustools_binary_path(), 'count']
     command += ['-o', out_prefix]
     command += ['-g', t2g_path]
     command += ['-e', ecmap_path]
@@ -88,7 +89,7 @@ def bustools_count(bus_path, out_prefix, t2g_path, ecmap_path, txnames_path):
 
 
 def bustools_capture(bus_path, out_path, t2c_path, ecmap_path, txnames_path):
-    command = ['bustools', 'capture']
+    command = [get_bustools_binary_path(), 'capture']
     command += ['-o', out_path]
     command += ['-c', t2c_path]
     command += ['-e', ecmap_path]
@@ -100,7 +101,9 @@ def bustools_capture(bus_path, out_path, t2c_path, ecmap_path, txnames_path):
 
 
 def bustools_whitelist(bus_path, out_path):
-    command = ['bustools', 'whitelist', '-o', out_path, bus_path]
+    command = [
+        get_bustools_binary_path(), 'whitelist', '-o', out_path, bus_path
+    ]
     run_executable(command)
     return {'whitelist': out_path}
 

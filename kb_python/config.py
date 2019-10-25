@@ -1,4 +1,12 @@
+import os
+import platform
 from collections import namedtuple
+
+PACKAGE_PATH = os.path.dirname(__file__)
+PLATFORM = platform.system().lower()
+BINS_DIR = 'bins'
+
+TEMP_DIR = 'tmp'
 
 # Technology to file position mapping
 Technology = namedtuple(
@@ -27,4 +35,30 @@ TECHNOLOGIES = [
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 
-TEMP_DIR = 'tmp'
+
+class UnsupportedOSException(Exception):
+    pass
+
+
+def get_kallisto_binary_path():
+    bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
+    path = os.path.join(
+        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
+    )
+    if not os.path.exists(path):
+        raise UnsupportedOSException(
+            'This operating system ({}) is not supported.'.format(PLATFORM)
+        )
+    return path
+
+
+def get_bustools_binary_path():
+    bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
+    path = os.path.join(
+        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
+    )
+    if not os.path.exists(path):
+        raise UnsupportedOSException(
+            'This operating system ({}) is not supported.'.format(PLATFORM)
+        )
+    return path
