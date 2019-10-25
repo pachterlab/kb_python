@@ -136,24 +136,6 @@ class TestUtils(TestMixin, TestCase):
         whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
         self.assertTrue(os.path.exists(whitelist_path))
 
-    def test_get_transcripts_from_fasta(self):
-        transcripts = utils.get_transcripts_from_fasta(self.cdna_small_path)
-        self.assertEqual({
-            'ENST00000456328.1',
-            'ENST00000450305.2',
-            'ENST00000488147.3',
-        }, set(transcripts))
-
-    def test_get_transcripts_from_fasta_gzip(self):
-        transcripts = utils.get_transcripts_from_fasta(
-            self.cdna_small_gzip_path
-        )
-        self.assertEqual({
-            'ENST00000456328.1',
-            'ENST00000450305.2',
-            'ENST00000488147.3',
-        }, set(transcripts))
-
     def test_concatenate_files(self):
         temp_dir = tempfile.mkdtemp()
         file1_path = os.path.join(temp_dir, str(uuid.uuid4()))
