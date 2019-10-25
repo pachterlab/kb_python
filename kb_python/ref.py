@@ -1,18 +1,27 @@
 import logging
 import os
+import tarfile
+from urllib.request import urlretrieve
 
-from .config import get_kallisto_binary_path
+from .config import (
+    get_kallisto_binary_path,
+    INDEX_FILENAME,
+    REFERENCES_MAPPING,
+    T2G_FILENAME,
+)
 from .constants import (
     COMBINED_FILENAME,
     SORTED_FASTA_FILENAME,
     SORTED_GTF_FILENAME,
 )
-from .fasta import FASTA
+from .fasta import (
+    FASTA,
+    generate_cdna_fasta,
+    generate_intron_fasta,
+)
 from .gtf import GTF
 from .utils import (
     concatenate_files,
-    generate_cdna_fasta,
-    generate_intron_fasta,
     run_executable,
 )
 
@@ -78,6 +87,35 @@ def kallisto_index(fasta_path, index_path, k=31):
     return {'index': index_path}
 
 
+def download_reference(
+        choice, index_path, t2g_path, temp_dir='tmp', overwrite=False
+):
+    results = {}
+    if not os.path.exists(index_path) or overwrite:
+        reference = REFERENCES_MAPPING[choice]
+        url = reference.url
+        path = os.path.join(temp_dir, os.path.basename(url))
+        logging.info(
+            'Downloading files for {} from {} to {}'.format(choice, url, path)
+        )
+        local_path, headers = urlretrieve(url, path)
+
+        logging.info('Extracting files from {}'.format(local_path))
+        with tarfile.open(local_path, 'r:gz') as f:
+            f.extractall(temp_dir)
+
+        os.rename(os.path.join(temp_dir, INDEX_FILENAME), index_path)
+        results.update({'index': index_path})
+        os.rename(os.path.join(temp_dir, T2G_FILENAME), t2g_path)
+        results.update({'t2g': t2g_path})
+    else:
+        logger.info(
+            'Skipping download because {} already exists. Use the --overwrite flag to overwrite.'
+            .format(index_path)
+        )
+    return results
+
+
 def ref(
         fasta_path,
         gtf_path,
@@ -116,7 +154,7 @@ def ref(
     return results
 
 
-def ref_velocity(
+def ref_lamanno(
         fasta_path,
         gtf_path,
         cdna_path,

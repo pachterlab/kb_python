@@ -74,8 +74,8 @@ class TestCount(TestMixin, TestCase):
         out_dir = tempfile.mkdtemp()
         out_path = os.path.join(out_dir, 'capture.bus')
         result = count.bustools_capture(
-            self.velocity_bus_scs_path, out_path, self.velocity_cdna_t2c_path,
-            self.velocity_txnames_path, self.velocity_txnames_path
+            self.lamanno_bus_scs_path, out_path, self.lamanno_cdna_t2c_path,
+            self.lamanno_txnames_path, self.lamanno_txnames_path
         )
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
@@ -302,7 +302,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path
             )
 
-    def test_count_velocity_with_whitelist(self):
+    def test_count_lamanno_with_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -422,7 +422,7 @@ class TestCount(TestMixin, TestCase):
                         ),
                 }
             },
-                             count.count_velocity(
+                             count.count_lamanno(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -493,7 +493,7 @@ class TestCount(TestMixin, TestCase):
                 )
             ])
 
-    def test_count_velocity_without_whitelist(self):
+    def test_count_lamanno_without_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -615,7 +615,7 @@ class TestCount(TestMixin, TestCase):
                         ),
                 }
             },
-                             count.count_velocity(
+                             count.count_lamanno(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,

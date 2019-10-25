@@ -47,28 +47,6 @@ class TestUtils(TestMixin, TestCase):
         with self.assertRaises(sp.SubprocessError):
             utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
 
-    def test_generate_cdna_fasta(self):
-        out_path = os.path.join(
-            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
-        )
-        utils.generate_cdna_fasta(
-            self.sorted_fasta_path, self.sorted_gtf_path, out_path
-        )
-        with open(out_path, 'r') as f, open(self.split_cdna_fasta_path,
-                                            'r') as split:
-            self.assertEqual(f.read(), split.read())
-
-    def test_generate_intron_fasta(self):
-        out_path = os.path.join(
-            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
-        )
-        utils.generate_intron_fasta(
-            self.sorted_fasta_path, self.sorted_gtf_path, out_path
-        )
-        with open(out_path, 'r') as f, open(self.split_intron_fasta_path,
-                                            'r') as split:
-            self.assertEqual(f.read(), split.read())
-
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
             run_executable().stdout.read.return_value = 'kallisto 1.2.3'

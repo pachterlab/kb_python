@@ -35,6 +35,27 @@ TECHNOLOGIES = [
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 
+# Supported pre-built indices
+Reference = namedtuple(
+    'Reference', ['name', 'url', 'lamanno_url', 'velocity_url']
+)
+REFERENCES = [
+    Reference(
+        'human',
+        'https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/homo_sapiens.tar.gz',
+        None, None
+    ),
+    Reference(
+        'mouse',
+        'https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/mus_musculus.tar.gz',
+        None, None
+    )
+]
+REFERENCES_MAPPING = {r.name: r for r in REFERENCES}
+# File names that are in the tar.gz file.
+INDEX_FILENAME = 'transcriptome.idx'
+T2G_FILENAME = 'transcript_to_genes.txt'
+
 
 class UnsupportedOSException(Exception):
     pass

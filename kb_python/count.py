@@ -215,7 +215,7 @@ def count(
     return results
 
 
-def count_velocity(
+def count_lamanno(
         index_path,
         t2g_path,
         cdna_t2c_path,

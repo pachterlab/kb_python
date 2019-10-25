@@ -5,9 +5,9 @@ import shutil
 import sys
 
 from . import __version__
-from .config import TEMP_DIR
-from .count import count, count_velocity
-from .ref import ref, ref_velocity
+from .config import REFERENCES_MAPPING, TEMP_DIR
+from .count import count, count_lamanno
+from .ref import download_reference, ref, ref_lamanno
 from .utils import get_bustools_version, get_kallisto_version
 
 
@@ -22,8 +22,10 @@ def display_info():
 
 
 def parse_ref(args):
-    if args.velocity:
-        ref_velocity(
+    if args.d is not None:
+        download_reference(args.d, args.i, args.g, overwrite=args.overwrite)
+    elif args.lamanno:
+        ref_lamanno(
             args.fasta,
             args.gtf,
             args.c,
@@ -46,8 +48,8 @@ def parse_ref(args):
 
 
 def parse_count(args):
-    if args.velocity:
-        count_velocity(
+    if args.lamanno:
+        count_lamanno(
             args.i,
             args.g,
             args.c,
@@ -117,44 +119,65 @@ def setup_ref_args(parser, parent):
     )
     required_ref.add_argument(
         '-c',
-        help='Path to the cDNA FASTA to be generated',
+        help=(
+            'Path to the cDNA FASTA to be generated '
+            '(not needed when downloading)'
+        ),
         type=str,
-        required=True
+        required='-d' not in sys.argv
     )
-    required_velocity = parser_ref.add_argument_group(
-        'required arguments for --velocity'
+    required_lamanno = parser_ref.add_argument_group(
+        'required arguments for --lamanno'
     )
-    required_velocity.add_argument(
+    required_lamanno.add_argument(
         '-n',
         help='Path to the intron FASTA to be generated',
         type=str,
-        required='--velocity' in sys.argv
+        required='--lamanno' in sys.argv
     )
-    required_velocity.add_argument(
+    required_lamanno.add_argument(
         '-a',
         help='Path to generate cDNA transcripts to be captured',
         type=str,
-        required='--velocity' in sys.argv
+        required='--lamanno' in sys.argv
     )
-    required_velocity.add_argument(
+    required_lamanno.add_argument(
         '-r',
         help='Path to generate intron transcripts to be captured',
         type=str,
-        required='--velocity' in sys.argv
+        required='--lamanno' in sys.argv
     )
 
     parser_ref.add_argument(
-        '--velocity',
-        help='Prepare files for RNA velocity',
-        action='store_true'
+        '-d',
+        help=(
+            'Download a pre-built kallisto index (along with all necessary files) '
+            'instead of building it locally.'
+        ),
+        type=str,
+        choices=list(REFERENCES_MAPPING.keys()),
+        required=False
+    )
+    parser_ref.add_argument(
+        '--lamanno', help='Prepare files for RNA lamanno', action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
         help='Overwrite existing kallisto index',
         action='store_true'
     )
-    parser_ref.add_argument('fasta', help='Genomic FASTA file', type=str)
-    parser_ref.add_argument('gtf', help='Reference GTF file', type=str)
+    parser_ref.add_argument(
+        'fasta',
+        help='Genomic FASTA file',
+        type=str,
+        nargs=1 if '-d' not in sys.argv else '?'
+    )
+    parser_ref.add_argument(
+        'gtf',
+        help='Reference GTF file',
+        type=str,
+        nargs=1 if '-d' not in sys.argv else '?'
+    )
     return parser_ref
 
 
@@ -198,24 +221,24 @@ def setup_count_args(parser, parent):
     parser_count.add_argument(
         '-m', help='Maximum memory used (default: 4G)', type=str, default='4G'
     )
-    required_velocity = parser_count.add_argument_group(
-        'required arguments for --velocity'
+    required_lamanno = parser_count.add_argument_group(
+        'required arguments for --lamanno'
     )
-    required_velocity.add_argument(
+    required_lamanno.add_argument(
         '-c',
         help='Path to cDNA transcripts to be captured',
         type=str,
-        required='--velocity' in sys.argv
+        required='--lamanno' in sys.argv
     )
-    required_velocity.add_argument(
+    required_lamanno.add_argument(
         '-n',
         help='Path to intron transcripts to be captured',
         type=str,
-        required='--velocity' in sys.argv
+        required='--lamanno' in sys.argv
     )
 
     parser_count.add_argument(
-        '--velocity', help='Calculate RNA velocity', action='store_true'
+        '--lamanno', help='Calculate RNA lamanno', action='store_true'
     )
     parser_count.add_argument(
         '--overwrite',
@@ -292,6 +315,9 @@ def main():
     logger.debug('Printing verbose output')
     logger.debug('Creating tmp directory')
     os.makedirs(TEMP_DIR, exist_ok=True)
-    COMMAND_TO_FUNCTION[args.command](args)
-    if not args.keep_tmp:
-        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+    try:
+        COMMAND_TO_FUNCTION[args.command](args)
+    finally:
+        # Always clean temp dir
+        if not args.keep_tmp:
+            shutil.rmtree(TEMP_DIR, ignore_errors=True)
