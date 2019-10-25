@@ -10,6 +10,8 @@ import anndata
 import pandas as pd
 import scipy.io
 
+from .fasta import FASTA
+from .gtf import GTF
 from .config import TECHNOLOGIES_MAPPING, WHITELIST_DIR
 from .constants import MINIMUM_REQUIREMENTS
 
@@ -29,6 +31,222 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+
+def generate_cdna_fasta(fasta_path, gtf_path, out_path):
+    """Generate a cDNA FASTA using the genome and GTF.
+
+    This function assumes the order in which the chromosomes appear in the
+    genome FASTA is identical to the order in which they appear in the GTF.
+    Additionally, the GTF must be sorted by start position.
+    """
+    fasta = FASTA(fasta_path)
+    gtf = GTF(gtf_path)
+    gtf_entries = gtf.entries()
+
+    with open(out_path, 'w') as f:
+        previous_gtf_entry = None
+        for sequence_id, sequence in fasta.entries():
+
+            transcript_sequences = {}
+            transcript_infos = {}
+            while True:
+                try:
+                    gtf_entry = previous_gtf_entry if previous_gtf_entry else next(
+                        gtf_entries
+                    )
+                except StopIteration:
+                    break
+                previous_gtf_entry = None
+                chromosome = gtf_entry['seqname']
+
+                if sequence_id != chromosome:
+                    previous_gtf_entry = gtf_entry
+                    break
+
+                start = gtf_entry['start']
+                end = gtf_entry['end']
+                strand = gtf_entry['strand']
+                if gtf_entry['feature'] == 'exon':
+                    transcript_id = gtf_entry['group']['transcript_id']
+                    transcript_version = gtf_entry['group'].get(
+                        'transcript_version', None
+                    )
+
+                    transcript = '{}.{}'.format(
+                        transcript_id, transcript_version
+                    ) if transcript_version else transcript_id
+                    if transcript not in transcript_sequences:
+                        transcript_sequences[transcript] = ''
+                    transcript_sequences[transcript] += sequence[start - 1:end]
+                elif gtf_entry['feature'] == 'transcript':
+                    transcript_id = gtf_entry['group']['transcript_id']
+                    transcript_version = gtf_entry['group'].get(
+                        'transcript_version', None
+                    )
+                    transcript = '{}.{}'.format(
+                        transcript_id, transcript_version
+                    ) if transcript_version else transcript_id
+
+                    gene_id = gtf_entry['group']['gene_id']
+                    gene_version = gtf_entry['group'].get('gene_version', None)
+                    gene = '{}.{}'.format(
+                        gene_id, gene_version
+                    ) if gene_version else gene_id
+                    gene_name = gtf_entry['group'].get('gene_name', '')
+
+                    if transcript not in transcript_infos:
+                        attributes = [
+                            ('gene_id', gene),
+                            ('gene_name', gene_name),
+                            ('chr', chromosome),
+                            ('start', start),
+                            ('end', end),
+                            ('strand', strand),
+                        ]
+                        transcript_infos[transcript] = attributes
+
+            for transcript in sorted(transcript_sequences.keys()):
+                exon = transcript_sequences[transcript]
+                attributes = transcript_infos[transcript]
+                f.write(
+                    '{}\n'.format(FASTA.make_header(transcript, attributes))
+                )
+                f.write(
+                    '{}\n'.format(
+                        exon if dict(attributes)['strand'] ==
+                        '+' else FASTA.reverse_complement(exon)
+                    )
+                )
+
+    return out_path
+
+
+def generate_intron_fasta(fasta_path, gtf_path, out_path):
+    """Generate an intron FASTA using the genome and GTF.
+
+    This function assumes the order in which the chromosomes appear in the
+    genome FASTA is identical to the order in which they appear in the GTF.
+    Additionally, the GTF must be sorted by start position.
+
+    The intron for a specific transcript is the collection of the following:
+    1. transcript - exons
+    2. 5' UTR
+    3. 3' UTR
+    """
+    fasta = FASTA(fasta_path)
+    gtf = GTF(gtf_path)
+    gtf_entries = gtf.entries()
+
+    with open(out_path, 'w') as f:
+        previous_gtf_entry = None
+        for sequence_id, sequence in fasta.entries():
+
+            transcript_exons = {}
+            transcript_infos = {}
+            while True:
+                try:
+                    gtf_entry = previous_gtf_entry if previous_gtf_entry else next(
+                        gtf_entries
+                    )
+                except StopIteration:
+                    break
+                previous_gtf_entry = None
+                chromosome = gtf_entry['seqname']
+
+                if sequence_id != chromosome:
+                    previous_gtf_entry = gtf_entry
+                    break
+
+                start = gtf_entry['start']
+                end = gtf_entry['end']
+                strand = gtf_entry['strand']
+                if gtf_entry['feature'] == 'exon':
+                    transcript_id = gtf_entry['group']['transcript_id']
+                    transcript_version = gtf_entry['group'].get(
+                        'transcript_version', None
+                    )
+                    transcript = '{}.{}'.format(
+                        transcript_id, transcript_version
+                    ) if transcript_version else transcript_id
+                    transcript += '-I'
+
+                    transcript_exons.setdefault(transcript,
+                                                []).append((start, end))
+                elif gtf_entry['feature'] == 'transcript':
+                    transcript_id = gtf_entry['group']['transcript_id']
+                    transcript_version = gtf_entry['group'].get(
+                        'transcript_version', None
+                    )
+                    transcript = '{}.{}'.format(
+                        transcript_id, transcript_version
+                    ) if transcript_version else transcript_id
+                    transcript += '-I'
+
+                    gene_id = gtf_entry['group']['gene_id']
+                    gene_version = gtf_entry['group'].get('gene_version', None)
+                    gene = '{}.{}'.format(
+                        gene_id, gene_version
+                    ) if gene_version else gene_id
+                    gene_name = gtf_entry['group'].get('gene_name', '')
+
+                    if transcript not in transcript_infos:
+                        attributes = [
+                            ('gene_id', gene),
+                            ('gene_name', gene_name),
+                            ('chr', chromosome),
+                            ('start', start),
+                            ('end', end),
+                            ('strand', strand),
+                        ]
+                        transcript_infos[transcript] = attributes
+
+            for transcript in sorted(transcript_exons.keys()):
+                attributes = transcript_infos[transcript]
+
+                # Find transcript interval - all exon intervals
+                attributes_dict = dict(attributes)
+                transcript_interval = (
+                    attributes_dict['start'], attributes_dict['end']
+                )
+                introns = []
+                exons = list(sorted(transcript_exons[transcript]))
+                if exons:
+                    if exons[0][0] > transcript_interval[0]:
+                        introns.append(
+                            (transcript_interval[0], exons[0][0] - 1)
+                        )
+
+                    for i in range(len(exons) - 1):
+                        start = exons[i][1]
+                        end = exons[i + 1][0]
+                        introns.append((start + 1, end - 1))
+
+                    if exons[-1][1] < transcript_interval[1]:
+                        introns.append(
+                            (exons[-1][1] + 1, transcript_interval[1])
+                        )
+                else:
+                    introns.append(transcript_interval)
+
+                intron = ''
+                for start, end in introns:
+                    intron += sequence[start - 1:end]
+
+                if intron:
+                    f.write(
+                        '{}\n'.format(
+                            FASTA.make_header(transcript, attributes)
+                        )
+                    )
+                    f.write(
+                        '{}\n'.format(
+                            intron if dict(attributes)['strand'] ==
+                            '+' else FASTA.reverse_complement(intron)
+                        )
+                    )
+
+    return out_path
 
 
 def run_executable(
@@ -147,7 +365,13 @@ def get_supported_technologies():
     return parse_technologies(p.stdout)
 
 
-def copy_whitelist(technology):
+def whitelist_provided(technology):
+    upper = technology.upper()
+    return upper in TECHNOLOGIES_MAPPING and TECHNOLOGIES_MAPPING[
+        upper].whitelist_archive
+
+
+def copy_whitelist(technology, out_dir):
     """Copies provided whitelist barcodes for specified technology.
     """
     if not TECHNOLOGIES_MAPPING[technology.upper()]:
@@ -160,72 +384,9 @@ def copy_whitelist(technology):
     archive_path = os.path.join(
         os.path.dirname(__file__), WHITELIST_DIR, technology.whitelist_archive
     )
-    whitelist_filename = technology.whitelist_filename
     with tarfile.open(archive_path, 'r:gz') as f:
-        f.extract(whitelist_filename)
-    return whitelist_filename
-
-
-def get_transcripts_from_fasta(fasta_path):
-    """Parse out a list of transcript ids from a fasta file by inspecting
-    each header.
-
-    Gzip-compressed files are allowed.
-    """
-    transcripts = []
-    with gzip.open(fasta_path, 'rt') if fasta_path.endswith('.gz') else open(
-            fasta_path, 'r') as f:
-        for line in f:
-            if line.startswith('>'):
-                transcripts.append(line.split(' ')[0][1:])
-    return transcripts
-
-
-def create_transcript_list(
-        gtf_path, use_name=True, use_version=True, transcripts=None
-):
-    r = {}
-    with open(gtf_path, 'r') as f:
-        for line in f:
-            if len(line) == 0 or line[0] == '#':
-                continue
-            l = line.strip().split('\t')  # noqa
-            if l[2] == 'transcript':
-                info = l[8]
-                d = {}
-                for x in info.split('; '):
-                    x = x.strip()
-                    p = x.find(' ')
-                    if p == -1:
-                        continue
-                    k = x[:p]
-                    p = x.find('"', p)
-                    p2 = x.find('"', p + 1)
-                    v = x[p + 1:p2]
-                    d[k] = v
-
-                if 'transcript_id' not in d or 'gene_id' not in d:
-                    continue
-
-                tid = d['transcript_id'].split(".")[0]
-                gid = d['gene_id'].split(".")[0]
-                if use_version:
-                    if 'transcript_version' not in d or 'gene_version' not in d:
-                        continue
-
-                    tid += '.' + d['transcript_version']
-                    gid += '.' + d['gene_version']
-                gname = None
-                if use_name:
-                    if 'gene_name' not in d:
-                        continue
-                    gname = d['gene_name']
-
-                if tid in r or (transcripts and tid not in transcripts):
-                    continue
-
-                r[tid] = (gid, gname)
-    return r
+        f.extract(technology.whitelist_filename, path=out_dir)
+    return os.path.join(out_dir, technology.whitelist_filename)
 
 
 def concatenate_files(*paths, out_path, temp_dir='tmp'):
@@ -256,6 +417,10 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )
+
+
+def overlay_anndatas(*adatas):
+    pass
 
 
 def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):

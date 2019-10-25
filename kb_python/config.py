@@ -26,3 +26,5 @@ TECHNOLOGIES = [
     Technology('SURECELL', 2, 1, 0, None, None),
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
+
+TEMP_DIR = 'tmp'

@@ -1,8 +1,11 @@
 import argparse
 import logging
+import os
+import shutil
 import sys
 
 from . import __version__
+from .config import TEMP_DIR
 from .count import count, count_velocity
 from .ref import ref, ref_velocity
 
@@ -10,18 +13,25 @@ from .ref import ref, ref_velocity
 def parse_ref(args):
     if args.velocity:
         ref_velocity(
-            args.fasta[0],
-            args.fasta[1],
+            args.fasta,
             args.gtf,
-            args.i,
-            args.g,
             args.c,
             args.n,
-            keep_temp=args.keep_tmp,
+            args.i,
+            args.g,
+            args.a,
+            args.r,
             overwrite=args.overwrite
         )
     else:
-        ref(args.fasta[0], args.gtf, args.i, args.g, overwrite=args.overwrite)
+        ref(
+            args.fasta,
+            args.gtf,
+            args.c,
+            args.i,
+            args.g,
+            overwrite=args.overwrite
+        )
 
 
 def parse_count(args):
@@ -37,7 +47,6 @@ def parse_count(args):
             args.w,
             threads=args.t,
             memory=args.m,
-            keep_temp=args.keep_tmp,
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
@@ -52,7 +61,6 @@ def parse_count(args):
             args.w,
             threads=args.t,
             memory=args.m,
-            keep_temp=args.keep_tmp,
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
@@ -85,17 +93,29 @@ def setup_ref_args(parser, parent):
         type=str,
         required=True
     )
+    required_ref.add_argument(
+        '-c',
+        help='Path to the cDNA FASTA to be generated',
+        type=str,
+        required=True
+    )
     required_velocity = parser_ref.add_argument_group(
         'required arguments for --velocity'
     )
     required_velocity.add_argument(
-        '-c',
+        '-n',
+        help='Path to the intron FASTA to be generated',
+        type=str,
+        required='--velocity' in sys.argv
+    )
+    required_velocity.add_argument(
+        '-a',
         help='Path to generate cDNA transcripts to be captured',
         type=str,
         required='--velocity' in sys.argv
     )
     required_velocity.add_argument(
-        '-n',
+        '-r',
         help='Path to generate intron transcripts to be captured',
         type=str,
         required='--velocity' in sys.argv
@@ -111,7 +131,7 @@ def setup_ref_args(parser, parent):
         help='Overwrite existing kallisto index',
         action='store_true'
     )
-    parser_ref.add_argument('fasta', help='Reference FASTA file(s)', nargs='+')
+    parser_ref.add_argument('fasta', help='Genomic FASTA file', type=str)
     parser_ref.add_argument('gtf', help='Reference GTF file', type=str)
     return parser_ref
 
@@ -243,5 +263,10 @@ def main():
         format='[%(asctime)s] %(levelname)7s %(message)s',
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
-    logging.getLogger(__name__).debug('Printing verbose output')
+    logger = logging.getLogger(__name__)
+    logger.debug('Printing verbose output')
+    logger.debug('Creating tmp directory')
+    os.makedirs(TEMP_DIR, exist_ok=True)
     COMMAND_TO_FUNCTION[args.command](args)
+    if not args.keep_tmp:
+        shutil.rmtree(TEMP_DIR, ignore_errors=True)
