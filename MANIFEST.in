@@ -1,1 +1,2 @@
 include kb_python/whitelists/*
+recursive-include kb_python/bins *

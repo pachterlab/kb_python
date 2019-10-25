@@ -1,6 +1,7 @@
 import logging
 import os
 
+from .config import get_kallisto_binary_path
 from .constants import (
     COMBINED_FILENAME,
     SORTED_FASTA_FILENAME,
@@ -69,7 +70,10 @@ def create_t2c(fasta_path, t2c_path):
 
 
 def kallisto_index(fasta_path, index_path, k=31):
-    command = ['kallisto', 'index', '-i', index_path, '-k', k, fasta_path]
+    command = [
+        get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
+        fasta_path
+    ]
     run_executable(command)
     return {'index': index_path}
 

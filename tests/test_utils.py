@@ -69,25 +69,15 @@ class TestUtils(TestMixin, TestCase):
                                             'r') as split:
             self.assertEqual(f.read(), split.read())
 
-    def test_get_version(self):
+    def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
             run_executable().stdout.read.return_value = 'kallisto 1.2.3'
-            self.assertEqual(utils.get_version('kallisto'), (1, 2, 3))
+            self.assertEqual((1, 2, 3), utils.get_kallisto_version())
 
-    def test_check_dependencies(self):
-        with mock.patch('kb_python.utils.MINIMUM_REQUIREMENTS') as minimum_requirements,\
-            mock.patch('kb_python.utils.get_version') as get_version:
-            minimum_requirements.items.return_value = [('TEST', (0, 0, 0))]
-            get_version.return_value = (0, 0, 1)
-            utils.check_dependencies()
-
-    def test_check_dependencies_fail(self):
-        with mock.patch('kb_python.utils.MINIMUM_REQUIREMENTS') as minimum_requirements,\
-            mock.patch('kb_python.utils.get_version') as get_version:
-            minimum_requirements.items.return_value = [('TEST', (1, 0, 0))]
-            get_version.return_value = (0, 0, 1)
-            with self.assertRaises(utils.UnmetDependencyException):
-                utils.check_dependencies()
+    def test_get_bustools_version(self):
+        with mock.patch('kb_python.utils.run_executable') as run_executable:
+            run_executable().stdout.read.return_value = 'bustools 1.2.3'
+            self.assertEqual((1, 2, 3), utils.get_bustools_version())
 
     def test_parse_technologies(self):
         lines = [

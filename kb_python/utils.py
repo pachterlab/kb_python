@@ -12,17 +12,18 @@ import scipy.io
 
 from .fasta import FASTA
 from .gtf import GTF
-from .config import TECHNOLOGIES_MAPPING, WHITELIST_DIR
-from .constants import MINIMUM_REQUIREMENTS
+from .config import (
+    get_bustools_binary_path,
+    get_kallisto_binary_path,
+    PACKAGE_PATH,
+    TECHNOLOGIES_MAPPING,
+    WHITELIST_DIR,
+)
 
 logger = logging.getLogger(__name__)
 
 TECHNOLOGY_PARSER = re.compile(r'^(?P<name>\S+)')
-VERSION_PARSERS = {
-    requirement:
-    re.compile(r'^{} ([0-9]+).([0-9]+).([0-9]+)'.format(requirement))
-    for requirement in MINIMUM_REQUIREMENTS
-}
+VERSION_PARSER = re.compile(r'^\S*? ([0-9]+).([0-9]+).([0-9]+)')
 
 
 class NotImplementedException(Exception):
@@ -322,23 +323,16 @@ def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
     return processes
 
 
-def get_version(requirement):
-    p = run_executable([requirement], quiet=True, returncode=1)
-    match = VERSION_PARSERS[requirement].match(p.stdout.read())
+def get_kallisto_version():
+    p = run_executable([get_kallisto_binary_path()], quiet=True, returncode=1)
+    match = VERSION_PARSER.match(p.stdout.read())
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
-def check_dependencies():
-    """Checks if executable dependencies have been met.
-    """
-    for requirement, minimum_version in MINIMUM_REQUIREMENTS.items():
-        version = get_version(requirement)
-        if version < minimum_version:
-            raise UnmetDependencyException(
-                '{} version {} is less than the minimum requirement {}'.format(
-                    requirement, version, minimum_version
-                )
-            )
+def get_bustools_version():
+    p = run_executable([get_bustools_binary_path()], quiet=True, returncode=1)
+    match = VERSION_PARSER.match(p.stdout.read())
+    return tuple(int(ver) for ver in match.groups()) if match else None
 
 
 def parse_technologies(lines):
@@ -361,7 +355,9 @@ def parse_technologies(lines):
 def get_supported_technologies():
     """Runs 'kallisto bus --list' to fetch a list of supported technologies.
     """
-    p = run_executable(['kallisto', 'bus', '--list'], quiet=True, returncode=1)
+    p = run_executable([get_kallisto_binary_path(), 'bus', '--list'],
+                       quiet=True,
+                       returncode=1)
     return parse_technologies(p.stdout)
 
 
@@ -382,7 +378,7 @@ def copy_whitelist(technology, out_dir):
 
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
     archive_path = os.path.join(
-        os.path.dirname(__file__), WHITELIST_DIR, technology.whitelist_archive
+        PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
     )
     with tarfile.open(archive_path, 'r:gz') as f:
         f.extract(technology.whitelist_filename, path=out_dir)

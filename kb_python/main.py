@@ -8,6 +8,17 @@ from . import __version__
 from .config import TEMP_DIR
 from .count import count, count_velocity
 from .ref import ref, ref_velocity
+from .utils import get_bustools_version, get_kallisto_version
+
+
+def display_info():
+    kallisto_version = '.'.join(str(i) for i in get_kallisto_version())
+    bustools_version = '.'.join(str(i) for i in get_bustools_version())
+    info = '''kb_python {}
+    kallisto: {}
+    bustools: {}
+    '''.format(__version__, kallisto_version, bustools_version)
+    print(info)
 
 
 def parse_ref(args):
@@ -71,6 +82,17 @@ COMMAND_TO_FUNCTION = {
     'ref': parse_ref,
     'count': parse_count,
 }
+
+
+def setup_info_args(parser, parent):
+    parser_info = parser.add_parser(
+        'info',
+        description='Display package and citation information',
+        help='Display package and citation information',
+        parents=[parent],
+        add_help=False,
+    )
+    return parser_info
 
 
 def setup_ref_args(parser, parent):
@@ -238,6 +260,7 @@ def main():
     )
 
     # Command parsers
+    setup_info_args(subparsers, argparse.ArgumentParser(add_help=False))
     parser_ref = setup_ref_args(subparsers, parent)
     parser_count = setup_count_args(subparsers, parent)
 
@@ -251,7 +274,9 @@ def main():
         parser.print_help(sys.stderr)
         sys.exit(1)
     if len(sys.argv) == 2:
-        if sys.argv[1] in command_to_parser:
+        if sys.argv[1] == 'info':
+            display_info()
+        elif sys.argv[1] in command_to_parser:
             command_to_parser[sys.argv[1]].print_help(sys.stderr)
         else:
             parser.print_help(sys.stderr)

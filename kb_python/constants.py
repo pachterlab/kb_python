@@ -1,8 +1,3 @@
-# Binary depenencies
-MINIMUM_REQUIREMENTS = {
-    'bustools': (0, 39, 3),
-    'kallisto': (0, 46, 0),
-}
 # Default filenames
 CDNA_FILENAME = 'cdna.fa'
 INTRON_FILENAME = 'introns.fa'
