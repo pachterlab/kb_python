@@ -47,6 +47,28 @@ class TestUtils(TestMixin, TestCase):
         with self.assertRaises(sp.SubprocessError):
             utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
 
+    def test_generate_cdna_fasta(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        utils.generate_cdna_fasta(
+            self.sorted_fasta_path, self.sorted_gtf_path, out_path
+        )
+        with open(out_path, 'r') as f, open(self.split_cdna_fasta_path,
+                                            'r') as split:
+            self.assertEqual(f.read(), split.read())
+
+    def test_generate_intron_fasta(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        utils.generate_intron_fasta(
+            self.sorted_fasta_path, self.sorted_gtf_path, out_path
+        )
+        with open(out_path, 'r') as f, open(self.split_intron_fasta_path,
+                                            'r') as split:
+            self.assertEqual(f.read(), split.read())
+
     def test_get_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
             run_executable().stdout.read.return_value = 'kallisto 1.2.3'
@@ -83,27 +105,9 @@ class TestUtils(TestMixin, TestCase):
             utils.get_supported_technologies()
             parse_technologies.assert_called_once_with('TEST')
 
-    def test_create_transcript_list(self):
-        r = utils.create_transcript_list(self.small_gtf_path)
-        self.assertEqual({
-            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', '4933401J01Rik'),
-            'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', 'Gm26206'),
-        }, r)
-
-    def test_create_transcript_list_without_name(self):
-        r = utils.create_transcript_list(self.small_gtf_path, use_name=False)
-        self.assertEqual({
-            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', None),
-            'ENSMUST00000082908.1': ('ENSMUSG00000064842.1', None),
-        }, r)
-
-    def test_create_transcript_list_filter(self):
-        r = utils.create_transcript_list(
-            self.small_gtf_path, transcripts=['ENSMUST00000193812.1']
-        )
-        self.assertEqual({
-            'ENSMUST00000193812.1': ('ENSMUSG00000102693.1', '4933401J01Rik'),
-        }, r)
+    def test_whitelist_provided(self):
+        self.assertTrue(utils.whitelist_provided('10xv2'))
+        self.assertFalse(utils.whitelist_provided('UNSUPPORTED'))
 
     def test_import_matrix_as_anndata(self):
         utils.import_matrix_as_anndata(
@@ -129,29 +133,8 @@ class TestUtils(TestMixin, TestCase):
         self.assertTrue(os.path.exists(out_path))
 
     def test_copy_whitelist(self):
-        whitelist_filename = utils.copy_whitelist('10xv1')
-        try:
-            self.assertTrue(os.path.exists(whitelist_filename))
-        finally:
-            os.remove(whitelist_filename)
-
-    def test_get_transcripts_from_fasta(self):
-        transcripts = utils.get_transcripts_from_fasta(self.cdna_small_path)
-        self.assertEqual({
-            'ENST00000456328.1',
-            'ENST00000450305.2',
-            'ENST00000488147.3',
-        }, set(transcripts))
-
-    def test_get_transcripts_from_fasta_gzip(self):
-        transcripts = utils.get_transcripts_from_fasta(
-            self.cdna_small_gzip_path
-        )
-        self.assertEqual({
-            'ENST00000456328.1',
-            'ENST00000450305.2',
-            'ENST00000488147.3',
-        }, set(transcripts))
+        whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
+        self.assertTrue(os.path.exists(whitelist_path))
 
     def test_concatenate_files(self):
         temp_dir = tempfile.mkdtemp()
