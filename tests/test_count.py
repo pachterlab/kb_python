@@ -1,10 +1,12 @@
 import os
 import tempfile
+import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
 
 import kb_python.count as count
 from kb_python.constants import (
+    ADATA_PREFIX,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
@@ -87,6 +89,24 @@ class TestCount(TestMixin, TestCase):
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
+    def test_convert_matrix_to_loom(self):
+        out_path = os.path.join(
+            tempfile.mkdtemp(), '{}.loom'.format(uuid.uuid4())
+        )
+        count.convert_matrix_to_loom(
+            self.matrix_path, self.barcodes_path, self.genes_path, out_path
+        )
+        self.assertTrue(os.path.exists(out_path))
+
+    def test_convert_matrix_to_h5ad(self):
+        out_path = os.path.join(
+            tempfile.mkdtemp(), '{}.h5ad'.format(uuid.uuid4())
+        )
+        count.convert_matrix_to_h5ad(
+            self.matrix_path, self.barcodes_path, self.genes_path, out_path
+        )
+        self.assertTrue(os.path.exists(out_path))
+
     def test_copy_or_create_whitelist_provided(self):
         with mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist:
@@ -115,7 +135,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
-            mock.patch('kb_python.count.bustools_count') as bustools_count:
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix_to_loom') as convert_matrix_to_loom,\
+            mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
@@ -202,6 +224,228 @@ class TestCount(TestMixin, TestCase):
             bustools_count.assert_called_once_with(
                 bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
                 txnames_path
+            )
+            convert_matrix_to_loom.assert_not_called()
+            convert_matrix_to_h5ad.assert_not_called()
+
+    def test_count_loom(self):
+        with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix_to_loom') as convert_matrix_to_loom,\
+            mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
+            out_dir = tempfile.mkdtemp()
+            temp_dir = tempfile.mkdtemp()
+            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            loom_path = mock.MagicMock()
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            bustools_count.return_value = {
+                'mtx': '{}.mtx'.format(counts_prefix),
+                'genes': '{}.genes.txt'.format(counts_prefix),
+                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
+            }
+            convert_matrix_to_loom.return_value = loom_path
+
+            self.assertEqual({
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'inspect': inspect_path,
+                'bus_scs': bus_scs_path,
+                'mtx': '{}.mtx'.format(counts_prefix),
+                'genes': '{}.genes.txt'.format(counts_prefix),
+                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
+                'loom': loom_path,
+            },
+                             count.count(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 self.technology,
+                                 out_dir,
+                                 self.fastqs,
+                                 whitelist_path=self.whitelist_path,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 loom=True,
+                             ))
+
+            kallisto_bus.assert_called_once_with(
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
+            )
+            self.assertEqual(bustools_sort.call_count, 2)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
+            copy_or_create_whitelist.assert_not_called()
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            bustools_count.assert_called_once_with(
+                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
+                txnames_path
+            )
+            convert_matrix_to_loom.assert_called_once_with(
+                '{}.mtx'.format(counts_prefix),
+                '{}.barcodes.txt'.format(counts_prefix),
+                '{}.genes.txt'.format(counts_prefix),
+                os.path.join(
+                    out_dir, COUNTS_DIR, '{}.loom'.format(ADATA_PREFIX)
+                )
+            )
+            convert_matrix_to_h5ad.assert_not_called()
+
+    def test_count_h5ad(self):
+        with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix_to_loom') as convert_matrix_to_loom,\
+            mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
+            out_dir = tempfile.mkdtemp()
+            temp_dir = tempfile.mkdtemp()
+            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            h5ad_path = mock.MagicMock()
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            bustools_count.return_value = {
+                'mtx': '{}.mtx'.format(counts_prefix),
+                'genes': '{}.genes.txt'.format(counts_prefix),
+                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
+            }
+            convert_matrix_to_h5ad.return_value = h5ad_path
+
+            self.assertEqual({
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'inspect': inspect_path,
+                'bus_scs': bus_scs_path,
+                'mtx': '{}.mtx'.format(counts_prefix),
+                'genes': '{}.genes.txt'.format(counts_prefix),
+                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
+                'h5ad': h5ad_path,
+            },
+                             count.count(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 self.technology,
+                                 out_dir,
+                                 self.fastqs,
+                                 whitelist_path=self.whitelist_path,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 h5ad=True,
+                             ))
+
+            kallisto_bus.assert_called_once_with(
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
+            )
+            self.assertEqual(bustools_sort.call_count, 2)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
+            copy_or_create_whitelist.assert_not_called()
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            bustools_count.assert_called_once_with(
+                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
+                txnames_path
+            )
+            convert_matrix_to_loom.assert_not_called()
+            convert_matrix_to_h5ad.assert_called_once_with(
+                '{}.mtx'.format(counts_prefix),
+                '{}.barcodes.txt'.format(counts_prefix),
+                '{}.genes.txt'.format(counts_prefix),
+                os.path.join(
+                    out_dir, COUNTS_DIR, '{}.h5ad'.format(ADATA_PREFIX)
+                )
             )
 
     def test_count_without_whitelist(self):
@@ -210,7 +454,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
-            mock.patch('kb_python.count.bustools_count') as bustools_count:
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix_to_loom') as convert_matrix_to_loom,\
+            mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
@@ -301,6 +547,8 @@ class TestCount(TestMixin, TestCase):
                 bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
                 txnames_path
             )
+            convert_matrix_to_loom.assert_not_called()
+            convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_lamanno_with_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
@@ -309,7 +557,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
-            mock.patch('kb_python.count.bustools_count') as bustools_count:
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
+            mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, COUNTS_DIR)
@@ -492,6 +742,466 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path, ecmap_path, txnames_path
                 )
             ])
+            import_matrix_as_anndata.assert_not_called()
+            overlay_anndatas.assert_not_called()
+
+    def test_count_lamanno_loom(self):
+        with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
+            mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
+            out_dir = tempfile.mkdtemp()
+            temp_dir = tempfile.mkdtemp()
+            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            cdna_capture_path = os.path.join(
+                temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
+            )
+            intron_capture_path = os.path.join(
+                temp_dir, '{}.bus'.format(BUS_INTRON_PREFIX)
+            )
+            cdna_s_path = os.path.join(
+                out_dir, '{}.s.bus'.format(BUS_CDNA_PREFIX)
+            )
+            intron_s_path = os.path.join(
+                out_dir, '{}.s.bus'.format(BUS_INTRON_PREFIX)
+            )
+            cdna_t2c_path = mock.MagicMock()
+            intron_t2c_path = mock.MagicMock()
+            adata_spliced = mock.MagicMock()
+            adata_unspliced = mock.MagicMock()
+            adata = mock.MagicMock()
+            loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
+            adata.write_loom.return_value = loom_path
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }, {
+                'bus': cdna_s_path
+            }, {
+                'bus': intron_s_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_capture.side_effect = [{
+                'bus': cdna_capture_path
+            }, {
+                'bus': intron_capture_path
+            }]
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            bustools_count.side_effect = [{
+                'mtx':
+                    '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                'genes':
+                    '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ),
+                'barcodes':
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ),
+            }, {
+                'mtx':
+                    '{}.mtx'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+                'genes':
+                    '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+                'barcodes':
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+            }]
+            import_matrix_as_anndata.side_effect = [
+                adata_spliced, adata_unspliced
+            ]
+            overlay_anndatas.return_value = adata
+
+            self.assertEqual({
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'inspect': inspect_path,
+                'bus_scs': bus_scs_path,
+                'loom': loom_path,
+                BUS_CDNA_PREFIX: {
+                    'bus_s':
+                        cdna_s_path,
+                    'mtx':
+                        '{}.mtx'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                    'genes':
+                        '{}.genes.txt'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                    'barcodes':
+                        '{}.barcodes.txt'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                },
+                BUS_INTRON_PREFIX: {
+                    'bus_s':
+                        intron_s_path,
+                    'mtx':
+                        '{}.mtx'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                    'genes':
+                        '{}.genes.txt'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                    'barcodes':
+                        '{}.barcodes.txt'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                }
+            },
+                             count.count_lamanno(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 cdna_t2c_path,
+                                 intron_t2c_path,
+                                 self.technology,
+                                 out_dir,
+                                 self.fastqs,
+                                 whitelist_path=self.whitelist_path,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 loom=True
+                             ))
+
+            kallisto_bus.assert_called_once_with(
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
+            )
+            self.assertEqual(bustools_sort.call_count, 4)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    cdna_capture_path,
+                    cdna_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    intron_capture_path,
+                    intron_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
+            copy_or_create_whitelist.assert_not_called()
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            self.assertEqual(2, bustools_count.call_count)
+            bustools_count.assert_has_calls([
+                call(
+                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path, ecmap_path, txnames_path
+                ),
+                call(
+                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path, ecmap_path, txnames_path
+                )
+            ])
+            self.assertEqual(2, import_matrix_as_anndata.call_count)
+            import_matrix_as_anndata.assert_has_calls([
+                call(
+                    '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    )
+                ),
+                call(
+                    '{}.mtx'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    )
+                ),
+            ])
+            overlay_anndatas.assert_called_once_with(
+                adata_spliced, adata_unspliced
+            )
+            adata.write_loom.assert_called_once_with(loom_path)
+            adata.write.assert_not_called()
+
+    def test_count_lamanno_h5ad(self):
+        with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
+            mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
+            out_dir = tempfile.mkdtemp()
+            temp_dir = tempfile.mkdtemp()
+            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            cdna_capture_path = os.path.join(
+                temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
+            )
+            intron_capture_path = os.path.join(
+                temp_dir, '{}.bus'.format(BUS_INTRON_PREFIX)
+            )
+            cdna_s_path = os.path.join(
+                out_dir, '{}.s.bus'.format(BUS_CDNA_PREFIX)
+            )
+            intron_s_path = os.path.join(
+                out_dir, '{}.s.bus'.format(BUS_INTRON_PREFIX)
+            )
+            cdna_t2c_path = mock.MagicMock()
+            intron_t2c_path = mock.MagicMock()
+            adata_spliced = mock.MagicMock()
+            adata_unspliced = mock.MagicMock()
+            adata = mock.MagicMock()
+            h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
+            adata.write.return_value = h5ad_path
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }, {
+                'bus': cdna_s_path
+            }, {
+                'bus': intron_s_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_capture.side_effect = [{
+                'bus': cdna_capture_path
+            }, {
+                'bus': intron_capture_path
+            }]
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            bustools_count.side_effect = [{
+                'mtx':
+                    '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                'genes':
+                    '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ),
+                'barcodes':
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ),
+            }, {
+                'mtx':
+                    '{}.mtx'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+                'genes':
+                    '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+                'barcodes':
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ),
+            }]
+            import_matrix_as_anndata.side_effect = [
+                adata_spliced, adata_unspliced
+            ]
+            overlay_anndatas.return_value = adata
+
+            self.assertEqual({
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'inspect': inspect_path,
+                'bus_scs': bus_scs_path,
+                'h5ad': h5ad_path,
+                BUS_CDNA_PREFIX: {
+                    'bus_s':
+                        cdna_s_path,
+                    'mtx':
+                        '{}.mtx'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                    'genes':
+                        '{}.genes.txt'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                    'barcodes':
+                        '{}.barcodes.txt'.format(
+                            os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                        ),
+                },
+                BUS_INTRON_PREFIX: {
+                    'bus_s':
+                        intron_s_path,
+                    'mtx':
+                        '{}.mtx'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                    'genes':
+                        '{}.genes.txt'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                    'barcodes':
+                        '{}.barcodes.txt'.format(
+                            os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                        ),
+                }
+            },
+                             count.count_lamanno(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 cdna_t2c_path,
+                                 intron_t2c_path,
+                                 self.technology,
+                                 out_dir,
+                                 self.fastqs,
+                                 whitelist_path=self.whitelist_path,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 h5ad=True
+                             ))
+
+            kallisto_bus.assert_called_once_with(
+                self.fastqs,
+                self.index_path,
+                self.technology,
+                out_dir,
+                threads=threads
+            )
+            self.assertEqual(bustools_sort.call_count, 4)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    cdna_capture_path,
+                    cdna_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    intron_capture_path,
+                    intron_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
+            )
+            copy_or_create_whitelist.assert_not_called()
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            self.assertEqual(2, bustools_count.call_count)
+            bustools_count.assert_has_calls([
+                call(
+                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path, ecmap_path, txnames_path
+                ),
+                call(
+                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path, ecmap_path, txnames_path
+                )
+            ])
+            self.assertEqual(2, import_matrix_as_anndata.call_count)
+            import_matrix_as_anndata.assert_has_calls([
+                call(
+                    '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    )
+                ),
+                call(
+                    '{}.mtx'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    )
+                ),
+            ])
+            overlay_anndatas.assert_called_once_with(
+                adata_spliced, adata_unspliced
+            )
+            adata.write_loom.assert_not_called()
+            adata.write.assert_called_once_with(h5ad_path)
 
     def test_count_lamanno_without_whitelist(self):
         with mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
@@ -500,7 +1210,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
-            mock.patch('kb_python.count.bustools_count') as bustools_count:
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
+            mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, COUNTS_DIR)
@@ -686,3 +1398,5 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path, ecmap_path, txnames_path
                 )
             ])
+            import_matrix_as_anndata.assert_not_called()
+            overlay_anndatas.assert_not_called()
