@@ -1,4 +1,7 @@
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 
 class GTF:
@@ -59,8 +62,10 @@ class GTF:
                         )
                 position = f.tell()
                 line = f.readline()
+        logger.debug('Sorting {} GTF entries'.format(len(to_sort)))
         to_sort.sort()
 
+        logger.debug('Writing sorted GTF {}'.format(out_path))
         with open(self.gtf_path, 'r') as gtf, open(out_path, 'w') as f:
             for tup in to_sort:
                 position = tup[2]

@@ -4,6 +4,7 @@ import subprocess as sp
 import tempfile
 import uuid
 from unittest import mock, TestCase
+from unittest.mock import call
 
 import kb_python.utils as utils
 from tests.mixins import TestMixin
@@ -12,10 +13,8 @@ from tests.mixins import TestMixin
 class TestUtils(TestMixin, TestCase):
 
     def test_run_executable(self):
-        with mock.patch('kb_python.utils.logger.info') as info_mock:
-            p = utils.run_executable(['echo', 'TEST'], stream=False)
-            info_mock.assert_called_once_with('echo TEST')
-            self.assertEqual(p.stdout.read(), 'TEST\n')
+        p = utils.run_executable(['echo', 'TEST'], stream=False)
+        self.assertEqual(p.stdout.read(), 'TEST\n')
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):
@@ -33,7 +32,7 @@ class TestUtils(TestMixin, TestCase):
     def test_run_executable_with_stream(self):
         with mock.patch('kb_python.utils.logger.debug') as debug_mock:
             utils.run_executable(['echo', 'TEST'], stream=True)
-            debug_mock.assert_called_once_with('TEST')
+            debug_mock.assert_has_calls([call('TEST')])
 
     def test_run_chain(self):
         ps = utils.run_chain(['echo', 'TEST'], ['grep', 'T'])
@@ -46,28 +45,6 @@ class TestUtils(TestMixin, TestCase):
     def test_run_chain_raises_exception_when_dead(self):
         with self.assertRaises(sp.SubprocessError):
             utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
-
-    def test_generate_cdna_fasta(self):
-        out_path = os.path.join(
-            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
-        )
-        utils.generate_cdna_fasta(
-            self.sorted_fasta_path, self.sorted_gtf_path, out_path
-        )
-        with open(out_path, 'r') as f, open(self.split_cdna_fasta_path,
-                                            'r') as split:
-            self.assertEqual(f.read(), split.read())
-
-    def test_generate_intron_fasta(self):
-        out_path = os.path.join(
-            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
-        )
-        utils.generate_intron_fasta(
-            self.sorted_fasta_path, self.sorted_gtf_path, out_path
-        )
-        with open(out_path, 'r') as f, open(self.split_intron_fasta_path,
-                                            'r') as split:
-            self.assertEqual(f.read(), split.read())
 
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
@@ -104,23 +81,17 @@ class TestUtils(TestMixin, TestCase):
             self.matrix_path, self.barcodes_path, self.genes_path
         )
 
-    def test_convert_matrix_to_loom(self):
-        out_path = os.path.join(
-            tempfile.mkdtemp(), '{}.loom'.format(uuid.uuid4())
+    def test_overlay_anndatas(self):
+        adata_spliced = utils.import_matrix_as_anndata(
+            self.spliced_matrix_path, self.spliced_barcodes_path,
+            self.spliced_genes_path
         )
-        utils.convert_matrix_to_loom(
-            self.matrix_path, self.barcodes_path, self.genes_path, out_path
+        adata_unspliced = utils.import_matrix_as_anndata(
+            self.unspliced_matrix_path, self.unspliced_barcodes_path,
+            self.unspliced_genes_path
         )
-        self.assertTrue(os.path.exists(out_path))
-
-    def test_convert_matrix_to_h5ad(self):
-        out_path = os.path.join(
-            tempfile.mkdtemp(), '{}.h5ad'.format(uuid.uuid4())
-        )
-        utils.convert_matrix_to_h5ad(
-            self.matrix_path, self.barcodes_path, self.genes_path, out_path
-        )
-        self.assertTrue(os.path.exists(out_path))
+        adata = utils.overlay_anndatas(adata_spliced, adata_unspliced)
+        self.assertEqual({'spliced', 'unspliced'}, set(adata.layers.keys()))
 
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())

@@ -35,39 +35,46 @@ class TestMixin(TestCase):
         cls.loom_path = os.path.join(cls.counts_dir, 'genes.loom')
         cls.h5ad_path = os.path.join(cls.counts_dir, 'genes.h5ad')
 
-        cls.velocity_dir = os.path.join(cls.fixtures_dir, 'velocity')
-        cls.cdna_small_path = os.path.join(
-            cls.velocity_dir, 'human_cdna_small.fa'
-        )
-        cls.cdna_small_gzip_path = os.path.join(
-            cls.velocity_dir, 'human_cdna_small.fa.gz'
-        )
-        cls.cdna_path = os.path.join(
-            cls.velocity_dir, 'human_cdna_truncated.fa'
-        )
-        cls.intron_path = os.path.join(
-            cls.velocity_dir, 'human_intron_truncated.fa.gz'
-        )
-        cls.velocity_fastqs = [
-            os.path.join(cls.velocity_dir, 'R1.fastq'),
-            os.path.join(cls.velocity_dir, 'R2.fastq'),
+        cls.lamanno_dir = os.path.join(cls.fixtures_dir, 'lamanno')
+        cls.cdna_path = os.path.join(cls.lamanno_dir, 'cdna.fa')
+        cls.intron_path = os.path.join(cls.lamanno_dir, 'intron.fz')
+        cls.lamanno_fastqs = [
+            os.path.join(cls.lamanno_dir, 'R1.fastq.gz'),
+            os.path.join(cls.lamanno_dir, 'R2.fastq.gz'),
         ]
-        cls.velocity_t2g_path = os.path.join(
-            cls.velocity_dir, 'transcripts_to_genes.txt'
+        cls.lamanno_t2g_path = os.path.join(cls.lamanno_dir, 't2g.txt')
+        cls.lamanno_cdna_t2c_path = os.path.join(
+            cls.lamanno_dir, 'cdna_t2c.txt'
         )
-        cls.velocity_cdna_t2c_path = os.path.join(
-            cls.velocity_dir, 'cdna_transcripts_to_capture.txt'
+        cls.lamanno_intron_t2c_path = os.path.join(
+            cls.lamanno_dir, 'intron_t2c.txt'
         )
-        cls.velocity_intron_t2c_path = os.path.join(
-            cls.velocity_dir, 'intron_transcripts_to_capture.txt'
+        cls.lamanno_bus_path = os.path.join(cls.lamanno_dir, 'output.bus')
+        cls.lamanno_ecmap_path = os.path.join(cls.lamanno_dir, 'matrix.ec')
+        cls.lamanno_txnames_path = os.path.join(
+            cls.lamanno_dir, 'transcripts.txt'
         )
-        cls.velocity_bus_path = os.path.join(cls.velocity_dir, 'output.bus')
-        cls.velocity_ecmap_path = os.path.join(cls.velocity_dir, 'matrix.ec')
-        cls.velocity_txnames_path = os.path.join(
-            cls.velocity_dir, 'transcripts.txt'
+        cls.lamanno_bus_scs_path = os.path.join(
+            cls.lamanno_dir, 'output.s.c.s.bus'
         )
-        cls.velocity_bus_scs_path = os.path.join(
-            cls.velocity_dir, 'output.s.c.s.bus'
+        cls.lamanno_counts_dir = os.path.join(cls.lamanno_dir, 'counts')
+        cls.spliced_matrix_path = os.path.join(
+            cls.lamanno_counts_dir, 'spliced.mtx'
+        )
+        cls.spliced_barcodes_path = os.path.join(
+            cls.lamanno_counts_dir, 'spliced.barcodes.txt'
+        )
+        cls.spliced_genes_path = os.path.join(
+            cls.lamanno_counts_dir, 'spliced.genes.txt'
+        )
+        cls.unspliced_matrix_path = os.path.join(
+            cls.lamanno_counts_dir, 'unspliced.mtx'
+        )
+        cls.unspliced_barcodes_path = os.path.join(
+            cls.lamanno_counts_dir, 'unspliced.barcodes.txt'
+        )
+        cls.unspliced_genes_path = os.path.join(
+            cls.lamanno_counts_dir, 'unspliced.genes.txt'
         )
 
         cls.gtf_dir = os.path.join(cls.fixtures_dir, 'gtf')

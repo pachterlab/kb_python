@@ -1,18 +1,27 @@
 import logging
 import os
+import tarfile
+from urllib.request import urlretrieve
 
-from .config import get_kallisto_binary_path
+from .config import (
+    get_kallisto_binary_path,
+    INDEX_FILENAME,
+    REFERENCES_MAPPING,
+    T2G_FILENAME,
+)
 from .constants import (
     COMBINED_FILENAME,
     SORTED_FASTA_FILENAME,
     SORTED_GTF_FILENAME,
 )
-from .fasta import FASTA
+from .fasta import (
+    FASTA,
+    generate_cdna_fasta,
+    generate_intron_fasta,
+)
 from .gtf import GTF
 from .utils import (
     concatenate_files,
-    generate_cdna_fasta,
-    generate_intron_fasta,
     run_executable,
 )
 
@@ -20,18 +29,21 @@ logger = logging.getLogger(__name__)
 
 
 def sort_gtf(gtf_path, out_path):
+    logger.info('Sorting {}'.format(gtf_path))
     gtf = GTF(gtf_path)
     gtf.sort(out_path)
     return out_path
 
 
 def sort_fasta(fasta_path, out_path):
+    logger.info('Sorting {}'.format(fasta_path))
     fasta = FASTA(fasta_path)
     fasta.sort(out_path)
     return out_path
 
 
 def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
+    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     gtf = GTF(gtf_path)
     with open(t2g_path, 'w') as f:
         for entry in gtf.entries():
@@ -70,12 +82,42 @@ def create_t2c(fasta_path, t2c_path):
 
 
 def kallisto_index(fasta_path, index_path, k=31):
+    logger.info('Indexing to {}'.format(index_path))
     command = [
         get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
         fasta_path
     ]
     run_executable(command)
     return {'index': index_path}
+
+
+def download_reference(
+        choice, index_path, t2g_path, temp_dir='tmp', overwrite=False
+):
+    results = {}
+    if not os.path.exists(index_path) or overwrite:
+        reference = REFERENCES_MAPPING[choice]
+        url = reference.url
+        path = os.path.join(temp_dir, os.path.basename(url))
+        logging.info(
+            'Downloading files for {} from {} to {}'.format(choice, url, path)
+        )
+        local_path, headers = urlretrieve(url, path)
+
+        logging.info('Extracting files from {}'.format(local_path))
+        with tarfile.open(local_path, 'r:gz') as f:
+            f.extractall(temp_dir)
+
+        os.rename(os.path.join(temp_dir, INDEX_FILENAME), index_path)
+        results.update({'index': index_path})
+        os.rename(os.path.join(temp_dir, T2G_FILENAME), t2g_path)
+        results.update({'t2g': t2g_path})
+    else:
+        logger.info(
+            'Skipping download because {} already exists. Use the --overwrite flag to overwrite.'
+            .format(index_path)
+        )
+    return results
 
 
 def ref(
@@ -88,15 +130,12 @@ def ref(
         overwrite=False
 ):
     results = {}
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path)
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
-        logger.info('Sorting FASTA')
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
-        logger.info('Sorting GTF')
         sorted_gtf_path = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
@@ -105,7 +144,6 @@ def ref(
             sorted_fasta_path, sorted_gtf_path, cdna_path
         )
 
-        logger.info('Indexing')
         index_result = kallisto_index(cdna_fasta_path, index_path)
         results.update(index_result)
     else:
@@ -116,7 +154,7 @@ def ref(
     return results
 
 
-def ref_velocity(
+def ref_lamanno(
         fasta_path,
         gtf_path,
         cdna_path,
@@ -129,15 +167,12 @@ def ref_velocity(
         overwrite=False,
 ):
     results = {}
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path, intron=True)
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
-        logger.info('Sorting FASTA')
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
-        logger.info('Sorting GTF')
         sorted_gtf_path = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
@@ -169,7 +204,6 @@ def ref_velocity(
             out_path=os.path.join(temp_dir, COMBINED_FILENAME),
             temp_dir=temp_dir
         )
-        logger.info('Indexing')
         index_result = kallisto_index(combined_path, index_path)
         results.update(index_result)
     else:

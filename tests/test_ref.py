@@ -1,10 +1,12 @@
 import os
+import tarfile
 import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
 
 import kb_python.ref as ref
+from kb_python.config import INDEX_FILENAME, REFERENCES_MAPPING, T2G_FILENAME
 from kb_python.constants import (
     SORTED_FASTA_FILENAME,
     SORTED_GTF_FILENAME,
@@ -62,6 +64,49 @@ class TestRef(TestMixin, TestCase):
         with open(result['t2c'], 'r') as f, open(self.fasta_t2c_path,
                                                  'r') as t2c:
             self.assertEqual(f.read(), t2c.read())
+
+    def test_download_reference(self):
+        with mock.patch('kb_python.ref.urlretrieve') as urlretrieve:
+            choice = 'human'
+            url = REFERENCES_MAPPING[choice].url
+            temp_dir = tempfile.mkdtemp()
+            index_path = os.path.join(
+                tempfile.mkdtemp(), '{}.idx'.format(uuid.uuid4())
+            )
+            t2g_path = os.path.join(
+                tempfile.mkdtemp(), '{}.txt'.format(uuid.uuid4())
+            )
+            test_index_path = os.path.join(tempfile.mkdtemp(), INDEX_FILENAME)
+            test_t2g_path = os.path.join(tempfile.mkdtemp(), T2G_FILENAME)
+            with open(test_index_path, 'w') as index, open(test_t2g_path,
+                                                           'w') as t2g:
+                index.write('INDEX')
+                t2g.write('T2G')
+            test_tar_path = os.path.join(
+                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+            )
+            with tarfile.open(test_tar_path, 'w:gz') as f:
+                f.add(
+                    test_index_path, arcname=os.path.basename(test_index_path)
+                )
+                f.add(test_t2g_path, arcname=os.path.basename(test_t2g_path))
+            urlretrieve.return_value = test_tar_path, None
+            self.assertEqual({
+                'index': index_path,
+                't2g': t2g_path
+            },
+                             ref.download_reference(
+                                 choice,
+                                 index_path,
+                                 t2g_path,
+                                 temp_dir=temp_dir
+                             ))
+            urlretrieve.assert_called_once_with(
+                url, os.path.join(temp_dir, os.path.basename(url))
+            )
+            with open(index_path, 'r') as index, open(t2g_path, 'r') as t2g:
+                self.assertEqual('INDEX', index.read())
+                self.assertEqual('T2G', t2g.read())
 
     def test_ref(self):
         with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
@@ -174,7 +219,7 @@ class TestRef(TestMixin, TestCase):
             )
             kallisto_index.assert_called_once_with(cdna_fasta_path, index_path)
 
-    def test_ref_velocity(self):
+    def test_ref_lamanno(self):
         with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -215,7 +260,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'index': index_path,
             },
-                             ref.ref_velocity(
+                             ref.ref_lamanno(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -248,7 +293,7 @@ class TestRef(TestMixin, TestCase):
             ])
             kallisto_index.assert_called_once_with(combined_path, index_path)
 
-    def test_ref_velocity_exists(self):
+    def test_ref_lamanno_exists(self):
         with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -278,7 +323,7 @@ class TestRef(TestMixin, TestCase):
             concatenate_files.assert_not_called()
             kallisto_index.assert_not_called()
 
-    def test_ref_velocity_overwrite(self):
+    def test_ref_lamanno_overwrite(self):
         with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -319,7 +364,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'index': index_path,
             },
-                             ref.ref_velocity(
+                             ref.ref_lamanno(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
