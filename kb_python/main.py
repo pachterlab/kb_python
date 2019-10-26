@@ -52,6 +52,8 @@ def display_technologies():
 
 def parse_ref(args):
     if args.d is not None:
+        if args.lamanno:
+            raise Exception('--lamanno indices can not be downloaded')
         download_reference(args.d, args.i, args.g, overwrite=args.overwrite)
     elif args.lamanno:
         ref_lamanno(
@@ -182,7 +184,6 @@ def setup_ref_args(parser, parent):
 
     parser_ref.add_argument(
         '-d',
-        metavar='DOWNLOAD',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
             'instead of building it locally'
