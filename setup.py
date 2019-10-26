@@ -10,7 +10,7 @@ long_description = read('README.md')
 
 setup(
     name='kb_python',
-    version='0.1.0',
+    version='0.1.1',
     url='https://github.com/pachterlab/kb_python',
     author='Kyung Hoi (Joseph) Min',
     author_email='phoenixter96@gmail.com',
