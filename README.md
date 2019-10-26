@@ -1,5 +1,5 @@
 # kb_python
-![](https://img.shields.io/badge/Version-0.0.8-informational)
+![](https://img.shields.io/badge/Version-0.1.0-informational)
 ![](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
 
 A friendly wrapper around the kallisto | bustools pipeline for scRNA-seq analysis.
@@ -12,7 +12,7 @@ Must be accessible from the command-line as `bustools`.~~
 
 ~~There are plans to include installers for both prerequisites.~~
 
-Binaries are included with the package starting version `0.0.8`. There are no prerequisites starting from this version.
+Binaries are included with the package starting version `0.1.0`. There are no prerequisites starting from this version.
 
 ## Development
 ### Code Quality
