@@ -29,18 +29,21 @@ logger = logging.getLogger(__name__)
 
 
 def sort_gtf(gtf_path, out_path):
+    logger.info('Sorting {}'.format(gtf_path))
     gtf = GTF(gtf_path)
     gtf.sort(out_path)
     return out_path
 
 
 def sort_fasta(fasta_path, out_path):
+    logger.info('Sorting {}'.format(fasta_path))
     fasta = FASTA(fasta_path)
     fasta.sort(out_path)
     return out_path
 
 
 def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
+    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     gtf = GTF(gtf_path)
     with open(t2g_path, 'w') as f:
         for entry in gtf.entries():
@@ -79,6 +82,7 @@ def create_t2c(fasta_path, t2c_path):
 
 
 def kallisto_index(fasta_path, index_path, k=31):
+    logger.info('Indexing to {}'.format(index_path))
     command = [
         get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
         fasta_path
@@ -126,15 +130,12 @@ def ref(
         overwrite=False
 ):
     results = {}
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path)
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
-        logger.info('Sorting FASTA')
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
-        logger.info('Sorting GTF')
         sorted_gtf_path = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
@@ -143,7 +144,6 @@ def ref(
             sorted_fasta_path, sorted_gtf_path, cdna_path
         )
 
-        logger.info('Indexing')
         index_result = kallisto_index(cdna_fasta_path, index_path)
         results.update(index_result)
     else:
@@ -167,15 +167,12 @@ def ref_lamanno(
         overwrite=False,
 ):
     results = {}
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path, intron=True)
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
-        logger.info('Sorting FASTA')
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
-        logger.info('Sorting GTF')
         sorted_gtf_path = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
@@ -207,7 +204,6 @@ def ref_lamanno(
             out_path=os.path.join(temp_dir, COMBINED_FILENAME),
             temp_dir=temp_dir
         )
-        logger.info('Indexing')
         index_result = kallisto_index(combined_path, index_path)
         results.update(index_result)
     else:

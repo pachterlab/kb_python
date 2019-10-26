@@ -1,4 +1,7 @@
+import logging
 from .gtf import GTF
+
+logger = logging.getLogger(__name__)
 
 
 class FASTA:
@@ -62,10 +65,12 @@ class FASTA:
                 position = f.tell()
                 line = f.readline()
 
+        logger.debug('Sorting {} FASTA entries'.format(len(to_sort)))
         for i in range(len(to_sort) - 1):
             to_sort[i][2] = to_sort[i + 1][1]
         to_sort.sort()
 
+        logger.debug('Writing sorted FASTA {}'.format(out_path))
         with open(self.fasta_path, 'r') as fasta, open(out_path, 'w') as f:
             for tup in to_sort:
                 start_position = tup[1]
@@ -93,6 +98,9 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     with open(out_path, 'w') as f:
         previous_gtf_entry = None
         for sequence_id, sequence in fasta.entries():
+            logger.debug(
+                'Generating cDNA from chromosome {}'.format(sequence_id)
+            )
 
             transcript_sequences = {}
             transcript_infos = {}
@@ -152,6 +160,9 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
                         ]
                         transcript_infos[transcript] = attributes
 
+            logger.debug(
+                'Writing {} cDNA transcripts'.format(len(transcript_sequences))
+            )
             for transcript in sorted(transcript_sequences.keys()):
                 exon = transcript_sequences[transcript]
                 attributes = transcript_infos[transcript]
@@ -187,6 +198,9 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     with open(out_path, 'w') as f:
         previous_gtf_entry = None
         for sequence_id, sequence in fasta.entries():
+            logger.debug(
+                'Generating introns from chromosome {}'.format(sequence_id)
+            )
 
             transcript_exons = {}
             transcript_infos = {}
@@ -295,7 +309,7 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     return out_path
 
 
-def generate_spliced_Fasta(fasta_path, gtf_path, out_path):
+def generate_spliced_fasta(fasta_path, gtf_path, out_path):
     """Generate a spliced FASTA using the genome and GTF.
 
     This function assumes the order in which the chromosomes appear in the
@@ -309,7 +323,7 @@ def generate_spliced_Fasta(fasta_path, gtf_path, out_path):
     pass
 
 
-def generate_unspliced_Fasta(fasta_path, gtf_path, out_path):
+def generate_unspliced_fasta(fasta_path, gtf_path, out_path):
     """Generate a unspliced FASTA using the genome and GTF.
 
     This function assumes the order in which the chromosomes appear in the

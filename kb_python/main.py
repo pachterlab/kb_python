@@ -5,7 +5,7 @@ import shutil
 import sys
 
 from . import __version__
-from .config import REFERENCES_MAPPING, TEMP_DIR
+from .config import REFERENCES_MAPPING, TECHNOLOGIES, TEMP_DIR
 from .count import count, count_lamanno
 from .ref import download_reference, ref, ref_lamanno
 from .utils import get_bustools_version, get_kallisto_version
@@ -19,6 +19,35 @@ def display_info():
     bustools: {}
     '''.format(__version__, kallisto_version, bustools_version)
     print(info)
+    sys.exit(1)
+
+
+def display_technologies():
+    headers = [
+        'name', 'description', 'whitelist provided', 'fastq order for "count"'
+    ]
+    rows = [headers]
+
+    print('List of supported single-cell technologies\n')
+    for t in TECHNOLOGIES:
+        row = [
+            t.name, t.description, 'yes' if t.whitelist_archive else '',
+            'seq, umi' if t.seq_pos == 0 else 'umi, seq'
+        ]
+        rows.append(row)
+
+    max_lens = []
+    for i in range(len(headers)):
+        max_lens.append(len(headers[i]))
+        for row in rows[1:]:
+            max_lens[i] = max(max_lens[i], len(row[i]))
+
+    rows.insert(1, ['-' * l for l in max_lens])
+    for row in rows:
+        for col, l in zip(row, max_lens):
+            print(col.ljust(l + 4), end='')
+        print()
+    sys.exit(1)
 
 
 def parse_ref(args):
@@ -28,19 +57,19 @@ def parse_ref(args):
         ref_lamanno(
             args.fasta,
             args.gtf,
-            args.c,
-            args.n,
+            args.f1,
+            args.f2,
             args.i,
             args.g,
-            args.a,
-            args.r,
+            args.c1,
+            args.c2,
             overwrite=args.overwrite
         )
     else:
         ref(
             args.fasta,
             args.gtf,
-            args.c,
+            args.f1,
             args.i,
             args.g,
             overwrite=args.overwrite
@@ -52,8 +81,8 @@ def parse_count(args):
         count_lamanno(
             args.i,
             args.g,
-            args.c,
-            args.n,
+            args.c1,
+            args.c2,
             args.x,
             args.o,
             args.fastqs,
@@ -107,22 +136,22 @@ def setup_ref_args(parser, parent):
     required_ref = parser_ref.add_argument_group('required arguments')
     required_ref.add_argument(
         '-i',
+        metavar='INDEX',
         help='Path to the kallisto index to be constructed',
         type=str,
         required=True
     )
     required_ref.add_argument(
         '-g',
+        metavar='T2G',
         help='Path to transcript-to-gene mapping to be generated',
         type=str,
         required=True
     )
     required_ref.add_argument(
-        '-c',
-        help=(
-            'Path to the cDNA FASTA to be generated '
-            '(not needed when downloading)'
-        ),
+        '-f1',
+        metavar='FASTA',
+        help=('[Optional with -d] Path to the cDNA FASTA to be generated '),
         type=str,
         required='-d' not in sys.argv
     )
@@ -130,36 +159,42 @@ def setup_ref_args(parser, parent):
         'required arguments for --lamanno'
     )
     required_lamanno.add_argument(
-        '-n',
+        '-f2',
+        metavar='FASTA',
         help='Path to the intron FASTA to be generated',
         type=str,
         required='--lamanno' in sys.argv
     )
     required_lamanno.add_argument(
-        '-a',
-        help='Path to generate cDNA transcripts to be captured',
+        '-c1',
+        metavar='T2C',
+        help='Path to generate cDNA transcripts-to-capture',
         type=str,
         required='--lamanno' in sys.argv
     )
     required_lamanno.add_argument(
-        '-r',
-        help='Path to generate intron transcripts to be captured',
+        '-c2',
+        metavar='T2C',
+        help='Path to generate intron transcripts-to-capture',
         type=str,
         required='--lamanno' in sys.argv
     )
 
     parser_ref.add_argument(
         '-d',
+        metavar='DOWNLOAD',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
-            'instead of building it locally.'
+            'instead of building it locally'
         ),
         type=str,
         choices=list(REFERENCES_MAPPING.keys()),
         required=False
     )
     parser_ref.add_argument(
-        '--lamanno', help='Prepare files for RNA lamanno', action='store_true'
+        '--lamanno',
+        help='Prepare files for RNA velocity based on Lamanno',
+        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
@@ -170,13 +205,13 @@ def setup_ref_args(parser, parent):
         'fasta',
         help='Genomic FASTA file',
         type=str,
-        nargs=1 if '-d' not in sys.argv else '?'
+        nargs=None if '-d' not in sys.argv else '?'
     )
     parser_ref.add_argument(
         'gtf',
         help='Reference GTF file',
         type=str,
-        nargs=1 if '-d' not in sys.argv else '?'
+        nargs=None if '-d' not in sys.argv else '?'
     )
     return parser_ref
 
@@ -191,54 +226,80 @@ def setup_count_args(parser, parent):
     )
     required_count = parser_count.add_argument_group('required arguments')
     required_count.add_argument(
-        '-i', help='Path to kallisto index', type=str, required=True
+        '-i',
+        metavar='INDEX',
+        help='Path to kallisto index',
+        type=str,
+        required=True
     )
     required_count.add_argument(
         '-g',
+        metavar='T2G',
         help='Path to transcript-to-gene mapping',
         type=str,
         required=True
     )
     required_count.add_argument(
-        '-x', help='Single-cell technology used', type=str, required=True
+        '-x',
+        metavar='TECHNOLOGY',
+        help='Single-cell technology used ("kb --list" to view)',
+        type=str,
+        required=True
     )
     required_count.add_argument(
-        '-o', help='Path to output directory', type=str, required=True
+        '-o',
+        metavar='OUT',
+        help='Path to output directory',
+        type=str,
+        required=True
     )
     parser_count.add_argument(
         '-w',
+        metavar='WHITELIST',
         help=(
             'Path to file of whitelisted barcodes to correct to. '
             'If not provided and bustools supports the technology, '
             'a pre-packaged whitelist is used. If not, the bustools '
-            'whitelist command is used.'
+            'whitelist command is used. ("kb --list" to view whitelists)'
         ),
         type=str
     )
     parser_count.add_argument(
-        '-t', help='Number of threads to use (default: 8)', type=int, default=8
+        '-t',
+        metavar='THREADS',
+        help='Number of threads to use (default: 8)',
+        type=int,
+        default=8
     )
     parser_count.add_argument(
-        '-m', help='Maximum memory used (default: 4G)', type=str, default='4G'
+        '-m',
+        metavar='MEMORY',
+        help='Maximum memory used (default: 4G)',
+        type=str,
+        default='4G'
     )
     required_lamanno = parser_count.add_argument_group(
         'required arguments for --lamanno'
     )
     required_lamanno.add_argument(
-        '-c',
-        help='Path to cDNA transcripts to be captured',
+        '-c1',
+        metavar='T2C',
+        help='Path to cDNA transcripts-to-capture',
         type=str,
         required='--lamanno' in sys.argv
     )
     required_lamanno.add_argument(
-        '-n',
-        help='Path to intron transcripts to be captured',
+        '-c2',
+        metavar='T2C',
+        help='Path to intron transcripts-to-captured',
         type=str,
         required='--lamanno' in sys.argv
     )
 
     parser_count.add_argument(
-        '--lamanno', help='Calculate RNA lamanno', action='store_true'
+        '--lamanno',
+        help='Calculate RNA velocity based on Lamanno',
+        action='store_true'
     )
     parser_count.add_argument(
         '--overwrite',
@@ -265,9 +326,14 @@ def main():
     parser = argparse.ArgumentParser(
         description='kb_python {}'.format(__version__)
     )
+    parser.add_argument(
+        '--list',
+        help='Display list of supported single-cell technologies',
+        action='store_true'
+    )
     subparsers = parser.add_subparsers(
         dest='command',
-        title='Where <CMD> can be one of',
+        metavar='<CMD>',
         required=True,
     )
 
@@ -291,15 +357,17 @@ def main():
         'ref': parser_ref,
         'count': parser_count,
     }
+    if 'info' in sys.argv:
+        display_info()
+    elif '--list' in sys.argv:
+        display_technologies()
 
     # Show help when no arguments are given
     if len(sys.argv) == 1:
         parser.print_help(sys.stderr)
         sys.exit(1)
     if len(sys.argv) == 2:
-        if sys.argv[1] == 'info':
-            display_info()
-        elif sys.argv[1] in command_to_parser:
+        if sys.argv[1] in command_to_parser:
             command_to_parser[sys.argv[1]].print_help(sys.stderr)
         else:
             parser.print_help(sys.stderr)

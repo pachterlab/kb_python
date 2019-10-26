@@ -46,7 +46,7 @@ def run_executable(
     """
     command = [str(c) for c in command]
     if not quiet:
-        logger.info(' '.join(command))
+        logger.debug(' '.join(command))
     p = sp.Popen(
         command,
         stdin=stdin,
@@ -197,17 +197,27 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     )
 
 
-def overlay_anndatas(*adatas):
-    pass
+def overlay_anndatas(adata_spliced, adata_unspliced):
+    """'Overlays' anndata objects by taking the intersection of the obs and var
+    of each anndata.
+    """
+    adata_spliced_obs = adata_spliced[adata_spliced.obs.index.isin(
+        adata_unspliced.obs.index
+    )]
+    adata_unspliced_obs = adata_unspliced[adata_unspliced.obs.index.isin(
+        adata_spliced.obs.index
+    )]
+    adata_spliced_obs_var = adata_spliced_obs[:,
+                                              adata_spliced_obs.var.index.isin(
+                                                  adata_unspliced_obs.var.index
+                                              )]
+    adata_unspliced_obs_var = adata_unspliced_obs[:,
+                                                  adata_unspliced_obs.var.index.
+                                                  isin(
+                                                      adata_spliced_obs.var.
+                                                      index
+                                                  )]
 
-
-def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):
-    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-    adata.write_loom(out_path)
-    return out_path
-
-
-def convert_matrix_to_h5ad(matrix_path, barcodes_path, genes_path, out_path):
-    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-    adata.write(out_path)
-    return out_path
+    adata_spliced_obs_var.layers['spliced'] = adata_spliced_obs_var.X
+    adata_spliced_obs_var.layers['unspliced'] = adata_unspliced_obs_var.X
+    return adata_spliced_obs_var
