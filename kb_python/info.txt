@@ -2,7 +2,7 @@ kb is a python package for rapidly pre-processing single-cell RNA-seq data. It i
 
 Melsted, Booeshaghi et al., Modular and efficient pre-processing of single-cell RNA-seq, bioRxiv, 2019
 
-The goal of the wrapper is to simplify downloading and running of the  kallisto [1] and bustools [2] programs. It was inspired by Sten Linnarsson’s loompy fromfq command (http://linnarssonlab.org/loompy/kallisto/index.html)
+The goal of the wrapper is to simplify downloading and running of the kallisto [1] and bustools [2] programs. It was inspired by Sten Linnarsson’s loompy fromfq command (http://linnarssonlab.org/loompy/kallisto/index.html)
 
 The kb program consists of two parts:
 
