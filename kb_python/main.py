@@ -3,9 +3,11 @@ import logging
 import os
 import shutil
 import sys
+import textwrap
 
 from . import __version__
-from .config import REFERENCES_MAPPING, TECHNOLOGIES, TEMP_DIR
+from .config import PACKAGE_PATH, REFERENCES_MAPPING, TECHNOLOGIES, TEMP_DIR
+from .constants import INFO_FILENAME
 from .count import count, count_lamanno
 from .ref import download_reference, ref, ref_lamanno
 from .utils import get_bustools_version, get_kallisto_version
@@ -18,7 +20,16 @@ def display_info():
     kallisto: {}
     bustools: {}
     '''.format(__version__, kallisto_version, bustools_version)
-    print(info)
+    with open(os.path.join(PACKAGE_PATH, INFO_FILENAME), 'r') as f:
+        print(
+            '{}\n{}'.format(
+                info, '\n'.join([
+                    line.strip()
+                    if line.startswith('(') else textwrap.fill(line, width=80)
+                    for line in f.readlines()
+                ])
+            )
+        )
     sys.exit(1)
 
 
@@ -135,6 +146,8 @@ def setup_ref_args(parser, parent):
         help='Build a kallisto index and transcript-to-gene mapping',
         parents=[parent],
     )
+    parser_ref._actions[0].help = parser_ref._actions[0].help.capitalize()
+
     required_ref = parser_ref.add_argument_group('required arguments')
     required_ref.add_argument(
         '-i',
@@ -194,7 +207,10 @@ def setup_ref_args(parser, parent):
     )
     parser_ref.add_argument(
         '--lamanno',
-        help='Prepare files for RNA velocity based on Lamanno',
+        help=(
+            'Prepare files for RNA velocity based on '
+            'La Manno et al. 2018 logic'
+        ),
         action='store_true'
     )
     parser_ref.add_argument(
@@ -225,6 +241,8 @@ def setup_count_args(parser, parent):
         help='Generate count matrices from a set of single-cell FASTQ files',
         parents=[parent],
     )
+    parser_count._actions[0].help = parser_count._actions[0].help.capitalize()
+
     required_count = parser_count.add_argument_group('required arguments')
     required_count.add_argument(
         '-i',
@@ -299,7 +317,7 @@ def setup_count_args(parser, parent):
 
     parser_count.add_argument(
         '--lamanno',
-        help='Calculate RNA velocity based on Lamanno',
+        help='Calculate RNA velocity based on La Manno et al. 2018 logic',
         action='store_true'
     )
     parser_count.add_argument(
@@ -327,6 +345,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='kb_python {}'.format(__version__)
     )
+    parser._actions[0].help = parser._actions[0].help.capitalize()
     parser.add_argument(
         '--list',
         help='Display list of supported single-cell technologies',

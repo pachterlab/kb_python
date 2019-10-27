@@ -1,3 +1,5 @@
+INFO_FILENAME = 'info.txt'
+
 # Default filenames
 CDNA_FILENAME = 'cdna.fa'
 INTRON_FILENAME = 'introns.fa'

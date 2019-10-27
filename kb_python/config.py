@@ -45,19 +45,19 @@ Reference = namedtuple(
 REFERENCES = [
     Reference(
         'human',
-        'https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/homo_sapiens.tar.gz',
+        'https://caltech.box.com/shared/static/v1nm7lpnqz5syh8dyzdk2zs8bglncfib.gz',
         None, None
     ),
     Reference(
         'mouse',
-        'https://github.com/pachterlab/kallisto-transcriptome-indices/releases/download/ensembl-96/mus_musculus.tar.gz',
+        'https://caltech.box.com/shared/static/vcaz6cujop0xuapdmz0pplp3aoqc41si.gz',
         None, None
     )
 ]
 REFERENCES_MAPPING = {r.name: r for r in REFERENCES}
 # File names that are in the tar.gz file.
 INDEX_FILENAME = 'transcriptome.idx'
-T2G_FILENAME = 'transcript_to_genes.txt'
+T2G_FILENAME = 'transcripts_to_genes.txt'
 
 
 class UnsupportedOSException(Exception):
