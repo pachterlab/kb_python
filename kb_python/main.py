@@ -354,7 +354,6 @@ def main():
     subparsers = parser.add_subparsers(
         dest='command',
         metavar='<CMD>',
-        required=True,
     )
 
     # Add common options to this parent parser
