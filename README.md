@@ -1,6 +1,10 @@
 # kb_python
-![](https://img.shields.io/badge/Version-0.2.0-informational)
-![](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
+![github version](https://img.shields.io/badge/Version-0.2.0-informational)
+![pypi version](https://img.shields.io/pypi/v/kb-python)
+![python versions](https://img.shields.io/pypi/pyversions/kb_python)
+![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
+![pypi downloads](https://img.shields.io/pypi/dm/kb-python)
+![license](https://img.shields.io/pypi/l/kb-python)
 
 A friendly wrapper around the kallisto | bustools pipeline for scRNA-seq analysis.
 
