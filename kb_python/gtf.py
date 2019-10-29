@@ -1,6 +1,8 @@
 import logging
 import re
 
+from .utils import open_as_text
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ class GTF:
         :return: a generator that yields a dict of the GTF entry
         :rtype: generator
         """
-        with open(self.gtf_path, 'r') as f:
+        with open_as_text(self.gtf_path, 'r') as f:
             for line in f:
                 if line.startswith('#') or line.isspace():
                     continue
@@ -71,7 +73,7 @@ class GTF:
         :type out_path: str
         """
         to_sort = []
-        with open(self.gtf_path, 'r') as f:
+        with open_as_text(self.gtf_path, 'r') as f:
             position = 0
             line = f.readline()
             while line:
@@ -89,7 +91,8 @@ class GTF:
         to_sort.sort()
 
         logger.debug('Writing sorted GTF {}'.format(out_path))
-        with open(self.gtf_path, 'r') as gtf, open(out_path, 'w') as f:
+        with open_as_text(self.gtf_path, 'r') as gtf, open_as_text(out_path,
+                                                                   'w') as f:
             for tup in to_sort:
                 position = tup[2]
                 gtf.seek(position)

@@ -1,5 +1,7 @@
 import logging
+
 from .gtf import GTF
+from .utils import open_as_text
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class FASTA:
         :return: a generator that yields a tuple of the FASTA entry
         :rtype: generator
         """
-        with open(self.fasta_path, 'r') as f:
+        with open_as_text(self.fasta_path, 'r') as f:
             sequence_id = None
             sequence = ''
             for line in f:
@@ -97,7 +99,7 @@ class FASTA:
         :type out_path: str
         """
         to_sort = []
-        with open(self.fasta_path, 'r') as f:
+        with open_as_text(self.fasta_path, 'r') as f:
             position = 0
             line = f.readline()
 
@@ -114,7 +116,8 @@ class FASTA:
         to_sort.sort()
 
         logger.debug('Writing sorted FASTA {}'.format(out_path))
-        with open(self.fasta_path, 'r') as fasta, open(out_path, 'w') as f:
+        with open_as_text(self.fasta_path,
+                          'r') as fasta, open_as_text(out_path, 'w') as f:
             for tup in to_sort:
                 start_position = tup[1]
                 end_position = tup[2]
@@ -148,7 +151,7 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     gtf = GTF(gtf_path)
     gtf_entries = gtf.entries()
 
-    with open(out_path, 'w') as f:
+    with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
         for sequence_id, sequence in fasta.entries():
             logger.debug(
@@ -257,7 +260,7 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     gtf = GTF(gtf_path)
     gtf_entries = gtf.entries()
 
-    with open(out_path, 'w') as f:
+    with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
         for sequence_id, sequence in fasta.entries():
             logger.debug(

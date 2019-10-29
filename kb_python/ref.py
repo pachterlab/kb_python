@@ -22,6 +22,7 @@ from .fasta import (
 from .gtf import GTF
 from .utils import (
     concatenate_files,
+    open_as_text,
     run_executable,
 )
 
@@ -77,7 +78,7 @@ def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
     """
     logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     gtf = GTF(gtf_path)
-    with open(t2g_path, 'w') as f:
+    with open_as_text(t2g_path, 'w') as f:
         for entry in gtf.entries():
             if entry['feature'] == 'transcript':
                 transcript_id = entry['group']['transcript_id']
@@ -117,7 +118,7 @@ def create_t2c(fasta_path, t2c_path):
     :rtype: dict
     """
     fasta = FASTA(fasta_path)
-    with open(t2c_path, 'w') as f:
+    with open_as_text(t2c_path, 'w') as f:
         for sequence_id, _ in fasta.entries():
             f.write('{}\n'.format(sequence_id))
     return {'t2c': t2c_path}

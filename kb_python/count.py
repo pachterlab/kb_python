@@ -50,7 +50,9 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    logger.info('Generating BUS file from {}'.format(' '.join(fastqs)))
+    logger.info('Generating BUS file from')
+    for fastq in fastqs:
+        logger.info((' ' * 8) + fastq)
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]

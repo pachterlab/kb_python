@@ -3,7 +3,6 @@ import logging
 import os
 import re
 import subprocess as sp
-import tarfile
 import threading
 import time
 from urllib.request import urlretrieve
@@ -34,6 +33,21 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+
+def open_as_text(path, mode):
+    """Open a textfile or gzip file in text mode.
+
+    :param path: path to textfile or gzip
+    :type path: str
+    :param mode: mode to open the file, either `w` for write or `r` for read
+    :type mode: str
+
+    :return: file object
+    :rtype: file object
+    """
+    return gzip.open(path, mode +
+                     't') if path.endswith('.gz') else open(path, mode)
 
 
 def run_executable(
@@ -245,9 +259,13 @@ def copy_whitelist(technology, out_dir):
     archive_path = os.path.join(
         PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
     )
-    with tarfile.open(archive_path, 'r:gz') as f:
-        f.extract(technology.whitelist_filename, path=out_dir)
-    return os.path.join(out_dir, technology.whitelist_filename)
+    whitelist_path = os.path.join(
+        out_dir,
+        os.path.splitext(technology.whitelist_archive)[0]
+    )
+    with open_as_text(archive_path, 'r') as f, open(whitelist_path, 'w') as out:
+        out.write(f.read())
+    return whitelist_path
 
 
 def concatenate_files(*paths, out_path, temp_dir='tmp'):
@@ -267,8 +285,7 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
     """
     with open(out_path, 'w') as out:
         for path in paths:
-            with gzip.open(path, 'rt') if path.endswith('.gz') else open(
-                    path, 'r') as f:
+            with open_as_text(path, 'r') as f:
                 for line in f:
                     if not line.isspace():
                         out.write(line.strip() + '\n')
