@@ -1,16 +1,4 @@
-.PHONY : install test check build clean upload-test
-
-KALLISTO_VERSION=v0.46.0
-BUSTOOLS_VERSION=v0.39.3
-
-install:
-	wget https://github.com/pachterlab/kallisto/releases/download/v0.46.0/kallisto_linux-$(KALLISTO_VERSION).tar.gz -O kallisto.tar.gz
-	tar -xvzf kallisto.tar.gz
-	sudo cp kallisto/kallisto /usr/local/bin
-
-	wget https://github.com/BUStools/bustools/releases/download/v0.39.3/bustools_linux-$(BUSTOOLS_VERSION).tar.gz -O bustools.tar.gz
-	tar -xvzf bustools.tar.gz
-	sudo cp bustools/bustools /usr/local/bin
+.PHONY : install test check build clean push_release
 
 test:
 	nosetests --verbose --with-coverage --cover-package kb_python
@@ -36,5 +24,5 @@ bump_minor:
 bump_major:
 	bumpversion major
 
-upload-test:
-	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+push_release:
+	git push && git push --tags
