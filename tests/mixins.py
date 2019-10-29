@@ -9,6 +9,7 @@ class TestMixin(TestCase):
         cls.technology = '10xv2'
         cls.base_dir = os.path.dirname(os.path.abspath(__file__))
         cls.fixtures_dir = os.path.join(cls.base_dir, 'fixtures')
+        cls.test_gz_path = os.path.join(cls.fixtures_dir, 'test.gz')
         cls.small_gtf_path = os.path.join(cls.fixtures_dir, 'small.gtf')
         cls.gtf_path = os.path.join(cls.fixtures_dir, 'mouse_truncated.gtf')
         cls.fasta_path = os.path.join(cls.fixtures_dir, 'mouse_truncated.fasta')

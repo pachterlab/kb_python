@@ -41,15 +41,19 @@ def display_technologies():
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
     headers = [
-        'name', 'description', 'whitelist provided', 'fastq order for "count"'
+        'name', 'whitelist provided', 'barcode (file #, start, stop)',
+        'umi (file #, start, stop)', 'read file #'
     ]
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
     for t in TECHNOLOGIES:
         row = [
-            t.name, t.description, 'yes' if t.whitelist_archive else '',
-            'seq, umi' if t.seq_pos == 0 else 'umi, seq'
+            t.name,
+            'yes' if t.whitelist_archive else '',
+            ' '.join(str(tup) for tup in t.barcode_positions),
+            ' '.join(str(tup) for tup in t.umi_positions),
+            str(t.reads_file),
         ]
         rows.append(row)
 
@@ -284,7 +288,8 @@ def setup_count_args(parser, parent):
     # count
     parser_count = parser.add_parser(
         'count',
-        description='Generate count matrices from a set of single-cell FASTQ files',  # noqa
+        description=('Generate count matrices from a set of single-cell FASTQ files. '
+                     'Run `kb --list` to view single-cell technology information.'),  # noqa
         help='Generate count matrices from a set of single-cell FASTQ files',
         parents=[parent],
     )
@@ -308,7 +313,7 @@ def setup_count_args(parser, parent):
     required_count.add_argument(
         '-x',
         metavar='TECHNOLOGY',
-        help='Single-cell technology used ("kb --list" to view)',
+        help='Single-cell technology used (`kb --list` to view)',
         type=str,
         required=True
     )
@@ -326,7 +331,7 @@ def setup_count_args(parser, parent):
             'Path to file of whitelisted barcodes to correct to. '
             'If not provided and bustools supports the technology, '
             'a pre-packaged whitelist is used. If not, the bustools '
-            'whitelist command is used. ("kb --list" to view whitelists)'
+            'whitelist command is used. (`kb --list` to view whitelists)'
         ),
         type=str
     )
@@ -468,4 +473,5 @@ def main():
     finally:
         # Always clean temp dir
         if not args.keep_tmp:
+            logger.debug('Removing tmp directory')
             shutil.rmtree(TEMP_DIR, ignore_errors=True)
