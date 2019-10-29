@@ -7,6 +7,7 @@ from unittest import mock, TestCase
 from unittest.mock import call
 
 import kb_python.utils as utils
+from kb_python.config import UnsupportedOSException
 from tests.mixins import TestMixin
 
 
@@ -75,6 +76,33 @@ class TestUtils(TestMixin, TestCase):
     def test_whitelist_provided(self):
         self.assertTrue(utils.whitelist_provided('10xv2'))
         self.assertFalse(utils.whitelist_provided('UNSUPPORTED'))
+
+    def test_stream_file(self):
+        with mock.patch('kb_python.utils.PLATFORM', 'linux'),\
+            mock.patch('kb_python.utils.os') as os,\
+            mock.patch('kb_python.utils.threading') as threading,\
+            mock.patch('kb_python.utils.urlretrieve') as urlretrieve:
+            url = mock.MagicMock()
+            path = mock.MagicMock()
+            utils.stream_file(url, path)
+            os.mkfifo.assert_called_once_with(path)
+            threading.Thread.assert_called_once_with(
+                target=urlretrieve, args=(url, path), daemon=True
+            )
+            threading.Thread().start.assert_called_once_with()
+
+    def test_stream_file_windows(self):
+        with mock.patch('kb_python.utils.PLATFORM', 'windows'),\
+            mock.patch('kb_python.utils.os') as os,\
+            mock.patch('kb_python.utils.threading') as threading,\
+            mock.patch('kb_python.utils.urlretrieve') as urlretrieve:
+            url = mock.MagicMock()
+            path = mock.MagicMock()
+            with self.assertRaises(UnsupportedOSException):
+                utils.stream_file(url, path)
+            os.mkfifo.assert_not_called()
+            threading.thread.assert_not_called()
+            urlretrieve.assert_not_called()
 
     def test_import_matrix_as_anndata(self):
         utils.import_matrix_as_anndata(

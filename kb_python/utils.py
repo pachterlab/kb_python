@@ -4,7 +4,9 @@ import os
 import re
 import subprocess as sp
 import tarfile
+import threading
 import time
+from urllib.request import urlretrieve
 
 import anndata
 import pandas as pd
@@ -14,8 +16,10 @@ from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
     PACKAGE_PATH,
+    PLATFORM,
     TECHNOLOGIES_MAPPING,
     WHITELIST_DIR,
+    UnsupportedOSException,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,7 +46,32 @@ def run_executable(
         quiet=False,
         returncode=0
 ):
-    """Run a single shell command and wait for it to terminate.
+    """Execute a single shell command.
+
+    :param command: a list representing a single shell command
+    :type command: list
+    :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
+                  defaults to `None`
+    :type stdin: stream, optional
+    :param stdout: object to pass into the `stdout` argument for `subprocess.Popen`,
+                  defaults to `subprocess.PIPE`
+    :type stdout: stream, optional
+    :param stderr: object to pass into the `stderr` argument for `subprocess.Popen`,
+                  defaults to `subprocess.PIPE`
+    :type stderr: stream, optional
+    :param wait: whether to wait until the command has finished, defaults to `True`
+    :type wait: bool, optional
+    :param stream: whether to stream the output to the command line, defaults to `True`
+    :type stream: bool, optional
+    :param quiet: whether to not display anything to the command line and not check the return code,
+                  defaults to `False`
+    :type quiet: bool, optional
+    :param returncode: the return code expected if the command runs as intended,
+                       defaults to `0`
+    :type returncode: int, optional
+
+    :return: the spawned process
+    :rtype: subprocess.Process
     """
     command = [str(c) for c in command]
     if not quiet:
@@ -52,7 +81,8 @@ def run_executable(
         stdin=stdin,
         stdout=stdout,
         stderr=stderr,
-        universal_newlines=wait
+        universal_newlines=wait,
+        bufsize=1 if wait else -1,
     )
 
     # Wait if desired.
@@ -73,7 +103,23 @@ def run_executable(
 
 
 def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
-    """Chain multiple commands by piping outputs to inputs.
+    """Execute multiple shell commands by piping the output into inputs.
+
+    :param *commands: lists of shell commands
+    :type *commands: list
+    :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
+                  defaults to `None`
+    :type stdin: stream, optional
+    :param stdout: object to pass into the `stdout` argument for `subprocess.Popen`,
+                  defaults to `subprocess.PIPE`
+    :type stdout: stream, optional
+    :param wait: whether to wait until the command has finished, defaults to `True`
+    :type wait: bool, optional
+    :param stream: whether to stream the output to the command line, defaults to `True`
+    :type stream: bool, optional
+
+    :return: list of spawned subprocesses
+    :rtype: list
     """
     assert len(commands) > 1
     processes = []
@@ -106,18 +152,42 @@ def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
 
 
 def get_kallisto_version():
+    """Get the provided Kallisto version.
+
+    This function parses the help text by executing the included Kallisto binary.
+
+    :return: tuple of major, minor, patch versions
+    :rtype: tuple
+    """
     p = run_executable([get_kallisto_binary_path()], quiet=True, returncode=1)
     match = VERSION_PARSER.match(p.stdout.read())
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
 def get_bustools_version():
+    """Get the provided Bustools version.
+
+    This function parses the help text by executing the included Bustools binary.
+
+    :return: tuple of major, minor, patch versions
+    :rtype: tuple
+    """
     p = run_executable([get_bustools_binary_path()], quiet=True, returncode=1)
     match = VERSION_PARSER.match(p.stdout.read())
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
 def parse_technologies(lines):
+    """Parse a list of strings into a list of supported technologies.
+
+    This function parses the technologies printed by running `kallisto bus --list`.
+
+    :param lines: the output of `kallisto bus --list` split into lines
+    :type lines: list
+
+    :return: list of technologies
+    :rtype: list
+    """
     parsing = False
     technologies = set()
     for line in lines:
@@ -136,6 +206,9 @@ def parse_technologies(lines):
 
 def get_supported_technologies():
     """Runs 'kallisto bus --list' to fetch a list of supported technologies.
+
+    :return: list of technologies
+    :rtype: list
     """
     p = run_executable([get_kallisto_binary_path(), 'bus', '--list'],
                        quiet=True,
@@ -144,20 +217,30 @@ def get_supported_technologies():
 
 
 def whitelist_provided(technology):
+    """Determine whether or not the whitelist for a technology is provided.
+
+    :param technology: the name of the technology
+    :type technology: str
+
+    :return: whether the whitelist is provided
+    :rtype: bool
+    """
     upper = technology.upper()
     return upper in TECHNOLOGIES_MAPPING and TECHNOLOGIES_MAPPING[
         upper].whitelist_archive
 
 
 def copy_whitelist(technology, out_dir):
-    """Copies provided whitelist barcodes for specified technology.
-    """
-    if not TECHNOLOGIES_MAPPING[technology.upper()]:
-        raise NotImplementedException(
-            'whitelist for {} is not yet provided by kb_python'.
-            format(technology)
-        )
+    """Copies provided whitelist for specified technology.
 
+    :param technology: the name of the technology
+    :type technology: str
+    :param out_dir: directory to put the whitelist
+    :type out_dir: str
+
+    :return: path to whitelist
+    :rtype: str
+    """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
     archive_path = os.path.join(
         PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
@@ -171,6 +254,16 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
     """Concatenates an arbitrary number of files into one TEXT file.
 
     Only supports text and gzip files.
+
+    :param *paths: an arbitrary number of paths to files
+    :type *paths: str
+    :param out_path: path to place concatenated file
+    :type out_path: str
+    :param temp_dir: temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+
+    :return: path to concatenated file
+    :rtype: str
     """
     with open(out_path, 'w') as out:
         for path in paths:
@@ -183,7 +276,49 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
     return out_path
 
 
+def stream_file(url, path):
+    """Creates a FIFO file to use for piping remote files into processes.
+
+    This function spawns a new thread to download the remote file into a FIFO
+    file object. FIFO file objects are only supported on unix systems.
+
+    :param url: url to the file
+    :type url: str
+    :param path: path to place FIFO file
+    :type path: str
+
+    :raises UnsupportedOSException: if the OS is Windows
+
+    :return: path to FIFO file
+    :rtype: str
+    """
+    # Windows does not support FIFO files.
+    if PLATFORM == 'windows':
+        raise UnsupportedOSException((
+            'Windows does not support piping remote files.'
+            'Please download the file manually.'
+        ))
+    else:
+        logger.info('Piping {} to {}'.format(url, path))
+        os.mkfifo(path)
+        t = threading.Thread(target=urlretrieve, args=(url, path), daemon=True)
+        t.start()
+    return path
+
+
 def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
+    """Import a matrix as an Anndata object.
+
+    :param matrix_path: path to the matrix ec file
+    :type matrix_path: str
+    :param barcodes_path: path to the barcodes txt file
+    :type barcodes_path: str
+    :param genes_path: path to the genes txt file
+    :type genes_path: str
+
+    :return: a new Anndata object
+    :rtype: anndata.Anndata
+    """
     df_barcodes = pd.read_csv(
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
@@ -200,6 +335,14 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
 def overlay_anndatas(adata_spliced, adata_unspliced):
     """'Overlays' anndata objects by taking the intersection of the obs and var
     of each anndata.
+
+    :param adata_spliced: an Anndata object
+    :type adata_spliced: anndata.Anndata
+    :param adata_unspliced: an Anndata object
+    :type adata_unspliced: anndata.Anndata
+
+    :return: a new Anndata object
+    :rtype: anndata.Anndata
     """
     adata_spliced_obs = adata_spliced[adata_spliced.obs.index.isin(
         adata_unspliced.obs.index
