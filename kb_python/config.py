@@ -40,7 +40,7 @@ TECHNOLOGIES = [
     ),
     Technology('DROPSEQ', 'DropSeq', 2, 1, [(0, 12, 20)], [(0, 0, 12)], None),
     Technology(
-        'INDROPSV3',
+        'INDROPS',
         'inDrops version 3',
         2,
         1,
