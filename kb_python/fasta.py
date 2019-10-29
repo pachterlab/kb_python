@@ -5,6 +5,11 @@ logger = logging.getLogger(__name__)
 
 
 class FASTA:
+    """Utility class to easily read and manipulate FASTA files.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+    """
     BASEPAIRS = {
         'a': 'T',
         'A': 'T',
@@ -23,19 +28,52 @@ class FASTA:
 
     @staticmethod
     def make_header(seq_id, attributes):
+        """Create a correctly-formatted FASTA header with the given sequence ID
+        and attributes.
+
+        :param seq_id: sequence ID
+        :type seq_id: str
+        :param attributes: list of key-value pairs corresponding to attributes
+                           of this sequence
+        :type attributes: list
+
+        :return: FASTA header
+        :rtype: str
+        """
         return '>{} {}'.format(
             seq_id, ' '.join('{}:{}'.format(k, v) for k, v in attributes)
         )
 
     @staticmethod
     def parse_header(line):
+        """Get the sequence ID from a FASTA header.
+
+        :param line: FASTA header line
+        :type line: str
+
+        :return: sequence ID
+        :rtype: str
+        """
         return line.strip().split(' ', 1)[0][1:]
 
     @staticmethod
     def reverse_complement(sequence):
+        """Get the reverse complement of the given DNA sequence.
+
+        :param sequence: DNA sequence
+        :type sequence: str
+
+        :return: reverse complement
+        :rtype: str
+        """
         return ''.join(FASTA.BASEPAIRS[b] for b in reversed(sequence))
 
     def entries(self):
+        """Generator that yields one FASTA entry (sequence ID + sequence) at a time.
+
+        :return: a generator that yields a tuple of the FASTA entry
+        :rtype: generator
+        """
         with open(self.fasta_path, 'r') as f:
             sequence_id = None
             sequence = ''
@@ -53,6 +91,11 @@ class FASTA:
                 yield sequence_id, sequence
 
     def sort(self, out_path):
+        """Sort the FASTA file by sequence ID.
+
+        :param out_path: path to generate the sorted FASTA
+        :type out_path: str
+        """
         to_sort = []
         with open(self.fasta_path, 'r') as f:
             position = 0
@@ -90,6 +133,16 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     This function assumes the order in which the chromosomes appear in the
     genome FASTA is identical to the order in which they appear in the GTF.
     Additionally, the GTF must be sorted by start position.
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param out_path: path to cDNA FASTA to generate
+    :type out_path: str
+
+    :return: path to generated cDNA FASTA
+    :rtype: str
     """
     fasta = FASTA(fasta_path)
     gtf = GTF(gtf_path)
@@ -185,11 +238,20 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     This function assumes the order in which the chromosomes appear in the
     genome FASTA is identical to the order in which they appear in the GTF.
     Additionally, the GTF must be sorted by start position.
-
     The intron for a specific transcript is the collection of the following:
     1. transcript - exons
     2. 5' UTR
     3. 3' UTR
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param out_path: path to intron FASTA to generate
+    :type out_path: str
+
+    :return: path to generated intron FASTA
+    :rtype: str
     """
     fasta = FASTA(fasta_path)
     gtf = GTF(gtf_path)
@@ -315,10 +377,19 @@ def generate_spliced_fasta(fasta_path, gtf_path, out_path):
     This function assumes the order in which the chromosomes appear in the
     genome FASTA is identical to the order in which they appear in the GTF.
     Additionally, the GTF must be sorted by start position.
-
     The spliced FASTA contains entries of length 2 * (k - 1) for k = 31,
     centered around exon-exon splice junctions (any overlapping regions are
     collapsed).
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param out_path: path to spliced FASTA to generate
+    :type out_path: str
+
+    :return: path to generated spliced FASTA
+    :rtype: str
     """
     pass
 
@@ -329,9 +400,18 @@ def generate_unspliced_fasta(fasta_path, gtf_path, out_path):
     This function assumes the order in which the chromosomes appear in the
     genome FASTA is identical to the order in which they appear in the GTF.
     Additionally, the GTF must be sorted by start position.
-
     The spliced FASTA contains entries of length 2 * (k - 1) for k = 31,
     centered around exon-intron splice junctions + full introns
     (any overlapping regions are collapsed).
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param out_path: path to unspliced FASTA to generate
+    :type out_path: str
+
+    :return: path to generated unspliced FASTA
+    :rtype: str
     """
     pass

@@ -14,6 +14,9 @@ from .utils import get_bustools_version, get_kallisto_version
 
 
 def display_info():
+    """Displays kb, kallisto and bustools version + citation information, along
+    with a brief description and examples.
+    """
     kallisto_version = '.'.join(str(i) for i in get_kallisto_version())
     bustools_version = '.'.join(str(i) for i in get_bustools_version())
     info = '''kb_python {}
@@ -34,6 +37,9 @@ def display_info():
 
 
 def display_technologies():
+    """Displays a list of supported technologies along with whether kb provides
+    a whitelist for that technology and the FASTQ argument order for kb count.
+    """
     headers = [
         'name', 'description', 'whitelist provided', 'fastq order for "count"'
     ]
@@ -62,6 +68,11 @@ def display_technologies():
 
 
 def parse_ref(args):
+    """Parser for the `ref` command.
+
+    :param args: Command-line arguments dictionary, as parsed by argparse
+    :type args: dict
+    """
     if args.d is not None:
         if args.lamanno:
             raise Exception('--lamanno indices can not be downloaded')
@@ -90,6 +101,11 @@ def parse_ref(args):
 
 
 def parse_count(args):
+    """Parser for the `count` command.
+
+    :param args: Command-line arguments dictionary, as parsed by argparse
+    :type args: dict
+    """
     if args.lamanno:
         count_lamanno(
             args.i,
@@ -114,6 +130,7 @@ def parse_count(args):
             args.o,
             args.fastqs,
             args.w,
+            filter=args.filter,
             threads=args.t,
             memory=args.m,
             overwrite=args.overwrite,
@@ -129,6 +146,16 @@ COMMAND_TO_FUNCTION = {
 
 
 def setup_info_args(parser, parent):
+    """Helper function to set up a subparser for the `info` command.
+
+    :param parser: argparse parser to add the `info` command to
+    :type args: argparse.ArgumentParser
+    :param parent: argparse parser parent of the newly added subcommand.
+                   used to inherit shared commands/flags
+    :type args: argparse.ArgumentParser
+    :return: the newly added parser
+    :rtype: argparse.ArgumentParser
+    """
     parser_info = parser.add_parser(
         'info',
         description='Display package and citation information',
@@ -140,6 +167,16 @@ def setup_info_args(parser, parent):
 
 
 def setup_ref_args(parser, parent):
+    """Helper function to set up a subparser for the `ref` command.
+
+    :param parser: argparse parser to add the `ref` command to
+    :type args: argparse.ArgumentParser
+    :param parent: argparse parser parent of the newly added subcommand.
+                   used to inherit shared commands/flags
+    :type args: argparse.ArgumentParser
+    :return: the newly added parser
+    :rtype: argparse.ArgumentParser
+    """
     parser_ref = parser.add_parser(
         'ref',
         description='Build a kallisto index and transcript-to-gene mapping',
@@ -234,6 +271,16 @@ def setup_ref_args(parser, parent):
 
 
 def setup_count_args(parser, parent):
+    """Helper function to set up a subparser for the `count` command.
+
+    :param parser: argparse parser to add the `count` command to
+    :type args: argparse.ArgumentParser
+    :param parent: argparse parser parent of the newly added subcommand.
+                   used to inherit shared commands/flags
+    :type args: argparse.ArgumentParser
+    :return: the newly added parser
+    :rtype: argparse.ArgumentParser
+    """
     # count
     parser_count = parser.add_parser(
         'count',
@@ -314,16 +361,25 @@ def setup_count_args(parser, parent):
         type=str,
         required='--lamanno' in sys.argv
     )
-
-    parser_count.add_argument(
-        '--lamanno',
-        help='Calculate RNA velocity based on La Manno et al. 2018 logic',
-        action='store_true'
-    )
     parser_count.add_argument(
         '--overwrite',
         help='Overwrite existing output.bus file',
         action='store_true'
+    )
+
+    lamanno_filter_group = parser_count.add_mutually_exclusive_group()
+    lamanno_filter_group.add_argument(
+        '--lamanno',
+        help='Calculate RNA velocity based on La Manno et al. 2018 logic',
+        action='store_true'
+    )
+    lamanno_filter_group.add_argument(
+        '--filter',
+        help='Produce a filtered gene count matrix (default: bustools)',
+        type=str,
+        const='bustools',
+        nargs='?',
+        choices=['bustools']
     )
     conversion_group = parser_count.add_mutually_exclusive_group()
     conversion_group.add_argument(
@@ -341,6 +397,8 @@ def setup_count_args(parser, parent):
 
 
 def main():
+    """Command-line entrypoint.
+    """
     # Main parser
     parser = argparse.ArgumentParser(
         description='kb_python {}'.format(__version__)
@@ -403,7 +461,10 @@ def main():
     logger.debug('Creating tmp directory')
     os.makedirs(TEMP_DIR, exist_ok=True)
     try:
+        logger.debug(args)
         COMMAND_TO_FUNCTION[args.command](args)
+    except Exception:
+        logger.exception('An exception occurred')
     finally:
         # Always clean temp dir
         if not args.keep_tmp:

@@ -29,6 +29,14 @@ logger = logging.getLogger(__name__)
 
 
 def sort_gtf(gtf_path, out_path):
+    """Sorts a GTF file based on its chromosome, start position, line number.
+
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+
+    :return: path to sorted GTF file
+    :rtype: str
+    """
     logger.info('Sorting {}'.format(gtf_path))
     gtf = GTF(gtf_path)
     gtf.sort(out_path)
@@ -36,6 +44,14 @@ def sort_gtf(gtf_path, out_path):
 
 
 def sort_fasta(fasta_path, out_path):
+    """Sorts a FASTA file based on its header.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+
+    :return: path to sorted FASTA file
+    :rtype: str
+    """
     logger.info('Sorting {}'.format(fasta_path))
     fasta = FASTA(fasta_path)
     fasta.sort(out_path)
@@ -43,6 +59,22 @@ def sort_fasta(fasta_path, out_path):
 
 
 def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
+    """Creates a transcript-to-gene mapping from a GTF file.
+
+    GTF entries that have `transcript` as its feature are parsed for
+    the `transcript_id`, `gene_id` and `gene_name`.
+
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+    :param intron: whether or not to include intron transcript ids (with the
+                   `-I` prefix), defaults to `False`
+    :type intron: bool, optional
+
+    :return: dictionary containing path to generated t2g mapping
+    :rtype: dict
+    """
     logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
     gtf = GTF(gtf_path)
     with open(t2g_path, 'w') as f:
@@ -74,6 +106,16 @@ def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
 
 
 def create_t2c(fasta_path, t2c_path):
+    """Creates a transcripts-to-capture list from a FASTA file.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+    :param t2c_path: path to output transcripts-to-capture list
+    :type t2c_path: str
+
+    :return: dictionary containing path to generated t2c list
+    :rtype: dict
+    """
     fasta = FASTA(fasta_path)
     with open(t2c_path, 'w') as f:
         for sequence_id, _ in fasta.entries():
@@ -82,6 +124,18 @@ def create_t2c(fasta_path, t2c_path):
 
 
 def kallisto_index(fasta_path, index_path, k=31):
+    """Runs `kallisto index`.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+    :param index_path: path to output kallisto index
+    :type index_path: str
+    :param k: k-mer length, defaults to 31
+    :type k: int, optional
+
+    :return: dictionary containing path to generated index
+    :rtype: dict
+    """
     logger.info('Indexing to {}'.format(index_path))
     command = [
         get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
@@ -94,6 +148,24 @@ def kallisto_index(fasta_path, index_path, k=31):
 def download_reference(
         choice, index_path, t2g_path, temp_dir='tmp', overwrite=False
 ):
+    """Downloads a provided reference file from a static url.
+
+    The configuration for provided references is in `config.py`.
+
+    :param choice: reference key
+    :type choice: str
+    :param index_path: path to output kallisto index
+    :type index_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param overwrite: overwrite an existing index file, defaults to `False`
+    :type overwrite: bool, optional
+
+    :return: dictionary containing paths to generated file(s)
+    :rtype: dict
+    """
     results = {}
     if not os.path.exists(index_path) or overwrite:
         reference = REFERENCES_MAPPING[choice]
@@ -129,6 +201,24 @@ def ref(
         temp_dir='tmp',
         overwrite=False
 ):
+    """Generates files necessary to generate count matrices for single-cell RNA-seq.
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param cdna_path: path to generate the cDNA FASTA file
+    :type cdna_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param overwrite: overwrite an existing index file, defaults to `False`
+    :type overwrite: bool, optional
+
+    :return: dictionary containing paths to generated file(s)
+    :rtype: dict
+    """
     results = {}
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path)
     results.update(t2g_result)
@@ -166,6 +256,30 @@ def ref_lamanno(
         temp_dir='tmp',
         overwrite=False,
 ):
+    """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
+
+    :param fasta_path: path to genomic FASTA file
+    :type fasta_path: str
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    :param cdna_path: path to generate the cDNA FASTA file
+    :type cdna_path: str
+    :param intron_path: path to generate the intron FASTA file
+    :type intron_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+    :param cdna_t2c_path: path to generate the cDNA transcripts-to-capture file
+    :type cdna_t2c_path: str
+    :param intron_t2c_path: path to generate the intron transcripts-to-capture file
+    :type intron_t2c_path: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param overwrite: overwrite an existing index file, defaults to `False`
+    :type overwrite: bool, optional
+
+    :return: dictionary containing paths to generated file(s)
+    :rtype: dict
+    """
     results = {}
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path, intron=True)
     results.update(t2g_result)

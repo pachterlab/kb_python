@@ -33,4 +33,4 @@ Prepare files (Kallisto index, transcripts-to-genes mapping, cDNA transcripts to
 References
 ==========
 [1] Bray, N. L., Pimentel, H., Melsted, P., & Pachter, L. (2016). Near-optimal probabilistic RNA-seq quantification. Nature biotechnology, 34(5), 525.
-[2] Melsted, P., Booeshaghi, A. S., Gao, F., da Veiga Beltrame, E., Lu, L., Hjorleifsson, K. E., ... & Pachter, L. (2019). Modular and efficient pre-processing of single-cell RNA-seq. BioRxiv, 673285.
+[2] Melsted, P., Booeshaghi, A. S., Gao, F., da Veiga Beltrame, E., Lu, L., Hjorleifsson, K. E., Gehring, J., & Pachter, L. (2019). Modular and efficient pre-processing of single-cell RNA-seq. BioRxiv, 673285.

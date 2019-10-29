@@ -5,6 +5,11 @@ logger = logging.getLogger(__name__)
 
 
 class GTF:
+    """Utility class to easily read and parse GTF files.
+
+    :param gtf_path: path to GTF file
+    :type gtf_path: str
+    """
     PARSER = re.compile(
         r'''
         ^(?P<seqname>.+?)\t     # chromosome
@@ -26,6 +31,14 @@ class GTF:
 
     @staticmethod
     def parse_entry(line):
+        """Parse a single GTF entry.
+
+        :param line: a line in the GTF file
+        :type line: str
+
+        :return: parsed GTF information
+        :rtype: dict
+        """
         match = GTF.PARSER.match(line)
         if match:
             groupdict = match.groupdict()
@@ -39,6 +52,11 @@ class GTF:
         return None
 
     def entries(self):
+        """Generator that yields one GTF entry at a time.
+
+        :return: a generator that yields a dict of the GTF entry
+        :rtype: generator
+        """
         with open(self.gtf_path, 'r') as f:
             for line in f:
                 if line.startswith('#') or line.isspace():
@@ -47,6 +65,11 @@ class GTF:
                 yield GTF.parse_entry(line)
 
     def sort(self, out_path):
+        """Sort the GTF file by chromosome, start position, line number.
+
+        :param out_path: path to generate the sorted GTF
+        :type out_path: str
+        """
         to_sort = []
         with open(self.gtf_path, 'r') as f:
             position = 0

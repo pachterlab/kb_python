@@ -65,6 +65,12 @@ class UnsupportedOSException(Exception):
 
 
 def get_kallisto_binary_path():
+    """Get the path to the platform-dependent Kallisto binary included with
+    the installation.
+
+    :return: path to the binary
+    :rtype: str
+    """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
     path = os.path.join(
         PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
@@ -77,6 +83,12 @@ def get_kallisto_binary_path():
 
 
 def get_bustools_binary_path():
+    """Get the path to the platform-dependent Bustools binary included with
+    the installation.
+
+    :return: path to the binary
+    :rtype: str
+    """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
     path = os.path.join(
         PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
