@@ -377,7 +377,6 @@ def setup_count_args(parser, parent):
         '--filter',
         help='Produce a filtered gene count matrix (default: bustools)',
         type=str,
-        default='bustools',
         const='bustools',
         nargs='?',
         choices=['bustools']
