@@ -12,7 +12,7 @@ Must be accessible from the command-line as `bustools`.~~
 
 ~~There are plans to include installers for both prerequisites.~~
 
-Binaries are included with the package starting version `0.1.4`. There are no prerequisites starting from this version.
+Binaries are included with the package starting version `0.0.8`. There are no prerequisites starting from this version.
 
 ## Development
 ### Code Quality
