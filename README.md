@@ -10,7 +10,7 @@
 kb-python is a python package that wraps the [kallisto | bustools](https://www.kallistobus.tools) single-cell RNA-seq workflow, which is described in
 
 Melsted, Booeshaghi et al., Modular and efficient pre-processing of single-cell
-RNA-seq, bioRxiv, 2019
+RNA-seq, bioRxiv, 2019.
 
 The wrapper simplifies downloading and running of the kallisto
 [1] and bustools [2] programs. It was inspired by Sten Linnarsson’s `loompy
