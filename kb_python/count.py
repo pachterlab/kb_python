@@ -247,7 +247,18 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
-def download_or_stream_fastqs(fastqs, temp_dir='tmp'):
+def stream_fastqs(fastqs, temp_dir='tmp'):
+    """Given a list of fastqs (that may be local or remote paths), stream any
+    remote files. Internally, calls utils.
+
+    :param fastqs: list of (remote or local) fastq paths
+    :type fastqs: list
+    :param temp_dir: temporary directory
+    :type temp_dir: str
+
+    :return: all remote paths substituted with a local path
+    :rtype: list
+    """
     return [
         stream_file(fastq, os.path.join(temp_dir, os.path.basename(fastq)))
         if urlparse(fastq).scheme in ('http', 'https', 'ftp', 'ftps') else fastq
@@ -393,7 +404,7 @@ def count(
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
         # Pipe any remote files.
-        fastqs = download_or_stream_fastqs(fastqs, temp_dir=temp_dir)
+        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
         bus_result = kallisto_bus(
             fastqs, index_path, technology, unfiltered_dir, threads=threads
         )
@@ -590,7 +601,7 @@ def count_lamanno(
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        fastqs = download_or_stream_fastqs(fastqs, temp_dir=temp_dir)
+        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
         bus_result = kallisto_bus(
             fastqs, index_path, technology, out_dir, threads=threads
         )

@@ -113,18 +113,17 @@ class TestCount(TestMixin, TestCase):
         )
         self.assertTrue(os.path.exists(out_path))
 
-    def test_download_or_stream_fastqs_local(self):
+    def test_stream_fastqs_local(self):
         with mock.patch('kb_python.count.stream_file') as stream_file:
             temp_dir = tempfile.mkdtemp()
             fastqs = ['path/to/file1.gz', 'path/to/file2.gz']
             stream_file.side_effect = ['FILE 1', 'FILE 2']
             self.assertEqual(
-                fastqs,
-                count.download_or_stream_fastqs(fastqs, temp_dir=temp_dir)
+                fastqs, count.stream_fastqs(fastqs, temp_dir=temp_dir)
             )
             stream_file.assert_not_called()
 
-    def test_download_or_stream_fastqs_remote(self):
+    def test_stream_fastqs_remote(self):
         with mock.patch('kb_python.count.stream_file') as stream_file:
             temp_dir = tempfile.mkdtemp()
             fastqs = ['http://path/to/file1.gz', 'https://path/to/file2.gz']
@@ -133,9 +132,8 @@ class TestCount(TestMixin, TestCase):
                 for fastq in fastqs
             ]
             stream_file.side_effect = ['FILE 1', 'FILE 2']
-            self.assertEqual([
-                'FILE 1', 'FILE 2'
-            ], count.download_or_stream_fastqs(fastqs, temp_dir=temp_dir))
+            self.assertEqual(['FILE 1', 'FILE 2'],
+                             count.stream_fastqs(fastqs, temp_dir=temp_dir))
             self.assertEqual(2, stream_file.call_count)
             stream_file.assert_has_calls([
                 call(fastqs[0], local_fastqs[0]),
@@ -165,7 +163,7 @@ class TestCount(TestMixin, TestCase):
             )
 
     def test_count_with_whitelist(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -186,7 +184,7 @@ class TestCount(TestMixin, TestCase):
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -226,7 +224,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -268,7 +266,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_loom(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -290,7 +288,7 @@ class TestCount(TestMixin, TestCase):
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
             loom_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -333,7 +331,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  loom=True,
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -382,7 +380,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_h5ad(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -404,7 +402,7 @@ class TestCount(TestMixin, TestCase):
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
             h5ad_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -447,7 +445,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  h5ad=True,
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -496,7 +494,7 @@ class TestCount(TestMixin, TestCase):
             )
 
     def test_count_filter(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -531,7 +529,7 @@ class TestCount(TestMixin, TestCase):
             )
             filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
             filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -596,7 +594,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -663,7 +661,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_filter_loom(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -700,7 +698,7 @@ class TestCount(TestMixin, TestCase):
             filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
             filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
             filtered_loom_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -770,7 +768,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  loom=True
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -857,7 +855,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_filter_h5ad(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -894,7 +892,7 @@ class TestCount(TestMixin, TestCase):
             filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
             filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
             filtered_h5ad_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -964,7 +962,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  h5ad=True
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -1051,7 +1049,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_loom.assert_not_called()
 
     def test_count_without_whitelist(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -1072,7 +1070,7 @@ class TestCount(TestMixin, TestCase):
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -1113,7 +1111,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -1157,7 +1155,7 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_h5ad.assert_not_called()
 
     def test_count_lamanno_with_whitelist(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -1193,7 +1191,7 @@ class TestCount(TestMixin, TestCase):
             )
             cdna_t2c_path = mock.MagicMock()
             intron_t2c_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -1293,7 +1291,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -1356,7 +1354,7 @@ class TestCount(TestMixin, TestCase):
             overlay_anndatas.assert_not_called()
 
     def test_count_lamanno_loom(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -1397,7 +1395,7 @@ class TestCount(TestMixin, TestCase):
             adata = mock.MagicMock()
             loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
             adata.write_loom.return_value = loom_path
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -1503,7 +1501,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  loom=True
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -1589,7 +1587,7 @@ class TestCount(TestMixin, TestCase):
             adata.write.assert_not_called()
 
     def test_count_lamanno_h5ad(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -1630,7 +1628,7 @@ class TestCount(TestMixin, TestCase):
             adata = mock.MagicMock()
             h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
             adata.write.return_value = h5ad_path
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -1736,7 +1734,7 @@ class TestCount(TestMixin, TestCase):
                                  memory=memory,
                                  h5ad=True
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
@@ -1822,7 +1820,7 @@ class TestCount(TestMixin, TestCase):
             adata.write.assert_called_once_with(h5ad_path)
 
     def test_count_lamanno_without_whitelist(self):
-        with mock.patch('kb_python.count.download_or_stream_fastqs') as download_or_stream_fastqs,\
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
@@ -1858,7 +1856,7 @@ class TestCount(TestMixin, TestCase):
             )
             cdna_t2c_path = mock.MagicMock()
             intron_t2c_path = mock.MagicMock()
-            download_or_stream_fastqs.return_value = self.fastqs
+            stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
@@ -1959,7 +1957,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
-            download_or_stream_fastqs.assert_called_once_with(
+            stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
             kallisto_bus.assert_called_once_with(
