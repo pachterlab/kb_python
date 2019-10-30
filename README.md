@@ -1,4 +1,4 @@
-# kb_python
+# kb-python
 ![github version](https://img.shields.io/badge/Version-0.2.0-informational)
 [![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.2.0/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
@@ -23,7 +23,7 @@ Visit the [Getting Started](https://www.kallistobus.tools/kb_getting_started) pa
 Developer documentation is hosted on [Read the Docs](https://kb-python.readthedocs.io/en/latest/).
 
 ### Code Quality
-`kb_python` uses `flake8` and `yapf` to ensure code quality and `nose`
+`kb-python` uses `flake8` and `yapf` to ensure code quality and `nose`
 to run unittests. All necessary dependencies for development can be installed
 by running `pip install -r dev-requirements.txt`.
 
@@ -40,7 +40,7 @@ version and release the new version to Pypi,
 1. Run `make bump_patch`, `make bump_minor` or `make bump_major` depending
 on which version to bump. This will make a new commit and create a new tag
 with the new version.
-2. Push the commit and tag with `git push --tag`.
+2. Push the commit and tag with `make push_release`.
 3. Go to the `releases` tab on Github. Select the version that was just commited.
 `Edit tag`, write a description, and `Publish release`.
 4. A Github Actions workflow will be triggered to build and upload the updated
