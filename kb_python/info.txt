@@ -10,25 +10,7 @@ The `kb ref` command builds or downloads a species-specific index for pseudoalig
 
 The `kb count` command runs the kallisto [1] and bustools [2] programs. It can be used for pre-processing of data from a variety of single-cell RNA-seq technologies, and for a number of different workflows (e.g. production of gene count matrices, RNA velocity analyses, etc.). The output can be saved in a variety of formats including mix and loom. Examples are provided below.
 
-
-Examples
-========
-(1) kb ref -i transcriptome.idx -g transcripts_to_genes.txt -f1 cdna.fa Mus_musculus.GRCm38.dna.primary_assembly.fa Mus_musculus.GRCm38.98.gtf
-(2) kb count -i transcriptome.idx -g transcripts_to_genes.txt -x 10xv2 -o output --loom Reads1.fastq.gz Reads2.fasta.gz
-Build a Kallisto index and transcripts-to-genes mapping using the mouse transcriptome, generated from the provided genomic FASTA and GTF. Then, generate count matrices with the built index and transcripts-to-genes mapping. Convert the final count matrix to a .loom file.
-
-(1) kb ref -i transcriptome.idx -g transcripts_to_genes.txt -f1 cdna.fa Mus_musculus.GRCm38.dna.primary_assembly.fa Mus_musculus.GRCm38.98.gtf
-(2) kb count -i transcriptome.idx -g transcripts_to_genes.txt -x 10xv2 -w 10xv2_whitelist -o output --h5ad Reads1.fastq.gz Reads2.fasta.gz
-Build a Kallisto index and transcripts-to-genes mapping using the mouse transcriptome, generated from the provided genomic FASTA and GTF. Then, generate count matrices with the built index, transcripts-to-genes mapping and provided whitelist. Convert the final count matrix to a .h5ad file.
-
-(1) kb ref -i transcriptome.idx -g transcripts_to_genes.txt -d mouse
-(2) kb count -i transcriptome.idx -g transcripts_to_genes.txt -x 10xv2 -o output Reads1.fastq.gz Reads2.fasta.gz
-Instead of building a Kallisto index locally, download a pre-built index. Then, generate count matrices with the built index and transcripts-to-genes mapping.
-
-(1) kb ref -i transcriptome.idx -g transcripts_to_genes.txt -f1 cdna.fa -f2 introns.fa -c1 cdna_transcripts_to_capture.txt -c2 intron_transcripts_to_capture --lamanno Mus_musculus.GRCm38.dna.primary_assembly.fa Mus_musculus.GRCm38.98.gtf
-(2) kb count -i transcriptome.idx -g transcripts_to_genes.txt -x 10xv2 -o output -c1 cdna_transcripts_to_capture.txt -c2 intron_transcripts_to_capture.txt --lamanno Reads1.fastq.gz Reads2.fasta.gz
-Prepare files (Kallisto index, transcripts-to-genes mapping, cDNA transcripts to capture, intron transcripts to capture) for RNA velocity based on Lamanno et al. 2018 logic. Then, calculate RNA velocity using the prepared files.
-
+Examples are available at: https://www.kallistobus.tools/tutorials
 
 References
 ==========
