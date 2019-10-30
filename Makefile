@@ -1,4 +1,4 @@
-.PHONY : install test check build clean push_release
+.PHONY : install test check build docs clean push_release
 
 test:
 	nosetests --verbose --with-coverage --cover-package kb_python
@@ -10,10 +10,15 @@ check:
 build:
 	python setup.py sdist bdist_wheel
 
+docs:
+	sphinx-build -a docs docs/_build
+
 clean:
 	rm -rf build
 	rm -rf dist
 	rm -rf kb_python.egg-info
+	rm -rf docs/_build
+	rm -rf docs/api
 
 bump_patch:
 	bumpversion patch
