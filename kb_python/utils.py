@@ -119,8 +119,8 @@ def run_executable(
 def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
     """Execute multiple shell commands by piping the output into inputs.
 
-    :param *commands: lists of shell commands
-    :type *commands: list
+    :param commands: lists of shell commands
+    :type commands: list
     :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
                   defaults to `None`
     :type stdin: stream, optional
@@ -273,8 +273,8 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
 
     Only supports text and gzip files.
 
-    :param *paths: an arbitrary number of paths to files
-    :type *paths: str
+    :param paths: an arbitrary number of paths to files
+    :type paths: str
     :param out_path: path to place concatenated file
     :type out_path: str
     :param temp_dir: temporary directory, defaults to `tmp`
