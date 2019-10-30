@@ -6,15 +6,9 @@
 Welcome to kb-python's documentation!
 =====================================
 
+This page contains **DEVELOPER** documentation for `kb-python`.
+For user documentation and tutorials, please go to `kallisto | bustools <https://www.kallistobus.tools/>`_.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
