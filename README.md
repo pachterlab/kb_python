@@ -16,7 +16,7 @@ The wrapper simplifies downloading and running of the kallisto
 [1] and bustools [2] programs. It was inspired by Sten Linnarsson’s `loompy
 fromfq` command (http://linnarssonlab.org/loompy/kallisto/index.html)
 
-The kb program consists of two parts:
+The `kb` program consists of two parts:
 
 The `kb ref` command builds or downloads a species-specific index for
 pseudoalignment of reads. This command must be run prior to `kb count`, and it
@@ -30,6 +30,7 @@ variety of formats including mix and loom. Examples are provided below.
 
 [1] Bray, N. L., Pimentel, H., Melsted, P., & Pachter, L. (2016). Near-optimal
 probabilistic RNA-seq quantification. Nature biotechnology, 34(5), 525.
+
 [2] Melsted, P., Booeshaghi, A. S., Gao, F., da Veiga Beltrame, E., Lu, L.,
 Hjorleifsson, K. E., Gehring, J., & Pachter, L. (2019). Modular and efficient
 pre-processing of single-cell RNA-seq. BioRxiv, 673285.
