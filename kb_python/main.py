@@ -317,12 +317,12 @@ def setup_count_args(parser, parent):
         type=str,
         required=True
     )
-    required_count.add_argument(
+    parser_count.add_argument(
         '-o',
         metavar='OUT',
-        help='Path to output directory',
+        help='Path to output directory (default: current directory)',
         type=str,
-        required=True
+        default='.',
     )
     parser_count.add_argument(
         '-w',
