@@ -296,7 +296,7 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
 def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):
     """Converts a matrix to loom.
 
-    :param matrix_path: path to matrix ec file
+    :param matrix_path: path to matrix mtx file
     :type matrix_path: str
     :param barcodes_path: path list of barcodes
     :type barcodes_path: str
@@ -317,7 +317,7 @@ def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):
 def convert_matrix_to_h5ad(matrix_path, barcodes_path, genes_path, out_path):
     """Converts a matrix to h5ad.
 
-    :param matrix_path: path to matrix ec file
+    :param matrix_path: path to matrix mtx file
     :type matrix_path: str
     :param barcodes_path: path list of barcodes
     :type barcodes_path: str
