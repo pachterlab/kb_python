@@ -3,12 +3,7 @@ import os
 import tarfile
 from urllib.request import urlretrieve
 
-from .config import (
-    get_kallisto_binary_path,
-    INDEX_FILENAME,
-    REFERENCES_MAPPING,
-    T2G_FILENAME,
-)
+from .config import get_kallisto_binary_path
 from .constants import (
     COMBINED_FILENAME,
     SORTED_FASTA_FILENAME,
@@ -146,19 +141,17 @@ def kallisto_index(fasta_path, index_path, k=31):
     return {'index': index_path}
 
 
-def download_reference(
-        choice, index_path, t2g_path, temp_dir='tmp', overwrite=False
-):
+def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     """Downloads a provided reference file from a static url.
 
     The configuration for provided references is in `config.py`.
 
-    :param choice: reference key
-    :type choice: str
-    :param index_path: path to output kallisto index
-    :type index_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
+    :param reference: a Reference object, as defined in `config.py`
+    :type reference: Reference
+    :param files: dictionary that has the command-line option as keys and
+                  the path as values. used to determine if all the required
+                  paths to download the given reference have been provided
+    :type files: dict
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -168,12 +161,21 @@ def download_reference(
     :rtype: dict
     """
     results = {}
-    if not os.path.exists(index_path) or overwrite:
-        reference = REFERENCES_MAPPING[choice]
+    if not any(os.path.exists(file) for file in files) or overwrite:
+        # Make sure all the required file paths are there.
+        diff = set(reference.files.keys()) - set(files.keys())
+        if diff:
+            raise Exception(
+                'the following options are required to download this reference: {}'
+                .format(','.join(diff))
+            )
+
         url = reference.url
         path = os.path.join(temp_dir, os.path.basename(url))
         logging.info(
-            'Downloading files for {} from {} to {}'.format(choice, url, path)
+            'Downloading files for {} from {} to {}'.format(
+                reference.name, url, path
+            )
         )
         local_path, headers = urlretrieve(url, path)
 
@@ -181,14 +183,14 @@ def download_reference(
         with tarfile.open(local_path, 'r:gz') as f:
             f.extractall(temp_dir)
 
-        os.rename(os.path.join(temp_dir, INDEX_FILENAME), index_path)
-        results.update({'index': index_path})
-        os.rename(os.path.join(temp_dir, T2G_FILENAME), t2g_path)
-        results.update({'t2g': t2g_path})
+        for option in reference.files:
+            os.rename(
+                os.path.join(temp_dir, reference.files[option]), files[option]
+            )
+            results.update({option: files[option]})
     else:
         logger.info(
-            'Skipping download because {} already exists. Use the --overwrite flag to overwrite.'
-            .format(index_path)
+            'Skipping download because some files already exist. Use the --overwrite flag to overwrite.'
         )
     return results
 
