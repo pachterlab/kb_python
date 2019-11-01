@@ -7,18 +7,18 @@ from .constants import (
     ADATA_PREFIX,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
+    BUS_FILTERED_FILENAME,
     BUS_INTRON_PREFIX,
     BUS_S_FILENAME,
     BUS_SC_FILENAME,
-    BUS_SCS_FILENAME,
-    COUNTS_DIR,
+    BUS_UNFILTERED_FILENAME,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
     FILTER_WHITELIST_FILENAME,
-    FILTERED_DIR,
+    FILTERED_COUNTS_DIR,
     INSPECT_FILENAME,
     TXNAMES_FILENAME,
-    UNFILTERED_DIR,
+    UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
 from .utils import (
@@ -388,25 +388,21 @@ def count(
     results = {}
 
     os.makedirs(out_dir, exist_ok=True)
-    unfiltered_dir = os.path.join(
-        out_dir, UNFILTERED_DIR
-    ) if filter else out_dir
-    os.makedirs(unfiltered_dir, exist_ok=True)
     unfiltered_results = results.setdefault(
-        UNFILTERED_DIR, {}
+        'unfiltered', {}
     ) if filter else results
 
     bus_result = {
-        'bus': os.path.join(unfiltered_dir, BUS_FILENAME),
-        'ecmap': os.path.join(unfiltered_dir, ECMAP_FILENAME),
-        'txnames': os.path.join(unfiltered_dir, TXNAMES_FILENAME),
+        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
         # Pipe any remote files.
         fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
         bus_result = kallisto_bus(
-            fastqs, index_path, technology, unfiltered_dir, threads=threads
+            fastqs, index_path, technology, out_dir, threads=threads
         )
     else:
         logger.info(
@@ -424,12 +420,12 @@ def count(
     if not whitelist_path:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
-            technology, sort_result['bus'], unfiltered_dir
+            technology, sort_result['bus'], out_dir
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
     inspect_result = bustools_inspect(
-        sort_result['bus'], os.path.join(unfiltered_dir, INSPECT_FILENAME),
+        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
         whitelist_path, bus_result['ecmap']
     )
     unfiltered_results.update(inspect_result)
@@ -439,14 +435,14 @@ def count(
     )
     sort2_result = bustools_sort(
         correct_result['bus'],
-        os.path.join(unfiltered_dir, BUS_SCS_FILENAME),
+        os.path.join(out_dir, BUS_UNFILTERED_FILENAME),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
     )
     unfiltered_results.update({'bus_scs': sort2_result['bus']})
 
-    counts_dir = os.path.join(unfiltered_dir, COUNTS_DIR)
+    counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
     counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
     count_result = bustools_count(
@@ -476,18 +472,16 @@ def count(
 
     if filter == 'bustools':
         logger.info('Filtering')
-        filtered_dir = os.path.join(out_dir, FILTERED_DIR)
-        os.makedirs(filtered_dir, exist_ok=True)
-        filtered_results = results.setdefault(FILTERED_DIR, {})
+        filtered_results = results.setdefault('filtered', {})
         filtered_whitelist_result = bustools_whitelist(
             sort2_result['bus'],
-            os.path.join(filtered_dir, FILTER_WHITELIST_FILENAME)
+            os.path.join(out_dir, FILTER_WHITELIST_FILENAME)
         )
         filtered_results.update(filtered_whitelist_result)
 
         filtered_capture_result = bustools_capture(
             sort2_result['bus'],
-            os.path.join(temp_dir, os.path.basename(sort2_result['bus'])),
+            os.path.join(temp_dir, BUS_FILTERED_FILENAME),
             filtered_whitelist_result['whitelist'],
             bus_result['ecmap'],
             bus_result['txnames'],
@@ -495,14 +489,14 @@ def count(
         )
         filtered_sort_result = bustools_sort(
             filtered_capture_result['bus'],
-            os.path.join(filtered_dir, os.path.basename(sort2_result['bus'])),
+            os.path.join(out_dir, BUS_FILTERED_FILENAME),
             temp_dir=temp_dir,
             threads=threads,
             memory=memory,
         )
         filtered_results.update({'bus_scs': filtered_sort_result['bus']})
 
-        filtered_counts_dir = os.path.join(filtered_dir, COUNTS_DIR)
+        filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
         os.makedirs(filtered_counts_dir, exist_ok=True)
         filtered_counts_prefix = os.path.join(
             filtered_counts_dir, COUNTS_PREFIX
@@ -636,7 +630,7 @@ def count_lamanno(
     )
     sort2_result = bustools_sort(
         correct_result['bus'],
-        os.path.join(out_dir, BUS_SCS_FILENAME),
+        os.path.join(out_dir, BUS_UNFILTERED_FILENAME),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
@@ -647,7 +641,7 @@ def count_lamanno(
         BUS_CDNA_PREFIX: cdna_t2c_path,
         BUS_INTRON_PREFIX: intron_t2c_path,
     }
-    counts_dir = os.path.join(out_dir, COUNTS_DIR)
+    counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
     for prefix, t2c_path in prefix_to_t2c.items():
         capture_result = bustools_capture(
