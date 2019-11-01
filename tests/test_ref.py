@@ -6,7 +6,7 @@ from unittest import mock, TestCase
 from unittest.mock import call
 
 import kb_python.ref as ref
-from kb_python.config import INDEX_FILENAME, REFERENCES_MAPPING, T2G_FILENAME
+from kb_python.config import REFERENCES_MAPPING
 from kb_python.constants import (
     SORTED_FASTA_FILENAME,
     SORTED_GTF_FILENAME,
@@ -67,17 +67,19 @@ class TestRef(TestMixin, TestCase):
 
     def test_download_reference(self):
         with mock.patch('kb_python.ref.urlretrieve') as urlretrieve:
-            choice = 'human'
-            url = REFERENCES_MAPPING[choice].url
+            reference = REFERENCES_MAPPING['human']
+            files = {
+                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
+                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+            }
             temp_dir = tempfile.mkdtemp()
-            index_path = os.path.join(
-                tempfile.mkdtemp(), '{}.idx'.format(uuid.uuid4())
+
+            test_index_path = os.path.join(
+                tempfile.mkdtemp(), 'transcriptome.idx'
             )
-            t2g_path = os.path.join(
-                tempfile.mkdtemp(), '{}.txt'.format(uuid.uuid4())
+            test_t2g_path = os.path.join(
+                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
             )
-            test_index_path = os.path.join(tempfile.mkdtemp(), INDEX_FILENAME)
-            test_t2g_path = os.path.join(tempfile.mkdtemp(), T2G_FILENAME)
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
@@ -91,22 +93,82 @@ class TestRef(TestMixin, TestCase):
                 )
                 f.add(test_t2g_path, arcname=os.path.basename(test_t2g_path))
             urlretrieve.return_value = test_tar_path, None
-            self.assertEqual({
-                'index': index_path,
-                't2g': t2g_path
-            },
-                             ref.download_reference(
-                                 choice,
-                                 index_path,
-                                 t2g_path,
-                                 temp_dir=temp_dir
-                             ))
-            urlretrieve.assert_called_once_with(
-                url, os.path.join(temp_dir, os.path.basename(url))
+            self.assertEqual(
+                files,
+                ref.download_reference(reference, files, temp_dir=temp_dir)
             )
-            with open(index_path, 'r') as index, open(t2g_path, 'r') as t2g:
+            urlretrieve.assert_called_once_with(
+                reference.url,
+                os.path.join(temp_dir, os.path.basename(reference.url))
+            )
+            with open(files['i'], 'r') as index, open(files['g'], 'r') as t2g:
                 self.assertEqual('INDEX', index.read())
                 self.assertEqual('T2G', t2g.read())
+
+    def test_download_reference_doesnt_overwrite(self):
+        with mock.patch('kb_python.ref.os.path.exists') as exists,\
+            mock.patch('kb_python.ref.urlretrieve') as urlretrieve:
+            exists.return_value = True
+            reference = REFERENCES_MAPPING['human']
+            files = {
+                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
+                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+            }
+            temp_dir = tempfile.mkdtemp()
+
+            test_index_path = os.path.join(
+                tempfile.mkdtemp(), 'transcriptome.idx'
+            )
+            test_t2g_path = os.path.join(
+                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+            )
+            with open(test_index_path, 'w') as index, open(test_t2g_path,
+                                                           'w') as t2g:
+                index.write('INDEX')
+                t2g.write('T2G')
+            test_tar_path = os.path.join(
+                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+            )
+            with tarfile.open(test_tar_path, 'w:gz') as f:
+                f.add(
+                    test_index_path, arcname=os.path.basename(test_index_path)
+                )
+                f.add(test_t2g_path, arcname=os.path.basename(test_t2g_path))
+            urlretrieve.return_value = test_tar_path, None
+            self.assertEqual({},
+                             ref.download_reference(
+                                 reference, files, temp_dir=temp_dir
+                             ))
+            urlretrieve.assert_not_called()
+
+    def test_download_reference_less_files(self):
+        with mock.patch('kb_python.ref.urlretrieve') as urlretrieve:
+            reference = REFERENCES_MAPPING['human']
+            files = {'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx')}
+            temp_dir = tempfile.mkdtemp()
+
+            test_index_path = os.path.join(
+                tempfile.mkdtemp(), 'transcriptome.idx'
+            )
+            test_t2g_path = os.path.join(
+                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+            )
+            with open(test_index_path, 'w') as index, open(test_t2g_path,
+                                                           'w') as t2g:
+                index.write('INDEX')
+                t2g.write('T2G')
+            test_tar_path = os.path.join(
+                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+            )
+            with tarfile.open(test_tar_path, 'w:gz') as f:
+                f.add(
+                    test_index_path, arcname=os.path.basename(test_index_path)
+                )
+                f.add(test_t2g_path, arcname=os.path.basename(test_t2g_path))
+            urlretrieve.return_value = test_tar_path, None
+            with self.assertRaises(Exception):
+                ref.download_reference(reference, files, temp_dir=temp_dir)
+            urlretrieve.assert_not_called()
 
     def test_ref(self):
         with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\

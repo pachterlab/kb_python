@@ -59,25 +59,36 @@ TECHNOLOGIES = [
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 
 # Supported pre-built indices
-Reference = namedtuple(
-    'Reference', ['name', 'url', 'lamanno_url', 'velocity_url']
-)
+Reference = namedtuple('Reference', ['name', 'url', 'files'])
 REFERENCES = [
     Reference(
         'human',
         'https://caltech.box.com/shared/static/v1nm7lpnqz5syh8dyzdk2zs8bglncfib.gz',
-        None, None
+        {
+            'i': 'transcriptome.idx',
+            'g': 'transcripts_to_genes.txt'
+        }
     ),
     Reference(
         'mouse',
         'https://caltech.box.com/shared/static/vcaz6cujop0xuapdmz0pplp3aoqc41si.gz',
-        None, None
+        {
+            'i': 'transcriptome.idx',
+            'g': 'transcripts_to_genes.txt'
+        }
+    ),
+    Reference(
+        'linnarsson',
+        'https://caltech.box.com/shared/static/kyf7ai5s8y2l0vycl5yxunrappvrf0yx.gz',
+        {
+            'i': 'gencode.v31.fragments.idx',
+            'g': 'fragments2genes.txt',
+            'c1': 'spliced_fragments.txt',
+            'c2': 'unspliced_fragments.txt',
+        }
     )
 ]
 REFERENCES_MAPPING = {r.name: r for r in REFERENCES}
-# File names that are in the tar.gz file.
-INDEX_FILENAME = 'transcriptome.idx'
-T2G_FILENAME = 'transcripts_to_genes.txt'
 
 
 class UnsupportedOSException(Exception):

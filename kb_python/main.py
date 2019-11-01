@@ -78,9 +78,15 @@ def parse_ref(args):
     :type args: dict
     """
     if args.d is not None:
-        if args.lamanno:
-            raise Exception('--lamanno indices can not be downloaded')
-        download_reference(args.d, args.i, args.g, overwrite=args.overwrite)
+        # Options that are files.
+        options = ['i', 'g', 'c1', 'c2']
+        files = {
+            option: getattr(args, option)
+            for option in options
+            if getattr(args, option) is not None
+        }
+        reference = REFERENCES_MAPPING[args.d]
+        download_reference(reference, files, overwrite=args.overwrite)
     elif args.lamanno:
         ref_lamanno(
             args.fasta,
