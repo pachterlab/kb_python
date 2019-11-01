@@ -1,4 +1,5 @@
 import logging
+import re
 
 from .gtf import GTF
 from .utils import open_as_text
@@ -12,6 +13,8 @@ class FASTA:
     :param fasta_path: path to FASTA file
     :type fasta_path: str
     """
+    PARSER = re.compile(r'^>(?P<sequence_id>\S+)(?P<group>.*)')
+    GROUP_PARSER = re.compile(r'(?P<key>\S+?):(?P<value>\S+)')
     BASEPAIRS = {
         'a': 'T',
         'A': 'T',
@@ -48,15 +51,22 @@ class FASTA:
 
     @staticmethod
     def parse_header(line):
-        """Get the sequence ID from a FASTA header.
+        """Parse information from a FASTA header.
 
         :param line: FASTA header line
         :type line: str
 
-        :return: sequence ID
-        :rtype: str
+        :return: parsed information
+        :rtype: dict
         """
-        return line.strip().split(' ', 1)[0][1:]
+        match = FASTA.PARSER.match(line)
+        if match:
+            groupdict = match.groupdict()
+            groupdict['group'] = dict(
+                FASTA.GROUP_PARSER.findall(groupdict.get('group', ''))
+            )
+            return groupdict
+        return None
 
     @staticmethod
     def reverse_complement(sequence):
@@ -77,20 +87,20 @@ class FASTA:
         :rtype: generator
         """
         with open_as_text(self.fasta_path, 'r') as f:
-            sequence_id = None
+            info = None
             sequence = ''
             for line in f:
                 if line.startswith('>'):
-                    if sequence_id:
-                        yield sequence_id, sequence
+                    if info:
+                        yield info, sequence
                         sequence = ''
 
-                    sequence_id = FASTA.parse_header(line)
+                    info = FASTA.parse_header(line)
                 else:
                     sequence += line.strip()
 
-            if sequence_id:
-                yield sequence_id, sequence
+            if info:
+                yield info, sequence
 
     def sort(self, out_path):
         """Sort the FASTA file by sequence ID.
@@ -105,7 +115,9 @@ class FASTA:
 
             while line:
                 if line.startswith('>'):
-                    to_sort.append([FASTA.parse_header(line), position, None])
+                    to_sort.append([
+                        FASTA.parse_header(line)['sequence_id'], position, None
+                    ])
 
                 position = f.tell()
                 line = f.readline()
@@ -153,7 +165,8 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
 
     with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
-        for sequence_id, sequence in fasta.entries():
+        for info, sequence in fasta.entries():
+            sequence_id = info['sequence_id']
             logger.debug(
                 'Generating cDNA from chromosome {}'.format(sequence_id)
             )
@@ -235,7 +248,7 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     return out_path
 
 
-def generate_intron_fasta(fasta_path, gtf_path, out_path):
+def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
     """Generate an intron FASTA using the genome and GTF.
 
     This function assumes the order in which the chromosomes appear in the
@@ -245,6 +258,8 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     1. transcript - exons
     2. 5' UTR
     3. 3' UTR
+    Additionally, append 30-bp (k - 1 where k = 31) flanks to each intron,
+    combining sections that overlap into a single FASTA entry.
 
     :param fasta_path: path to genomic FASTA file
     :type fasta_path: str
@@ -252,6 +267,8 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
     :type gtf_path: str
     :param out_path: path to intron FASTA to generate
     :type out_path: str
+    :param flank: the size of intron flanks, in bases, defaults to `30`
+    :type flank: int, optional
 
     :return: path to generated intron FASTA
     :rtype: str
@@ -262,7 +279,8 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
 
     with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
-        for sequence_id, sequence in fasta.entries():
+        for info, sequence in fasta.entries():
+            sequence_id = info['sequence_id']
             logger.debug(
                 'Generating introns from chromosome {}'.format(sequence_id)
             )
@@ -294,7 +312,6 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
                     transcript = '{}.{}'.format(
                         transcript_id, transcript_version
                     ) if transcript_version else transcript_id
-                    transcript += '-I'
 
                     transcript_exons.setdefault(transcript,
                                                 []).append((start, end))
@@ -306,7 +323,6 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
                     transcript = '{}.{}'.format(
                         transcript_id, transcript_version
                     ) if transcript_version else transcript_id
-                    transcript += '-I'
 
                     gene_id = gtf_entry['group']['gene_id']
                     gene_version = gtf_entry['group'].get('gene_version', None)
@@ -354,14 +370,40 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
                 else:
                     introns.append(transcript_interval)
 
-                intron = ''
+                index = 1
+                flank_start = None
+                flank_end = None
                 for start, end in introns:
-                    intron += sequence[start - 1:end]
-
-                if intron:
+                    if flank_start is None:
+                        flank_start = max(start - flank, transcript_interval[0])
+                    if flank_end is None or start - flank <= flank_end:
+                        flank_end = min(end + flank, transcript_interval[1])
+                    else:
+                        intron = sequence[flank_start - 1:flank_end]
+                        f.write(
+                            '{}\n'.format(
+                                FASTA.make_header(
+                                    '{}-I.{}'.format(transcript, index),
+                                    attributes
+                                )
+                            )
+                        )
+                        f.write(
+                            '{}\n'.format(
+                                intron if dict(attributes)['strand'] ==
+                                '+' else FASTA.reverse_complement(intron)
+                            )
+                        )
+                        index += 1
+                        flank_start = max(start - flank, transcript_interval[0])
+                        flank_end = min(end + flank, transcript_interval[1])
+                if flank_start is not None and flank_end is not None:
+                    intron = sequence[flank_start - 1:flank_end]
                     f.write(
                         '{}\n'.format(
-                            FASTA.make_header(transcript, attributes)
+                            FASTA.make_header(
+                                '{}-I.{}'.format(transcript, index), attributes
+                            )
                         )
                     )
                     f.write(
@@ -370,6 +412,7 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path):
                             '+' else FASTA.reverse_complement(intron)
                         )
                     )
+                    index += 1
 
     return out_path
 

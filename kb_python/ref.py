@@ -59,6 +59,30 @@ def sort_fasta(fasta_path, out_path):
     return out_path
 
 
+def create_t2g_from_fasta(fasta_path, t2g_path):
+    """Parse FASTA headers to get transcripts-to-gene mapping.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+
+    :return: dictionary containing path to generated t2g mapping
+    :rtype: dict
+    """
+    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
+    with open_as_text(t2g_path, 'w') as f:
+        fasta = FASTA(fasta_path)
+        for info, _ in fasta.entries():
+            f.write(
+                '{}\t{}\t{}\n'.format(
+                    info['sequence_id'], info['group']['gene_id'],
+                    info['group'].get('gene_name', '')
+                )
+            )
+    return {'t2g': t2g_path}
+
+
 def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
     """Creates a transcript-to-gene mapping from a GTF file.
 
@@ -119,7 +143,8 @@ def create_t2c(fasta_path, t2c_path):
     """
     fasta = FASTA(fasta_path)
     with open_as_text(t2c_path, 'w') as f:
-        for sequence_id, _ in fasta.entries():
+        for info, _ in fasta.entries():
+            sequence_id = info['sequence_id']
             f.write('{}\n'.format(sequence_id))
     return {'t2c': t2c_path}
 
@@ -282,8 +307,6 @@ def ref_lamanno(
     :rtype: dict
     """
     results = {}
-    t2g_result = create_t2g_from_gtf(gtf_path, t2g_path, intron=True)
-    results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
@@ -319,6 +342,8 @@ def ref_lamanno(
             out_path=os.path.join(temp_dir, COMBINED_FILENAME),
             temp_dir=temp_dir
         )
+        t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
+        results.update(t2g_result)
         index_result = kallisto_index(combined_path, index_path)
         results.update(index_result)
     else:

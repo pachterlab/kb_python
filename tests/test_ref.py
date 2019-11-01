@@ -37,6 +37,17 @@ class TestRef(TestMixin, TestCase):
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
+    def test_create_t2g_from_fasta(self):
+        t2g_path = os.path.join(
+            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
+        )
+        result = ref.create_t2g_from_fasta(
+            self.split_intron_fasta_path, t2g_path
+        )
+        with open(result['t2g'], 'r') as f, open(self.fasta_t2g_intron_path,
+                                                 'r') as t2g:
+            self.assertEqual(f.read(), t2g.read())
+
     def test_create_t2g_from_gtf(self):
         t2g_path = os.path.join(
             tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
@@ -220,7 +231,7 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(cdna_fasta_path, index_path)
 
     def test_ref_lamanno(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -245,7 +256,7 @@ class TestRef(TestMixin, TestCase):
             generate_cdna_fasta.return_value = cdna_fasta_path
             generate_intron_fasta.return_value = intron_fasta_path
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
                 't2c': cdna_t2c_path
             }, {
@@ -271,8 +282,8 @@ class TestRef(TestMixin, TestCase):
                                  intron_t2c_path,
                                  temp_dir=temp_dir
                              ))
-            create_t2g_from_gtf.assert_called_once_with(
-                self.gtf_path, t2g_path, intron=True
+            create_t2g_from_fasta.assert_called_once_with(
+                combined_path, t2g_path
             )
             sort_fasta.assert_called_once_with(
                 self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
@@ -294,7 +305,7 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(combined_path, index_path)
 
     def test_ref_lamanno_exists(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -308,13 +319,13 @@ class TestRef(TestMixin, TestCase):
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             self.assertEqual({'t2g': t2g_path},
                              ref.ref(
                                  self.fasta_path, self.gtf_path,
                                  cdna_fasta_path, index_path, t2g_path
                              ))
-            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
+            create_t2g_from_fasta.assert_not_called()
             sort_fasta.assert_not_called()
             sort_gtf.assert_not_called()
             generate_cdna_fasta.assert_not_called()
@@ -324,7 +335,7 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
 
     def test_ref_lamanno_overwrite(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -349,7 +360,7 @@ class TestRef(TestMixin, TestCase):
             generate_cdna_fasta.return_value = cdna_fasta_path
             generate_intron_fasta.return_value = intron_fasta_path
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
                 't2c': cdna_t2c_path
             }, {
@@ -376,8 +387,8 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir,
                                  overwrite=True
                              ))
-            create_t2g_from_gtf.assert_called_once_with(
-                self.gtf_path, t2g_path, intron=True
+            create_t2g_from_fasta.assert_called_once_with(
+                combined_path, t2g_path
             )
             sort_fasta.assert_called_once_with(
                 self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)

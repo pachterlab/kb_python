@@ -1,4 +1,6 @@
->TRANSCRIPT_B-I gene_id:GENE_B.1 gene_name:GENE_B_NAME chr:2 start:1 end:10 strand:+
-AGTG
->TRANSCRIPT_C-I gene_id:GENE_C gene_name:GENE_C_NAME chr:2 start:2 end:14 strand:-
-AGATCC
+>TRANSCRIPT_B-I.1 gene_id:GENE_B.1 gene_name:GENE_B_NAME chr:2 start:1 end:10 strand:+
+ATCGG
+>TRANSCRIPT_B-I.2 gene_id:GENE_B.1 gene_name:GENE_B_NAME chr:2 start:1 end:10 strand:+
+CTG
+>TRANSCRIPT_C-I.1 gene_id:GENE_C gene_name:GENE_C_NAME chr:2 start:2 end:14 strand:-
+CAGATCCG

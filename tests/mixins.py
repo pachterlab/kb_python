@@ -82,7 +82,10 @@ class TestMixin(TestCase):
         cls.unsorted_gtf_path = os.path.join(cls.gtf_dir, 'not_sorted.gtf')
         cls.sorted_gtf_path = os.path.join(cls.gtf_dir, 'sorted.gtf')
         cls.gtf_t2g_path = os.path.join(cls.gtf_dir, 't2g.txt')
-        cls.gtf_t2g_intron_path = os.path.join(cls.gtf_dir, 't2g_intron.txt')
+        cls.fasta_t2g_intron_path = os.path.join(cls.gtf_dir, 't2g_intron.txt')
+        cls.gtf_t2g_intron_path = os.path.join(
+            cls.gtf_dir, 't2g_intron_gtf.txt'
+        )
 
         cls.fasta_dir = os.path.join(cls.fixtures_dir, 'fasta')
         cls.unsorted_fasta_path = os.path.join(cls.fasta_dir, 'not_sorted.fa')
