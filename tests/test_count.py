@@ -9,18 +9,18 @@ from kb_python.constants import (
     ADATA_PREFIX,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
+    BUS_FILTERED_FILENAME,
     BUS_INTRON_PREFIX,
     BUS_S_FILENAME,
     BUS_SC_FILENAME,
-    BUS_SCS_FILENAME,
-    COUNTS_DIR,
+    BUS_UNFILTERED_FILENAME,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
-    FILTERED_DIR,
     FILTER_WHITELIST_FILENAME,
+    FILTERED_COUNTS_DIR,
     INSPECT_FILENAME,
     TXNAMES_FILENAME,
-    UNFILTERED_DIR,
+    UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
 from tests.mixins import TestMixin
@@ -174,7 +174,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            counts_prefix = os.path.join(
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
+            )
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -183,7 +185,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
@@ -277,7 +279,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            counts_prefix = os.path.join(
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
+            )
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -286,7 +290,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             loom_path = mock.MagicMock()
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
@@ -374,7 +378,8 @@ class TestCount(TestMixin, TestCase):
                 '{}.barcodes.txt'.format(counts_prefix),
                 '{}.genes.txt'.format(counts_prefix),
                 os.path.join(
-                    out_dir, COUNTS_DIR, '{}.loom'.format(ADATA_PREFIX)
+                    out_dir, UNFILTERED_COUNTS_DIR,
+                    '{}.loom'.format(ADATA_PREFIX)
                 )
             )
             convert_matrix_to_h5ad.assert_not_called()
@@ -391,7 +396,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            counts_prefix = os.path.join(
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
+            )
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -400,7 +407,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             h5ad_path = mock.MagicMock()
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
@@ -489,7 +496,8 @@ class TestCount(TestMixin, TestCase):
                 '{}.barcodes.txt'.format(counts_prefix),
                 '{}.genes.txt'.format(counts_prefix),
                 os.path.join(
-                    out_dir, COUNTS_DIR, '{}.h5ad'.format(ADATA_PREFIX)
+                    out_dir, UNFILTERED_COUNTS_DIR,
+                    '{}.h5ad'.format(ADATA_PREFIX)
                 )
             )
 
@@ -506,29 +514,29 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture:
             out_dir = tempfile.mkdtemp()
-            unfiltered_dir = os.path.join(out_dir, UNFILTERED_DIR)
-            filtered_dir = os.path.join(out_dir, FILTERED_DIR)
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
-                unfiltered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             threads = 99999
             memory = 'TEST'
-            bus_path = os.path.join(unfiltered_dir, BUS_FILENAME)
-            ecmap_path = os.path.join(unfiltered_dir, ECMAP_FILENAME)
-            txnames_path = os.path.join(unfiltered_dir, TXNAMES_FILENAME)
-            inspect_path = os.path.join(unfiltered_dir, INSPECT_FILENAME)
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(unfiltered_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             filtered_counts_prefix = os.path.join(
-                filtered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             filter_whitelist_path = os.path.join(
-                filtered_dir, FILTER_WHITELIST_FILENAME
+                out_dir, FILTER_WHITELIST_FILENAME
             )
-            filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
-            filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
+            filtered_temp_bus_path = os.path.join(
+                temp_dir, BUS_FILTERED_FILENAME
+            )
+            filtered_bus_path = os.path.join(out_dir, BUS_FILTERED_FILENAME)
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
@@ -601,7 +609,7 @@ class TestCount(TestMixin, TestCase):
                 self.fastqs,
                 self.index_path,
                 self.technology,
-                unfiltered_dir,
+                out_dir,
                 threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 3)
@@ -673,30 +681,30 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture:
             out_dir = tempfile.mkdtemp()
-            unfiltered_dir = os.path.join(out_dir, UNFILTERED_DIR)
-            filtered_dir = os.path.join(out_dir, FILTERED_DIR)
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
-                unfiltered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             threads = 99999
             memory = 'TEST'
-            bus_path = os.path.join(unfiltered_dir, BUS_FILENAME)
-            ecmap_path = os.path.join(unfiltered_dir, ECMAP_FILENAME)
-            txnames_path = os.path.join(unfiltered_dir, TXNAMES_FILENAME)
-            inspect_path = os.path.join(unfiltered_dir, INSPECT_FILENAME)
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(unfiltered_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             loom_path = mock.MagicMock()
             filtered_counts_prefix = os.path.join(
-                filtered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             filter_whitelist_path = os.path.join(
-                filtered_dir, FILTER_WHITELIST_FILENAME
+                out_dir, FILTER_WHITELIST_FILENAME
             )
-            filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
-            filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
+            filtered_temp_bus_path = os.path.join(
+                temp_dir, BUS_FILTERED_FILENAME
+            )
+            filtered_bus_path = os.path.join(out_dir, BUS_FILTERED_FILENAME)
             filtered_loom_path = mock.MagicMock()
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
@@ -775,7 +783,7 @@ class TestCount(TestMixin, TestCase):
                 self.fastqs,
                 self.index_path,
                 self.technology,
-                unfiltered_dir,
+                out_dir,
                 threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 3)
@@ -838,7 +846,7 @@ class TestCount(TestMixin, TestCase):
                     '{}.barcodes.txt'.format(counts_prefix),
                     '{}.genes.txt'.format(counts_prefix),
                     os.path.join(
-                        unfiltered_dir, COUNTS_DIR,
+                        out_dir, UNFILTERED_COUNTS_DIR,
                         '{}.loom'.format(ADATA_PREFIX)
                     )
                 ),
@@ -847,7 +855,7 @@ class TestCount(TestMixin, TestCase):
                     '{}.barcodes.txt'.format(filtered_counts_prefix),
                     '{}.genes.txt'.format(filtered_counts_prefix),
                     os.path.join(
-                        filtered_dir, COUNTS_DIR,
+                        out_dir, FILTERED_COUNTS_DIR,
                         '{}.loom'.format(ADATA_PREFIX)
                     )
                 )
@@ -867,30 +875,30 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture:
             out_dir = tempfile.mkdtemp()
-            unfiltered_dir = os.path.join(out_dir, UNFILTERED_DIR)
-            filtered_dir = os.path.join(out_dir, FILTERED_DIR)
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
-                unfiltered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             threads = 99999
             memory = 'TEST'
-            bus_path = os.path.join(unfiltered_dir, BUS_FILENAME)
-            ecmap_path = os.path.join(unfiltered_dir, ECMAP_FILENAME)
-            txnames_path = os.path.join(unfiltered_dir, TXNAMES_FILENAME)
-            inspect_path = os.path.join(unfiltered_dir, INSPECT_FILENAME)
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(unfiltered_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             h5ad_path = mock.MagicMock()
             filtered_counts_prefix = os.path.join(
-                filtered_dir, COUNTS_DIR, COUNTS_PREFIX
+                out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
             filter_whitelist_path = os.path.join(
-                filtered_dir, FILTER_WHITELIST_FILENAME
+                out_dir, FILTER_WHITELIST_FILENAME
             )
-            filtered_temp_bus_path = os.path.join(temp_dir, BUS_SCS_FILENAME)
-            filtered_bus_path = os.path.join(filtered_dir, BUS_SCS_FILENAME)
+            filtered_temp_bus_path = os.path.join(
+                temp_dir, BUS_FILTERED_FILENAME
+            )
+            filtered_bus_path = os.path.join(out_dir, BUS_FILTERED_FILENAME)
             filtered_h5ad_path = mock.MagicMock()
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
@@ -969,7 +977,7 @@ class TestCount(TestMixin, TestCase):
                 self.fastqs,
                 self.index_path,
                 self.technology,
-                unfiltered_dir,
+                out_dir,
                 threads=threads
             )
             self.assertEqual(bustools_sort.call_count, 3)
@@ -1032,7 +1040,7 @@ class TestCount(TestMixin, TestCase):
                     '{}.barcodes.txt'.format(counts_prefix),
                     '{}.genes.txt'.format(counts_prefix),
                     os.path.join(
-                        unfiltered_dir, COUNTS_DIR,
+                        out_dir, UNFILTERED_COUNTS_DIR,
                         '{}.h5ad'.format(ADATA_PREFIX)
                     )
                 ),
@@ -1041,7 +1049,7 @@ class TestCount(TestMixin, TestCase):
                     '{}.barcodes.txt'.format(filtered_counts_prefix),
                     '{}.genes.txt'.format(filtered_counts_prefix),
                     os.path.join(
-                        filtered_dir, COUNTS_DIR,
+                        out_dir, FILTERED_COUNTS_DIR,
                         '{}.h5ad'.format(ADATA_PREFIX)
                     )
                 )
@@ -1060,7 +1068,9 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_prefix = os.path.join(out_dir, COUNTS_DIR, COUNTS_PREFIX)
+            counts_prefix = os.path.join(
+                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
+            )
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -1069,7 +1079,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
@@ -1167,7 +1177,7 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -1176,7 +1186,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             cdna_capture_path = os.path.join(
                 temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
             )
@@ -1366,7 +1376,7 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -1375,7 +1385,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             cdna_capture_path = os.path.join(
                 temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
             )
@@ -1599,7 +1609,7 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -1608,7 +1618,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             cdna_capture_path = os.path.join(
                 temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
             )
@@ -1832,7 +1842,7 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.overlay_anndatas') as overlay_anndatas:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
-            counts_dir = os.path.join(out_dir, COUNTS_DIR)
+            counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
             bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -1841,7 +1851,7 @@ class TestCount(TestMixin, TestCase):
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_SCS_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             cdna_capture_path = os.path.join(
                 temp_dir, '{}.bus'.format(BUS_CDNA_PREFIX)
             )
