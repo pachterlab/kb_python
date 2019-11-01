@@ -223,7 +223,7 @@ def bustools_capture(
     command += ['--{}'.format(capture_type)]
     command += [bus_path]
     run_executable(command)
-    return {'bus': bus_path}
+    return {'bus': out_path}
 
 
 def bustools_whitelist(bus_path, out_path):

@@ -38,6 +38,11 @@ class TestCount(TestMixin, TestCase):
         result = count.kallisto_bus(
             self.fastqs, self.index_path, self.technology, out_dir, threads=1
         )
+        self.assertEqual({
+            'bus': os.path.join(out_dir, BUS_FILENAME),
+            'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+            'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        }, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -47,6 +52,7 @@ class TestCount(TestMixin, TestCase):
         result = count.bustools_sort(
             self.bus_path, out_path, threads=1, memory='1G'
         )
+        self.assertEqual({'bus': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -56,6 +62,7 @@ class TestCount(TestMixin, TestCase):
         result = count.bustools_inspect(
             self.bus_s_path, out_path, self.whitelist_path, self.ecmap_path
         )
+        self.assertEqual({'inspect': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -65,6 +72,7 @@ class TestCount(TestMixin, TestCase):
         result = count.bustools_correct(
             self.bus_s_path, out_path, self.whitelist_path
         )
+        self.assertEqual({'bus': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -75,6 +83,11 @@ class TestCount(TestMixin, TestCase):
             self.bus_scs_path, counts_path, self.t2g_path, self.ecmap_path,
             self.txnames_path
         )
+        self.assertEqual({
+            'mtx': '{}.mtx'.format(counts_path),
+            'genes': '{}.genes.txt'.format(counts_path),
+            'barcodes': '{}.barcodes.txt'.format(counts_path),
+        }, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -85,6 +98,7 @@ class TestCount(TestMixin, TestCase):
             self.lamanno_bus_scs_path, out_path, self.lamanno_cdna_t2c_path,
             self.lamanno_txnames_path, self.lamanno_txnames_path
         )
+        self.assertEqual({'bus': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
@@ -92,6 +106,7 @@ class TestCount(TestMixin, TestCase):
         out_dir = tempfile.mkdtemp()
         out_path = os.path.join(out_dir, 'whitelist.txt')
         result = count.bustools_whitelist(self.bus_s_path, out_path)
+        self.assertEqual({'whitelist': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
