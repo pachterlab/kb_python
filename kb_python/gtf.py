@@ -79,9 +79,7 @@ class GTF:
             while line:
                 if not line.startswith('#') and not line.isspace():
                     entry = GTF.parse_entry(line)
-                    if entry['feature'] in ('transcript', 'exon',
-                                            'five_prime_utr',
-                                            'three_prime_utr'):
+                    if entry['feature'] in ('transcript', 'exon'):
                         to_sort.append(
                             (entry['seqname'], entry['start'], position)
                         )
