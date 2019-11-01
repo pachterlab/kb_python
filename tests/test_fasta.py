@@ -21,8 +21,13 @@ class TestFASTA(TestMixin, TestCase):
         )
 
     def test_parse_header(self):
-        header = '>transcript_id TEST'
-        self.assertEqual('transcript_id', fasta.FASTA.parse_header(header))
+        header = '>transcript_id TEST:testing'
+        self.assertEqual({
+            'sequence_id': 'transcript_id',
+            'group': {
+                'TEST': 'testing'
+            }
+        }, fasta.FASTA.parse_header(header))
 
     def test_reverse_complement(self):
         sequence = 'ATCG'
@@ -34,7 +39,7 @@ class TestFASTA(TestMixin, TestCase):
 
     def test_sort(self):
         out_path = os.path.join(
-            tempfile.gettempdir(), '{}.gtf'.format(uuid.uuid4())
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
         )
         fa = fasta.FASTA(self.unsorted_fasta_path)
         fa.sort(out_path)
@@ -59,7 +64,7 @@ class TestFASTA(TestMixin, TestCase):
             tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
         )
         fasta.generate_intron_fasta(
-            self.sorted_fasta_path, self.sorted_gtf_path, out_path
+            self.sorted_fasta_path, self.sorted_gtf_path, out_path, flank=1
         )
         with open(out_path, 'r') as f, open(self.split_intron_fasta_path,
                                             'r') as split:
