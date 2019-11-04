@@ -2,6 +2,7 @@ import gzip
 import logging
 import os
 import re
+import shutil
 import subprocess as sp
 import threading
 import time
@@ -48,6 +49,38 @@ def open_as_text(path, mode):
     """
     return gzip.open(path, mode +
                      't') if path.endswith('.gz') else open(path, mode)
+
+
+def decompress_gzip(gzip_path, out_path):
+    """Decompress a gzip file to provided file path.
+
+    :param gzip_path: path to gzip file
+    :type gzip_path: str
+    :param out_path: path to decompressed file
+    :type out_path: str
+
+    :return: path to decompressed file
+    :rtype: str
+    """
+    with gzip.open(gzip_path, 'rb') as f, open(out_path, 'wb') as out:
+        shutil.copyfileobj(f, out)
+    return out_path
+
+
+def compress_gzip(file_path, out_path):
+    """Compress a file into gzip.
+
+    :param file_path: path to file
+    :type file_path: str
+    :param out_dir: path to compressed file
+    :type out_dir: str
+
+    :return: path to compressed file
+    :rtype: str
+    """
+    with open(file_path, 'rb') as f, gzip.open(out_path, 'wb') as out:
+        shutil.copyfileobj(f, out)
+    return out_path
 
 
 def run_executable(

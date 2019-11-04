@@ -31,6 +31,30 @@ class TestUtils(TestMixin, TestCase):
         with utils.open_as_text(path, 'r') as f:
             self.assertEqual(f.read(), 'TESTING')
 
+    def test_decompress_gzip(self):
+        filename = str(uuid.uuid4())
+        gzip_path = os.path.join(
+            tempfile.gettempdir(), '{}.gz'.format(filename)
+        )
+        out_path = os.path.join(tempfile.gettempdir(), filename)
+        with gzip.open(gzip_path, 'wt') as f:
+            f.write('TESTING\nTEST')
+        self.assertEqual(out_path, utils.decompress_gzip(gzip_path, out_path))
+        self.assertTrue(os.path.exists(out_path))
+        with open(out_path, 'r') as f:
+            self.assertEqual('TESTING\nTEST', f.read())
+
+    def test_compress_gzip(self):
+        filename = str(uuid.uuid4())
+        file_path = os.path.join(tempfile.gettempdir(), filename)
+        out_path = os.path.join(tempfile.gettempdir(), '{}.gz'.format(filename))
+        with open(file_path, 'w') as f:
+            f.write('TESTING\nTEST')
+        self.assertEqual(out_path, utils.compress_gzip(file_path, out_path))
+        self.assertTrue(os.path.exists(out_path))
+        with gzip.open(out_path, 'rt') as f:
+            self.assertEqual('TESTING\nTEST', f.read())
+
     def test_run_executable(self):
         p = utils.run_executable(['echo', 'TEST'], stream=False)
         self.assertEqual(p.stdout.read(), 'TEST\n')
