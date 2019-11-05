@@ -60,10 +60,10 @@ TECHNOLOGIES = [
     Technology(
         'INDROPSV3',
         'inDrops version 3',
+        3,
         2,
-        1,
-        [(0, 42, 48)],
-        [(0, 0, 11), (0, 30, 38)],
+        [(1, 8, 14)],
+        [(0, 0, 8), (1, 0, 8)],
         'inDropsv3_whitelist.txt.gz',
     ),
     Technology('SCRUBSEQ', 'SCRB-Seq', 2, 1, [(0, 6, 16)], [(0, 0, 6)], None),
