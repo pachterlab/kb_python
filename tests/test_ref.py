@@ -181,8 +181,29 @@ class TestRef(TestMixin, TestCase):
                 ref.download_reference(reference, files, temp_dir=temp_dir)
             urlretrieve.assert_not_called()
 
+    def decompress_file_text(self):
+        with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
+            temp_dir = tempfile.mkdtemp()
+            self.assertEqual(
+                'textfile.txt',
+                ref.decompress_file('textfile.txt', temp_dir=temp_dir)
+            )
+            decompress_gzip.assert_not_called()
+
+    def decompress_file_gzip(self):
+        with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
+            temp_dir = tempfile.mkdtemp()
+            self.assertEqual(
+                decompress_gzip.return_value,
+                ref.decompress_file('textfile.txt.gz', temp_dir=temp_dir)
+            )
+            decompress_gzip.assert_called_once_with(
+                'textfile.txt.gz', os.path.join(temp_dir, 'textfile.txt')
+            )
+
     def test_ref(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -195,6 +216,7 @@ class TestRef(TestMixin, TestCase):
             sorted_fasta_path = mock.MagicMock()
             sorted_gtf_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
+            decompress_file.side_effect = [self.gtf_path, self.fasta_path]
             sort_fasta.return_value = sorted_fasta_path
             sort_gtf.return_value = sorted_gtf_path
             generate_cdna_fasta.return_value = cdna_fasta_path
@@ -212,6 +234,11 @@ class TestRef(TestMixin, TestCase):
                                  t2g_path,
                                  temp_dir=temp_dir
                              ))
+            self.assertEqual(2, decompress_file.call_count)
+            decompress_file.assert_has_calls([
+                call(self.gtf_path, temp_dir=temp_dir),
+                call(self.fasta_path, temp_dir=temp_dir)
+            ])
             create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
             sort_fasta.assert_called_once_with(
                 self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
@@ -225,7 +252,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(cdna_fasta_path, index_path)
 
     def test_ref_exists(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -235,13 +263,22 @@ class TestRef(TestMixin, TestCase):
             cdna_fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
+            temp_dir = mock.MagicMock()
+            decompress_file.return_value = self.gtf_path
             kallisto_index.return_value = {'index': index_path}
             create_t2g_from_gtf.return_value = {'t2g': t2g_path}
             self.assertEqual({'t2g': t2g_path},
                              ref.ref(
-                                 self.fasta_path, self.gtf_path,
-                                 cdna_fasta_path, index_path, t2g_path
+                                 self.fasta_path,
+                                 self.gtf_path,
+                                 cdna_fasta_path,
+                                 index_path,
+                                 t2g_path,
+                                 temp_dir=temp_dir
                              ))
+            decompress_file.assert_called_once_with(
+                self.gtf_path, temp_dir=temp_dir
+            )
             create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
             sort_fasta.assert_not_called()
             sort_gtf.assert_not_called()
@@ -249,7 +286,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
 
     def test_ref_overwrite(self):
-        with mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -262,6 +300,7 @@ class TestRef(TestMixin, TestCase):
             sorted_fasta_path = mock.MagicMock()
             sorted_gtf_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
+            decompress_file.side_effect = [self.gtf_path, self.fasta_path]
             sort_fasta.return_value = sorted_fasta_path
             sort_gtf.return_value = sorted_gtf_path
             generate_cdna_fasta.return_value = cdna_fasta_path
@@ -280,6 +319,11 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir,
                                  overwrite=True
                              ))
+            self.assertEqual(2, decompress_file.call_count)
+            decompress_file.assert_has_calls([
+                call(self.gtf_path, temp_dir=temp_dir),
+                call(self.fasta_path, temp_dir=temp_dir)
+            ])
             create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
             sort_fasta.assert_called_once_with(
                 self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
@@ -293,7 +337,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(cdna_fasta_path, index_path)
 
     def test_ref_lamanno(self):
-        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -313,6 +358,7 @@ class TestRef(TestMixin, TestCase):
             cdna_t2c_path = mock.MagicMock()
             intron_t2c_path = mock.MagicMock()
             combined_path = mock.MagicMock()
+            decompress_file.side_effect = [self.fasta_path, self.gtf_path]
             sort_fasta.return_value = sorted_fasta_path
             sort_gtf.return_value = sorted_gtf_path
             generate_cdna_fasta.return_value = cdna_fasta_path
@@ -344,6 +390,11 @@ class TestRef(TestMixin, TestCase):
                                  intron_t2c_path,
                                  temp_dir=temp_dir
                              ))
+            self.assertEqual(2, decompress_file.call_count)
+            decompress_file.assert_has_calls([
+                call(self.fasta_path, temp_dir=temp_dir),
+                call(self.gtf_path, temp_dir=temp_dir),
+            ])
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
             )
@@ -367,7 +418,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(combined_path, index_path)
 
     def test_ref_lamanno_exists(self):
-        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -377,16 +429,28 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
             exists.return_value = True
-            cdna_fasta_path = mock.MagicMock()
+            temp_dir = tempfile.mkdtemp()
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
+            cdna_fasta_path = mock.MagicMock()
+            intron_fasta_path = mock.MagicMock()
+            cdna_t2c_path = mock.MagicMock()
+            intron_t2c_path = mock.MagicMock()
             kallisto_index.return_value = {'index': index_path}
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
-            self.assertEqual({'t2g': t2g_path},
-                             ref.ref(
-                                 self.fasta_path, self.gtf_path,
-                                 cdna_fasta_path, index_path, t2g_path
+            self.assertEqual({},
+                             ref.ref_lamanno(
+                                 self.fasta_path,
+                                 self.gtf_path,
+                                 cdna_fasta_path,
+                                 intron_fasta_path,
+                                 index_path,
+                                 t2g_path,
+                                 cdna_t2c_path,
+                                 intron_t2c_path,
+                                 temp_dir=temp_dir
                              ))
+            decompress_file.assert_not_called()
             create_t2g_from_fasta.assert_not_called()
             sort_fasta.assert_not_called()
             sort_gtf.assert_not_called()
@@ -397,7 +461,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
 
     def test_ref_lamanno_overwrite(self):
-        with mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
@@ -417,6 +482,7 @@ class TestRef(TestMixin, TestCase):
             cdna_t2c_path = mock.MagicMock()
             intron_t2c_path = mock.MagicMock()
             combined_path = mock.MagicMock()
+            decompress_file.side_effect = [self.fasta_path, self.gtf_path]
             sort_fasta.return_value = sorted_fasta_path
             sort_gtf.return_value = sorted_gtf_path
             generate_cdna_fasta.return_value = cdna_fasta_path
@@ -449,6 +515,11 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir,
                                  overwrite=True
                              ))
+            self.assertEqual(2, decompress_file.call_count)
+            decompress_file.assert_has_calls([
+                call(self.fasta_path, temp_dir=temp_dir),
+                call(self.gtf_path, temp_dir=temp_dir),
+            ])
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
             )
