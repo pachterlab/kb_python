@@ -8,7 +8,7 @@ import textwrap
 from . import __version__
 from .config import PACKAGE_PATH, REFERENCES_MAPPING, TECHNOLOGIES, TEMP_DIR
 from .constants import INFO_FILENAME
-from .count import count, count_lamanno
+from .count import count, count_velocity
 from .ref import download_reference, ref, ref_lamanno
 from .utils import get_bustools_version, get_kallisto_version
 
@@ -116,8 +116,8 @@ def parse_count(args):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    if args.lamanno:
-        count_lamanno(
+    if args.lamanno or args.nucleus:
+        count_velocity(
             args.i,
             args.g,
             args.c1,
@@ -132,6 +132,7 @@ def parse_count(args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            nucleus=args.nucleus,
         )
     else:
         count(
@@ -357,21 +358,21 @@ def setup_count_args(parser, parent):
         default='4G'
     )
     required_lamanno = parser_count.add_argument_group(
-        'required arguments for --lamanno'
+        'required arguments for --lamanno and --nucleus'
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required='--lamanno' in sys.argv
+        required=any(arg in sys.argv for arg in ('--lamanno', '--nucleus'))
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required='--lamanno' in sys.argv
+        required=any(arg in sys.argv for arg in ('--lamanno', '--nucleus'))
     )
     parser_count.add_argument(
         '--overwrite',
@@ -379,9 +380,15 @@ def setup_count_args(parser, parent):
         action='store_true'
     )
 
-    parser_count.add_argument(
+    velocity_group = parser_count.add_mutually_exclusive_group()
+    velocity_group.add_argument(
         '--lamanno',
         help='Calculate RNA velocity based on La Manno et al. 2018 logic',
+        action='store_true'
+    )
+    velocity_group.add_argument(
+        '--nucleus',
+        help='Calculate RNA velocity on single-nucleus RNA-seq reads',
         action='store_true'
     )
     parser_count.add_argument(

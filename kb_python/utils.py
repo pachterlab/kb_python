@@ -375,8 +375,6 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     df_genes = pd.read_csv(
         genes_path, header=None, index_col=0, names=['gene_id'], sep='\t'
     )
-    df_genes.index = df_genes.index.str.split('.').str[
-        0]  # slice off version number
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )
@@ -394,23 +392,30 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     :return: a new Anndata object
     :rtype: anndata.Anndata
     """
-    adata_spliced_obs = adata_spliced[adata_spliced.obs.index.isin(
-        adata_unspliced.obs.index
-    )]
-    adata_unspliced_obs = adata_unspliced[adata_unspliced.obs.index.isin(
-        adata_spliced.obs.index
-    )]
-    adata_spliced_obs_var = adata_spliced_obs[:,
-                                              adata_spliced_obs.var.index.isin(
-                                                  adata_unspliced_obs.var.index
-                                              )]
-    adata_unspliced_obs_var = adata_unspliced_obs[:,
-                                                  adata_unspliced_obs.var.index.
-                                                  isin(
-                                                      adata_spliced_obs.var.
-                                                      index
-                                                  )]
+    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    spliced_intersection = adata_spliced[idx]
+    unspliced_intersection = adata_unspliced[idx]
+    spliced_unspliced = spliced_intersection.copy()
+    spliced_unspliced.layers['spliced'] = spliced_intersection.X
+    spliced_unspliced.layers['unspliced'] = unspliced_intersection.X
+    return spliced_unspliced
 
-    adata_spliced_obs_var.layers['spliced'] = adata_spliced_obs_var.X
-    adata_spliced_obs_var.layers['unspliced'] = adata_unspliced_obs_var.X
-    return adata_spliced_obs_var
+
+def sum_anndatas(adata_spliced, adata_unspliced):
+    """Sum the counts in two anndata objects by taking the intersection of
+    both matrices and adding the values together.
+
+    :param adata_spliced: an Anndata object
+    :type adata_spliced: anndata.Anndata
+    :param adata_unspliced: an Anndata object
+    :type adata_unspliced: anndata.Anndata
+
+    :return: a new Anndata object
+    :rtype: anndata.Anndata
+    """
+    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    spliced_intersection = adata_spliced[idx]
+    unspliced_intersection = adata_unspliced[idx]
+    spliced_unspliced = spliced_intersection.copy()
+    spliced_unspliced.X = spliced_intersection.X + unspliced_intersection.X
+    return spliced_unspliced

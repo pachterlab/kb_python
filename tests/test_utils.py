@@ -163,6 +163,18 @@ class TestUtils(TestMixin, TestCase):
         adata = utils.overlay_anndatas(adata_spliced, adata_unspliced)
         self.assertEqual({'spliced', 'unspliced'}, set(adata.layers.keys()))
 
+    def test_sum_anndatas(self):
+        adata_spliced = utils.import_matrix_as_anndata(
+            self.spliced_matrix_path, self.spliced_barcodes_path,
+            self.spliced_genes_path
+        )
+        adata_unspliced = utils.import_matrix_as_anndata(
+            self.unspliced_matrix_path, self.unspliced_barcodes_path,
+            self.unspliced_genes_path
+        )
+        adata = utils.sum_anndatas(adata_spliced, adata_unspliced)
+        self.assertEqual(2.0, adata.X[5, 15])
+
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
         self.assertTrue(os.path.exists(whitelist_path))
