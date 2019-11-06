@@ -182,6 +182,72 @@ class TestCount(TestMixin, TestCase):
             convert_matrix_to_loom.assert_not_called()
             convert_matrix_to_h5ad.assert_not_called()
 
+    def test_filter_with_bustools_dont_count(self):
+        with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
+            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.os.makedirs'),\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix_to_loom') as convert_matrix_to_loom,\
+            mock.patch('kb_python.count.convert_matrix_to_h5ad') as convert_matrix_to_h5ad:
+            bus_path = mock.MagicMock()
+            ecmap_path = mock.MagicMock()
+            txnames_path = mock.MagicMock()
+            t2g_path = mock.MagicMock()
+            counts_dir = 'counts'
+            threads = 99999
+            memory = 'memory'
+            counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
+            temp_dir = tempfile.mkdtemp()
+            whitelist_path = mock.MagicMock()
+            capture_path = mock.MagicMock()
+            sort_path = 'path/to/busfile.bus'
+            bustools_whitelist.return_value = {'whitelist': whitelist_path}
+            bustools_capture.return_value = {'bus': capture_path}
+            bustools_sort.return_value = {'bus': sort_path}
+            bustools_count.return_value = {
+                'mtx': '{}.mtx'.format(counts_prefix),
+                'genes': '{}.genes.txt'.format(counts_prefix),
+                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
+            }
+            self.assertEqual({
+                'whitelist': whitelist_path,
+                'bus_scs': sort_path,
+            },
+                             count.filter_with_bustools(
+                                 bus_path,
+                                 ecmap_path,
+                                 txnames_path,
+                                 t2g_path,
+                                 whitelist_path,
+                                 sort_path,
+                                 counts_prefix,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 count=False,
+                             ))
+
+            bustools_whitelist.assert_called_once_with(bus_path, whitelist_path)
+            bustools_capture.assert_called_once_with(
+                bus_path,
+                os.path.join(temp_dir, os.path.basename(sort_path)),
+                whitelist_path,
+                ecmap_path,
+                txnames_path,
+                capture_type='barcode'
+            )
+            bustools_sort.assert_called_once_with(
+                capture_path,
+                sort_path,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
+            bustools_count.assert_not_called()
+            convert_matrix_to_loom.assert_not_called()
+            convert_matrix_to_h5ad.assert_not_called()
+
     def test_filter_with_bustools_loom(self):
         with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
