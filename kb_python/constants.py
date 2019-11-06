@@ -25,3 +25,6 @@ ADATA_PREFIX = 'adata'
 
 UNFILTERED_COUNTS_DIR = 'counts_unfiltered'
 FILTERED_COUNTS_DIR = 'counts_filtered'
+
+BUS_UNFILTERED_SUFFIX = '.unfiltered.bus'
+BUS_FILTERED_SUFFIX = '.filtered.bus'

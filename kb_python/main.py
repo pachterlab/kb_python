@@ -126,6 +126,7 @@ def parse_count(args):
             args.o,
             args.fastqs,
             args.w,
+            filter=args.filter,
             threads=args.t,
             memory=args.m,
             overwrite=args.overwrite,
@@ -378,13 +379,12 @@ def setup_count_args(parser, parent):
         action='store_true'
     )
 
-    lamanno_filter_group = parser_count.add_mutually_exclusive_group()
-    lamanno_filter_group.add_argument(
+    parser_count.add_argument(
         '--lamanno',
         help='Calculate RNA velocity based on La Manno et al. 2018 logic',
         action='store_true'
     )
-    lamanno_filter_group.add_argument(
+    parser_count.add_argument(
         '--filter',
         help='Produce a filtered gene count matrix (default: bustools)',
         type=str,
