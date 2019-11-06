@@ -414,3 +414,23 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     adata_spliced_obs_var.layers['spliced'] = adata_spliced_obs_var.X
     adata_spliced_obs_var.layers['unspliced'] = adata_unspliced_obs_var.X
     return adata_spliced_obs_var
+
+
+def sum_anndatas(adata_spliced, adata_unspliced):
+    """Sum the counts in two anndata objects by taking the intersection of
+    both matrices and adding the values together.
+
+    :param adata_spliced: an Anndata object
+    :type adata_spliced: anndata.Anndata
+    :param adata_unspliced: an Anndata object
+    :type adata_unspliced: anndata.Anndata
+
+    :return: a new Anndata object
+    :rtype: anndata.Anndata
+    """
+    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    spliced_intersection = adata_spliced[idx]
+    unspliced_intersection = adata_unspliced[idx]
+    spliced_unspliced = spliced_intersection.copy()
+    spliced_unspliced.X = spliced_intersection.X + unspliced_intersection.X
+    return spliced_unspliced
