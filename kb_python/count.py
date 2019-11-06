@@ -8,10 +8,12 @@ from .constants import (
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_FILTERED_FILENAME,
+    BUS_FILTERED_SUFFIX,
     BUS_INTRON_PREFIX,
     BUS_S_FILENAME,
     BUS_SC_FILENAME,
     BUS_UNFILTERED_FILENAME,
+    BUS_UNFILTERED_SUFFIX,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
     FILTER_WHITELIST_FILENAME,
@@ -247,6 +249,106 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
+def filter_with_bustools(
+        bus_path,
+        ecmap_path,
+        txnames_path,
+        t2g_path,
+        whitelist_path,
+        filtered_bus_path,
+        counts_prefix=None,
+        temp_dir='tmp',
+        threads=8,
+        memory='4G',
+        count=True,
+        loom=False,
+        h5ad=False
+):
+    """Generate filtered count matrices with bustools.
+
+    :param bus_path: path to sorted, corrected, sorted BUS file
+    :type bus_path: str
+    :param ecmap_path: path to matrix ec file
+    :type ecmap_path: str
+    :param txnames_path: path to list of transcripts
+    :type txnames_path: str
+    :param t2g_path: path to transcript-to-gene mapping
+    :type t2g_path: str
+    :param whitelist_path: path to filter whitelist to generate
+    :type whitelist_path: str
+    :param filtered_bus_path: path to filtered BUS file to generate
+    :type filtered_bus_path: str
+    :param counts_prefix: prefix of count matrix
+    :type counts_prefix: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+    :param memory: amount of memory to use, defaults to `4G`
+    :type memory: str, optional
+    :param loom: whether to convert the final count matrix into a loom file,
+                 defaults to `False`
+    :type loom: bool, optional
+    :param h5ad: whether to convert the final count matrix into a h5ad file,
+                 defaults to `False`
+    :type h5ad: bool, optional
+
+    :return: dictionary of generated files
+    :rtype: dict
+    """
+    logger.info('Filtering with bustools')
+    results = {}
+    whitelist_result = bustools_whitelist(bus_path, whitelist_path)
+    results.update(whitelist_result)
+    capture_result = bustools_capture(
+        bus_path,
+        os.path.join(temp_dir, os.path.basename(filtered_bus_path)),
+        whitelist_result['whitelist'],
+        ecmap_path,
+        txnames_path,
+        capture_type='barcode',
+    )
+    sort_result = bustools_sort(
+        capture_result['bus'],
+        filtered_bus_path,
+        temp_dir=temp_dir,
+        threads=threads,
+        memory=memory,
+    )
+    results.update({'bus_scs': sort_result['bus']})
+
+    if count:
+        counts_dir = os.path.dirname(counts_prefix)
+        os.makedirs(counts_dir, exist_ok=True)
+        count_result = bustools_count(
+            sort_result['bus'],
+            counts_prefix,
+            t2g_path,
+            ecmap_path,
+            txnames_path,
+        )
+        results.update(count_result)
+
+        if loom:
+            loom_path = convert_matrix_to_loom(
+                count_result['mtx'],
+                count_result['barcodes'],
+                count_result['genes'],
+                os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX)),
+            )
+            results.update({'loom': loom_path})
+        if h5ad:
+            h5ad_path = convert_matrix_to_h5ad(
+                count_result['mtx'],
+                count_result['barcodes'],
+                count_result['genes'],
+                os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX)),
+            )
+            results.update({'h5ad': h5ad_path})
+
+    return results
+
+
 def stream_fastqs(fastqs, temp_dir='tmp'):
     """Given a list of fastqs (that may be local or remote paths), stream any
     remote files. Internally, calls utils.
@@ -471,65 +573,27 @@ def count(
         unfiltered_results.update({'h5ad': h5ad_path})
 
     if filter == 'bustools':
-        logger.info('Filtering')
-        filtered_results = results.setdefault('filtered', {})
-        filtered_whitelist_result = bustools_whitelist(
-            sort2_result['bus'],
-            os.path.join(out_dir, FILTER_WHITELIST_FILENAME)
+        filtered_counts_prefix = os.path.join(
+            out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
         )
-        filtered_results.update(filtered_whitelist_result)
-
-        filtered_capture_result = bustools_capture(
+        filtered_whitelist_path = os.path.join(
+            out_dir, FILTER_WHITELIST_FILENAME
+        )
+        filtered_bus_path = os.path.join(out_dir, BUS_FILTERED_FILENAME)
+        results['filtered'] = filter_with_bustools(
             sort2_result['bus'],
-            os.path.join(temp_dir, BUS_FILTERED_FILENAME),
-            filtered_whitelist_result['whitelist'],
             bus_result['ecmap'],
             bus_result['txnames'],
-            capture_type='barcode',
-        )
-        filtered_sort_result = bustools_sort(
-            filtered_capture_result['bus'],
-            os.path.join(out_dir, BUS_FILTERED_FILENAME),
+            t2g_path,
+            filtered_whitelist_path,
+            filtered_bus_path,
+            filtered_counts_prefix,
             temp_dir=temp_dir,
             threads=threads,
             memory=memory,
+            loom=loom,
+            h5ad=h5ad
         )
-        filtered_results.update({'bus_scs': filtered_sort_result['bus']})
-
-        filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
-        os.makedirs(filtered_counts_dir, exist_ok=True)
-        filtered_counts_prefix = os.path.join(
-            filtered_counts_dir, COUNTS_PREFIX
-        )
-        filtered_count_result = bustools_count(
-            filtered_sort_result['bus'],
-            filtered_counts_prefix,
-            t2g_path,
-            bus_result['ecmap'],
-            bus_result['txnames'],
-        )
-        filtered_results.update(filtered_count_result)
-
-        if loom:
-            filtered_loom_path = convert_matrix_to_loom(
-                filtered_count_result['mtx'],
-                filtered_count_result['barcodes'],
-                filtered_count_result['genes'],
-                os.path.join(
-                    filtered_counts_dir, '{}.loom'.format(ADATA_PREFIX)
-                ),
-            )
-            filtered_results.update({'loom': filtered_loom_path})
-        if h5ad:
-            filtered_h5ad_path = convert_matrix_to_h5ad(
-                filtered_count_result['mtx'],
-                filtered_count_result['barcodes'],
-                filtered_count_result['genes'],
-                os.path.join(
-                    filtered_counts_dir, '{}.h5ad'.format(ADATA_PREFIX)
-                ),
-            )
-            filtered_results.update({'h5ad': filtered_h5ad_path})
 
     return results
 
@@ -543,6 +607,7 @@ def count_lamanno(
         out_dir,
         fastqs,
         whitelist_path=None,
+        filter=None,
         temp_dir='tmp',
         threads=8,
         memory='4G',
@@ -568,6 +633,9 @@ def count_lamanno(
     :type fastqs: list
     :param whitelist_path: path to whitelist, defaults to `None`
     :type whitelist_path: str, optional
+    :param filter: filter to use to generate a filtered count matrix,
+                   defaults to `None`
+    :type filter: str, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -651,7 +719,7 @@ def count_lamanno(
         )
         sort_result = bustools_sort(
             capture_result['bus'],
-            os.path.join(out_dir, '{}.s.bus'.format(prefix)),
+            os.path.join(out_dir, '{}{}'.format(prefix, BUS_UNFILTERED_SUFFIX)),
             temp_dir=temp_dir,
             threads=threads,
             memory=memory
@@ -659,7 +727,7 @@ def count_lamanno(
 
         if prefix not in results:
             results[prefix] = {}
-        results[prefix].update({'bus_s': sort_result['bus']})
+        results[prefix].update(sort_result)
 
         counts_prefix = os.path.join(counts_dir, prefix)
         count_result = bustools_count(
@@ -689,4 +757,76 @@ def count_lamanno(
             logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
             adata.write(h5ad_path)
             results.update({'h5ad': h5ad_path})
+
+    if filter:
+        if filter == 'bustools':
+            results['filtered'] = filter_with_bustools(
+                sort2_result['bus'],
+                bus_result['ecmap'],
+                bus_result['txnames'],
+                t2g_path,
+                os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
+                os.path.join(out_dir, BUS_FILTERED_FILENAME),
+                count=False
+            )
+
+            for prefix, t2c_path in prefix_to_t2c.items():
+                filtered_capture_result = bustools_capture(
+                    results['filtered']['bus_scs'],
+                    os.path.join(temp_dir, '{}.bus'.format(prefix)), t2c_path,
+                    bus_result['ecmap'], bus_result['txnames']
+                )
+                filtered_sort_result = bustools_sort(
+                    filtered_capture_result['bus'],
+                    os.path.join(
+                        out_dir, '{}{}'.format(prefix, BUS_FILTERED_SUFFIX)
+                    ),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+
+                results[prefix].setdefault('filtered',
+                                           {}).update(filtered_sort_result)
+
+                filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
+                os.makedirs(filtered_counts_dir, exist_ok=True)
+                filtered_counts_prefix = os.path.join(
+                    filtered_counts_dir, prefix
+                )
+                count_result = bustools_count(
+                    filtered_sort_result['bus'],
+                    filtered_counts_prefix,
+                    t2g_path,
+                    bus_result['ecmap'],
+                    bus_result['txnames'],
+                )
+                results[prefix]['filtered'].update(count_result)
+
+        if loom or h5ad:
+            adatas = {}
+            for prefix in prefix_to_t2c:
+                adatas[prefix] = import_matrix_as_anndata(
+                    results[prefix]['filtered']['mtx'],
+                    results[prefix]['filtered']['barcodes'],
+                    results[prefix]['filtered']['genes']
+                )
+            adata = overlay_anndatas(adatas['spliced'], adatas['unspliced'])
+            if loom:
+                loom_path = os.path.join(
+                    out_dir, FILTERED_COUNTS_DIR,
+                    '{}.loom'.format(ADATA_PREFIX)
+                )
+                logger.info('Writing matrices to loom {}'.format(loom_path))
+                adata.write_loom(loom_path)
+                results.update({'loom': loom_path})
+            if h5ad:
+                h5ad_path = os.path.join(
+                    out_dir, FILTERED_COUNTS_DIR,
+                    '{}.h5ad'.format(ADATA_PREFIX)
+                )
+                logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
+                adata.write(h5ad_path)
+                results.update({'h5ad': h5ad_path})
+
     return results
