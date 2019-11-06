@@ -17,6 +17,7 @@ from .fasta import (
 from .gtf import GTF
 from .utils import (
     concatenate_files,
+    decompress_gzip,
     open_as_text,
     run_executable,
 )
@@ -220,6 +221,25 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     return results
 
 
+def decompress_file(path, temp_dir='tmp'):
+    """Decompress the given path if it is a .gz file. Otherwise, return the
+    original path.
+
+    :param path: path to the file
+    :type path: str
+
+    :return: unaltered `path` if the file is not a .gz file, otherwise path to the
+             uncompressed file
+    :rtype: str
+    """
+    logger.info('Decompressing {} to {}'.format(path, temp_dir))
+    return decompress_gzip(
+        path,
+        os.path.join(temp_dir,
+                     os.path.splitext(os.path.basename(path))[0])
+    ) if path.endswith('.gz') else path
+
+
 def ref(
         fasta_path,
         gtf_path,
@@ -248,9 +268,11 @@ def ref(
     :rtype: dict
     """
     results = {}
+    gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
     t2g_result = create_t2g_from_gtf(gtf_path, t2g_path)
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
+        fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
@@ -310,9 +332,11 @@ def ref_lamanno(
     """
     results = {}
     if not os.path.exists(index_path) or overwrite:
+        fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
         sorted_fasta_path = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
+        gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
         sorted_gtf_path = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
