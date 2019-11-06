@@ -375,8 +375,6 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     df_genes = pd.read_csv(
         genes_path, header=None, index_col=0, names=['gene_id'], sep='\t'
     )
-    df_genes.index = df_genes.index.str.split('.').str[
-        0]  # slice off version number
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )
