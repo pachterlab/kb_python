@@ -29,6 +29,7 @@ from .utils import (
     import_matrix_as_anndata,
     overlay_anndatas,
     run_executable,
+    sum_anndatas,
     whitelist_provided,
 )
 
@@ -598,7 +599,7 @@ def count(
     return results
 
 
-def count_lamanno(
+def count_velocity(
         index_path,
         t2g_path,
         cdna_t2c_path,
@@ -614,6 +615,7 @@ def count_lamanno(
         overwrite=False,
         loom=False,
         h5ad=False,
+        nucleus=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -650,10 +652,16 @@ def count_lamanno(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param nucleus: whether this is a single-nucleus experiment. if `True`, the
+                    spliced and unspliced count matrices will be summed,
+                    defaults to `False`
+    :type nucleus: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
     """
+    combine_anndatas_func = sum_anndatas if nucleus else overlay_anndatas
+
     results = {}
 
     bus_result = {
@@ -746,7 +754,7 @@ def count_lamanno(
                 results[prefix]['mtx'], results[prefix]['barcodes'],
                 results[prefix]['genes']
             )
-        adata = overlay_anndatas(adatas['spliced'], adatas['unspliced'])
+        adata = combine_anndatas_func(adatas['spliced'], adatas['unspliced'])
         if loom:
             loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
             logger.info('Writing matrices to loom {}'.format(loom_path))
@@ -811,7 +819,9 @@ def count_lamanno(
                     results[prefix]['filtered']['barcodes'],
                     results[prefix]['filtered']['genes']
                 )
-            adata = overlay_anndatas(adatas['spliced'], adatas['unspliced'])
+            adata = combine_anndatas_func(
+                adatas['spliced'], adatas['unspliced']
+            )
             if loom:
                 loom_path = os.path.join(
                     out_dir, FILTERED_COUNTS_DIR,
