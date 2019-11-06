@@ -394,26 +394,13 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     :return: a new Anndata object
     :rtype: anndata.Anndata
     """
-    adata_spliced_obs = adata_spliced[adata_spliced.obs.index.isin(
-        adata_unspliced.obs.index
-    )]
-    adata_unspliced_obs = adata_unspliced[adata_unspliced.obs.index.isin(
-        adata_spliced.obs.index
-    )]
-    adata_spliced_obs_var = adata_spliced_obs[:,
-                                              adata_spliced_obs.var.index.isin(
-                                                  adata_unspliced_obs.var.index
-                                              )]
-    adata_unspliced_obs_var = adata_unspliced_obs[:,
-                                                  adata_unspliced_obs.var.index.
-                                                  isin(
-                                                      adata_spliced_obs.var.
-                                                      index
-                                                  )]
-
-    adata_spliced_obs_var.layers['spliced'] = adata_spliced_obs_var.X
-    adata_spliced_obs_var.layers['unspliced'] = adata_unspliced_obs_var.X
-    return adata_spliced_obs_var
+    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    spliced_intersection = adata_spliced[idx]
+    unspliced_intersection = adata_unspliced[idx]
+    spliced_unspliced = spliced_intersection.copy()
+    spliced_unspliced.layers['spliced'] = spliced_intersection.X
+    spliced_unspliced.layers['unspliced'] = unspliced_intersection.X
+    return spliced_unspliced
 
 
 def sum_anndatas(adata_spliced, adata_unspliced):
