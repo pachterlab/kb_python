@@ -357,6 +357,11 @@ def setup_count_args(parser, parent):
         type=str,
         default='4G'
     )
+    parser_count.add_argument(
+        '--tcc',
+        help='Generate a TCC matrix instead of a gene count matrix.',
+        action='store_true'
+    )
     required_lamanno = parser_count.add_argument_group(
         'required arguments for --lamanno and --nucleus'
     )

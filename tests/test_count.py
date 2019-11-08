@@ -177,7 +177,12 @@ class TestCount(TestMixin, TestCase):
                 memory=memory
             )
             bustools_count.assert_called_once_with(
-                sort_path, counts_prefix, t2g_path, ecmap_path, txnames_path
+                sort_path,
+                counts_prefix,
+                t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_not_called()
             convert_matrix_to_h5ad.assert_not_called()
@@ -317,7 +322,12 @@ class TestCount(TestMixin, TestCase):
                 memory=memory
             )
             bustools_count.assert_called_once_with(
-                sort_path, counts_prefix, t2g_path, ecmap_path, txnames_path
+                sort_path,
+                counts_prefix,
+                t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_called_once_with(
                 '{}.mtx'.format(counts_prefix),
@@ -396,7 +406,12 @@ class TestCount(TestMixin, TestCase):
                 memory=memory
             )
             bustools_count.assert_called_once_with(
-                sort_path, counts_prefix, t2g_path, ecmap_path, txnames_path
+                sort_path,
+                counts_prefix,
+                t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_h5ad.assert_called_once_with(
                 '{}.mtx'.format(counts_prefix),
@@ -572,8 +587,12 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
-                txnames_path
+                bus_scs_path,
+                counts_prefix,
+                self.t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_not_called()
             convert_matrix_to_h5ad.assert_not_called()
@@ -681,8 +700,12 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
-                txnames_path
+                bus_scs_path,
+                counts_prefix,
+                self.t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_called_once_with(
                 '{}.mtx'.format(counts_prefix),
@@ -798,8 +821,12 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
-                txnames_path
+                bus_scs_path,
+                counts_prefix,
+                self.t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_not_called()
             convert_matrix_to_h5ad.assert_called_once_with(
@@ -948,8 +975,12 @@ class TestCount(TestMixin, TestCase):
             )
             self.assertEqual(1, bustools_count.call_count)
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
-                txnames_path
+                bus_scs_path,
+                counts_prefix,
+                self.t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             filter_with_bustools.assert_called_once_with(
                 bus_scs_path,
@@ -1070,8 +1101,12 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_scs_path, counts_prefix, self.t2g_path, ecmap_path,
-                txnames_path
+                bus_scs_path,
+                counts_prefix,
+                self.t2g_path,
+                ecmap_path,
+                txnames_path,
+                tcc=False
             )
             convert_matrix_to_loom.assert_not_called()
             convert_matrix_to_h5ad.assert_not_called()
@@ -1265,12 +1300,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             import_matrix_as_anndata.assert_not_called()
@@ -1476,12 +1519,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             self.assertEqual(2, import_matrix_as_anndata.call_count)
@@ -1710,12 +1761,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             self.assertEqual(2, import_matrix_as_anndata.call_count)
@@ -1936,12 +1995,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             import_matrix_as_anndata.assert_not_called()
@@ -2271,23 +2338,38 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(4, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
                     cdna_filtered_path,
                     os.path.join(out_dir, FILTERED_COUNTS_DIR, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
                     intron_filtered_path,
                     os.path.join(
                         out_dir, FILTERED_COUNTS_DIR, BUS_INTRON_PREFIX
-                    ), self.t2g_path, ecmap_path, txnames_path
+                    ),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             self.assertEqual(1, filter_with_bustools.call_count)
@@ -2505,12 +2587,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             self.assertEqual(2, import_matrix_as_anndata.call_count)
@@ -2740,12 +2830,20 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, bustools_count.call_count)
             bustools_count.assert_has_calls([
                 call(
-                    cdna_s_path, os.path.join(counts_dir, BUS_CDNA_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    cdna_s_path,
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 ),
                 call(
-                    intron_s_path, os.path.join(counts_dir, BUS_INTRON_PREFIX),
-                    self.t2g_path, ecmap_path, txnames_path
+                    intron_s_path,
+                    os.path.join(counts_dir, BUS_INTRON_PREFIX),
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False
                 )
             ])
             self.assertEqual(2, import_matrix_as_anndata.call_count)
