@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from urllib.parse import urlparse
 
 from .config import get_bustools_binary_path, get_kallisto_binary_path
@@ -35,6 +36,23 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 
+INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
+
+
+def count_bus_records(bus_path):
+    """Run `bustools inspect` to get the number of BUS records in the BUS file.
+
+    :param bus_path: path to BUS file
+    :type bus_path: str
+
+    :return: number of BUS records in the file
+    :rtype: int
+    """
+    command = ['bustools', 'inspect', bus_path]
+    p = run_executable(command, quiet=True)
+    match = INSPECT_PARSER.match(p.stdout.read())
+    return int(match.groupdict().get('count', 0)) if match else None
+
 
 def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     """Runs `kallisto bus`.
@@ -63,8 +81,12 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     command += ['-t', threads]
     command += fastqs
     run_executable(command)
+
+    bus_path = os.path.join(out_dir, BUS_FILENAME)
+    if not count_bus_records(bus_path):
+        raise Exception('No reads aligned')
     return {
-        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'bus': bus_path,
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
     }
