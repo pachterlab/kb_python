@@ -48,7 +48,7 @@ def count_bus_records(bus_path):
     :return: number of BUS records in the file
     :rtype: int
     """
-    command = ['bustools', 'inspect', bus_path]
+    command = [get_bustools_binary_path(), 'inspect', bus_path]
     p = run_executable(command, quiet=True)
     match = INSPECT_PARSER.match(p.stdout.read())
     return int(match.groupdict().get('count', 0)) if match else None
