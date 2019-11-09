@@ -186,9 +186,13 @@ def bustools_count(
     command += [bus_path]
     run_executable(command)
     return {
-        'mtx': '{}.mtx'.format(out_prefix),
-        'genes': '{}.genes.txt'.format(out_prefix),
-        'barcodes': '{}.barcodes.txt'.format(out_prefix),
+        'mtx':
+            '{}.mtx'.format(out_prefix),
+        'ec' if tcc else 'genes':
+            '{}.ec.txt'.format(out_prefix)
+            if tcc else '{}.genes.txt'.format(out_prefix),
+        'barcodes':
+            '{}.barcodes.txt'.format(out_prefix),
     }
 
 
@@ -345,7 +349,7 @@ def filter_with_bustools(
             loom_path = convert_matrix_to_loom(
                 count_result['mtx'],
                 count_result['barcodes'],
-                count_result['genes'],
+                count_result.get('genes') or count_result.get('ec'),
                 os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX)),
             )
             results.update({'loom': loom_path})
@@ -353,7 +357,7 @@ def filter_with_bustools(
             h5ad_path = convert_matrix_to_h5ad(
                 count_result['mtx'],
                 count_result['barcodes'],
-                count_result['genes'],
+                count_result.get('genes') or count_result.get('ec'),
                 os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX)),
             )
             results.update({'h5ad': h5ad_path})
@@ -577,14 +581,14 @@ def count(
     if loom:
         loom_path = convert_matrix_to_loom(
             count_result['mtx'], count_result['barcodes'],
-            count_result['genes'],
+            count_result.get('genes') or count_result.get('ec'),
             os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
         )
         unfiltered_results.update({'loom': loom_path})
     if h5ad:
         h5ad_path = convert_matrix_to_h5ad(
             count_result['mtx'], count_result['barcodes'],
-            count_result['genes'],
+            count_result.get('genes') or count_result.get('ec'),
             os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
         )
         unfiltered_results.update({'h5ad': h5ad_path})
@@ -773,7 +777,7 @@ def count_velocity(
         for prefix in prefix_to_t2c:
             adatas[prefix] = import_matrix_as_anndata(
                 results[prefix]['mtx'], results[prefix]['barcodes'],
-                results[prefix]['genes']
+                results[prefix].get('genes') or results[prefix].get('ec')
             )
         adata = combine_anndatas_func(adatas['spliced'], adatas['unspliced'])
         if loom:
@@ -839,7 +843,8 @@ def count_velocity(
                 adatas[prefix] = import_matrix_as_anndata(
                     results[prefix]['filtered']['mtx'],
                     results[prefix]['filtered']['barcodes'],
-                    results[prefix]['filtered']['genes']
+                    results[prefix]['filtered'].get('genes')
+                    or results[prefix]['filtered'].get('ec')
                 )
             adata = combine_anndatas_func(
                 adatas['spliced'], adatas['unspliced']
