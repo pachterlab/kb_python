@@ -21,6 +21,7 @@ BUS_INTRON_PREFIX = 'unspliced'
 ECMAP_FILENAME = 'matrix.ec'
 TXNAMES_FILENAME = 'transcripts.txt'
 COUNTS_PREFIX = 'cells_x_genes'
+TCC_PREFIX = 'cells_x_tcc'
 ADATA_PREFIX = 'adata'
 
 UNFILTERED_COUNTS_DIR = 'counts_unfiltered'

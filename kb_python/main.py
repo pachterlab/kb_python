@@ -126,6 +126,7 @@ def parse_count(args):
             args.o,
             args.fastqs,
             args.w,
+            tcc=args.tcc,
             filter=args.filter,
             threads=args.t,
             memory=args.m,
@@ -142,6 +143,7 @@ def parse_count(args):
             args.o,
             args.fastqs,
             args.w,
+            tcc=args.tcc,
             filter=args.filter,
             threads=args.t,
             memory=args.m,
@@ -356,6 +358,11 @@ def setup_count_args(parser, parent):
         help='Maximum memory used (default: 4G)',
         type=str,
         default='4G'
+    )
+    parser_count.add_argument(
+        '--tcc',
+        help='Generate a TCC matrix instead of a gene count matrix.',
+        action='store_true'
     )
     required_lamanno = parser_count.add_argument_group(
         'required arguments for --lamanno and --nucleus'

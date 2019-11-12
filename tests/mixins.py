@@ -95,3 +95,11 @@ class TestMixin(TestCase):
         cls.split_intron_fasta_path = os.path.join(
             cls.fasta_dir, 'intron_split.fa'
         )
+
+        cls.tcc_dir = os.path.join(cls.fixtures_dir, 'tcc')
+        cls.tcc_matrix_path = os.path.join(cls.tcc_dir, 'cells_x_tcc.mtx')
+        cls.tcc_barcodes_path = os.path.join(
+            cls.tcc_dir, 'cells_x_tcc.barcodes.txt'
+        )
+        cls.tcc_ec_path = os.path.join(cls.tcc_dir, 'cells_x_tcc.ec.txt')
+        cls.tcc_txnames_path = os.path.join(cls.tcc_dir, 'transcripts.txt')
