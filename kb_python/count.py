@@ -819,9 +819,11 @@ def count_velocity(
     unfiltered_results.update({'bus_scs': sort2_result['bus']})
 
     prefixes = [BUS_CDNA_PREFIX, BUS_INTRON_PREFIX]
+    # The prefix and t2cs are swapped because we call bustools capture with
+    # the --complement flag.
     prefix_to_t2c = {
-        BUS_CDNA_PREFIX: cdna_t2c_path,
-        BUS_INTRON_PREFIX: intron_t2c_path,
+        BUS_CDNA_PREFIX: intron_t2c_path,
+        BUS_INTRON_PREFIX: cdna_t2c_path,
     }
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
