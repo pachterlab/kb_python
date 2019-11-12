@@ -820,6 +820,7 @@ def count_velocity(
     )
     unfiltered_results.update({'bus_scs': sort2_result['bus']})
 
+    prefixes = [BUS_CDNA_PREFIX, BUS_INTRON_PREFIX]
     prefix_to_t2c = {
         BUS_CDNA_PREFIX: cdna_t2c_path,
         BUS_INTRON_PREFIX: intron_t2c_path,
@@ -859,18 +860,14 @@ def count_velocity(
         unfiltered_results.update(
             convert_matrices(
                 counts_dir,
-                [unfiltered_results[prefix]['mtx'] for prefix in prefix_to_t2c],
-                [
-                    unfiltered_results[prefix]['barcodes']
-                    for prefix in prefix_to_t2c
-                ],
-                genes_path=[
+                [unfiltered_results[prefix]['mtx'] for prefix in prefixes],
+                [unfiltered_results[prefix]['barcodes'] for prefix in prefixes],
+                genes_paths=[
                     unfiltered_results[prefix].get('genes')
-                    for prefix in prefix_to_t2c
+                    for prefix in prefixes
                 ],
-                ec_path=[
-                    unfiltered_results[prefix].get('ec')
-                    for prefix in prefix_to_t2c
+                ec_paths=[
+                    unfiltered_results[prefix].get('ec') for prefix in prefixes
                 ],
                 txnames_path=bus_result['txnames'],
                 loom=loom,
@@ -932,22 +929,19 @@ def count_velocity(
         if loom or h5ad:
             filtered_results.update(
                 convert_matrices(
-                    counts_dir,
-                    [
-                        filtered_results[prefix]['mtx']
-                        for prefix in prefix_to_t2c
-                    ],
+                    filtered_counts_dir,
+                    [filtered_results[prefix]['mtx'] for prefix in prefixes],
                     [
                         filtered_results[prefix]['barcodes']
-                        for prefix in prefix_to_t2c
+                        for prefix in prefixes
                     ],
-                    genes_path=[
+                    genes_paths=[
                         filtered_results[prefix].get('genes')
-                        for prefix in prefix_to_t2c
+                        for prefix in prefixes
                     ],
-                    ec_path=[
+                    ec_paths=[
                         filtered_results[prefix].get('ec')
-                        for prefix in prefix_to_t2c
+                        for prefix in prefixes
                     ],
                     txnames_path=bus_result['txnames'],
                     loom=loom,
