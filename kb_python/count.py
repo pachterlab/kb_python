@@ -19,6 +19,7 @@ from .constants import (
     FILTER_WHITELIST_FILENAME,
     FILTERED_COUNTS_DIR,
     INSPECT_FILENAME,
+    TCC_PREFIX,
     TXNAMES_FILENAME,
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
@@ -27,6 +28,7 @@ from .utils import (
     copy_whitelist,
     stream_file,
     import_matrix_as_anndata,
+    import_tcc_matrix_as_anndata,
     overlay_anndatas,
     run_executable,
     sum_anndatas,
@@ -260,6 +262,129 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
+def convert_matrix(
+        counts_dir,
+        matrix_path,
+        barcodes_path,
+        genes_path=None,
+        ec_path=None,
+        txnames_path=None,
+        loom=False,
+        h5ad=False,
+        tcc=False
+):
+    """Convert a gene count or TCC matrix to loom or h5ad.
+
+    :param counts_dir: path to counts directory
+    :type counts_dir: str
+    :param matrix_path: path to matrix
+    :type matrix_path: str
+    :param barcodes_path: list of paths to barcodes.txt
+    :type barcodes_path: str
+    :param genes_path: path to genes.txt, defaults to `None`
+    :type genes_path: str, optional
+    :param ec_path: path to ec.txt, defaults to `None`
+    :type ec_path: str, optional
+    :param txnames_path: path to transcripts.txt, defaults to `None`
+    :type txnames_path: str, optional
+    :param loom: whether to generate loom file, defaults to `False`
+    :type loom: bool, optional
+    :param h5ad: whether to generate h5ad file, defaults to `False`
+    :type h5ad: bool, optional
+    :param tcc: whether the matrix is a TCC matrix, defaults to `False`
+    :type tcc: bool, optional
+
+    :return: dictionary of generated files
+    :rtype: dict
+    """
+    results = {}
+    logger.info('Reading matrix {}'.format(matrix_path))
+    adata = import_tcc_matrix_as_anndata(
+        matrix_path, barcodes_path, ec_path, txnames_path
+    ) if tcc else import_matrix_as_anndata(
+        matrix_path, barcodes_path, genes_path
+    )
+    if loom:
+        loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
+        logger.info('Writing matrix to loom {}'.format(loom_path))
+        adata.write_loom(loom_path)
+        results.update({'loom': loom_path})
+    if h5ad:
+        h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
+        logger.info('Writing matrix to h5ad {}'.format(h5ad_path))
+        adata.write(h5ad_path)
+        results.update({'h5ad': h5ad_path})
+    return results
+
+
+def convert_matrices(
+        counts_dir,
+        matrix_paths,
+        barcodes_paths,
+        genes_paths=None,
+        ec_paths=None,
+        txnames_path=None,
+        loom=False,
+        h5ad=False,
+        nucleus=False,
+        tcc=False
+):
+    """Convert a gene count or TCC matrix to loom or h5ad.
+
+    :param counts_dir: path to counts directory
+    :type counts_dir: str
+    :param matrix_paths: list of paths to matrices
+    :type matrix_paths: str
+    :param barcodes_paths: list of paths to barcodes.txt
+    :type barcodes_paths: str
+    :param genes_paths: list of paths to genes.txt, defaults to `None`
+    :type genes_paths: str, optional
+    :param ec_paths: list of path to ec.txt, defaults to `None`
+    :type ec_paths: str, optional
+    :param txnames_path: list of paths to transcripts.txt, defaults to `None`
+    :type txnames_path: str, optional
+    :param loom: whether to generate loom file, defaults to `False`
+    :type loom: bool, optional
+    :param h5ad: whether to generate h5ad file, defaults to `False`
+    :type h5ad: bool, optional
+    :param nucleus: whether the matrices contain single nucleus counts, defaults to `False`
+    :type nucleus: bool, optional
+    :param tcc: whether the matrix is a TCC matrix, defaults to `False`
+    :type tcc: bool, optional
+
+    :return: dictionary of generated files
+    :rtype: dict
+    """
+    results = {}
+    adatas = []
+    matrix_paths = matrix_paths or []
+    barcodes_paths = barcodes_paths or []
+    genes_paths = genes_paths or []
+    ec_paths = ec_paths or []
+    for matrix_path, barcodes_path, genes_ec_path in zip(
+            matrix_paths, barcodes_paths, ec_paths
+            if not genes_paths or None in genes_paths else genes_paths):
+        logger.info('Reading matrix {}'.format(matrix_path))
+        adatas.append(
+            import_tcc_matrix_as_anndata(
+                matrix_path, barcodes_path, genes_ec_path, txnames_path
+            ) if tcc else
+            import_matrix_as_anndata(matrix_path, barcodes_path, genes_ec_path)
+        )
+    adata = sum_anndatas(*adatas) if nucleus else overlay_anndatas(*adatas)
+    if loom:
+        loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
+        logger.info('Writing matrices to loom {}'.format(loom_path))
+        adata.write_loom(loom_path)
+        results.update({'loom': loom_path})
+    if h5ad:
+        h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
+        logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
+        adata.write(h5ad_path)
+        results.update({'h5ad': h5ad_path})
+    return results
+
+
 def filter_with_bustools(
         bus_path,
         ecmap_path,
@@ -345,22 +470,20 @@ def filter_with_bustools(
         )
         results.update(count_result)
 
-        if loom:
-            loom_path = convert_matrix_to_loom(
-                count_result['mtx'],
-                count_result['barcodes'],
-                count_result.get('genes') or count_result.get('ec'),
-                os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX)),
+        if loom or h5ad:
+            results.update(
+                convert_matrix(
+                    counts_dir,
+                    count_result['mtx'],
+                    count_result['barcodes'],
+                    genes_path=count_result.get('genes'),
+                    ec_path=count_result.get('ec'),
+                    txnames_path=txnames_path,
+                    loom=loom,
+                    h5ad=h5ad,
+                    tcc=tcc
+                )
             )
-            results.update({'loom': loom_path})
-        if h5ad:
-            h5ad_path = convert_matrix_to_h5ad(
-                count_result['mtx'],
-                count_result['barcodes'],
-                count_result.get('genes') or count_result.get('ec'),
-                os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX)),
-            )
-            results.update({'h5ad': h5ad_path})
 
     return results
 
@@ -409,48 +532,6 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
         return bustools_whitelist(
             bus_path, os.path.join(out_dir, WHITELIST_FILENAME)
         )['whitelist']
-
-
-def convert_matrix_to_loom(matrix_path, barcodes_path, genes_path, out_path):
-    """Converts a matrix to loom.
-
-    :param matrix_path: path to matrix mtx file
-    :type matrix_path: str
-    :param barcodes_path: path list of barcodes
-    :type barcodes_path: str
-    :param genes_path: path to list of genes
-    :type genes_path: str
-    :param out_path: path to output loom file
-    :type out_path: str
-
-    :return: path to loom file
-    :rtype: str
-    """
-    logger.info('Converting matrix {} to loom {}'.format(matrix_path, out_path))
-    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-    adata.write_loom(out_path)
-    return out_path
-
-
-def convert_matrix_to_h5ad(matrix_path, barcodes_path, genes_path, out_path):
-    """Converts a matrix to h5ad.
-
-    :param matrix_path: path to matrix mtx file
-    :type matrix_path: str
-    :param barcodes_path: path list of barcodes
-    :type barcodes_path: str
-    :param genes_path: path to list of genes
-    :type genes_path: str
-    :param out_path: path to output h5ad file
-    :type out_path: str
-
-    :return: path to h5ad file
-    :rtype: str
-    """
-    logger.info('Converting matrix {} to h5ad {}'.format(matrix_path, out_path))
-    adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-    adata.write(out_path)
-    return out_path
 
 
 def count(
@@ -510,9 +591,7 @@ def count(
     results = {}
 
     os.makedirs(out_dir, exist_ok=True)
-    unfiltered_results = results.setdefault(
-        'unfiltered', {}
-    ) if filter else results
+    unfiltered_results = results.setdefault('unfiltered', {})
 
     bus_result = {
         'bus': os.path.join(out_dir, BUS_FILENAME),
@@ -566,7 +645,9 @@ def count(
 
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     os.makedirs(counts_dir, exist_ok=True)
-    counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
+    counts_prefix = os.path.join(
+        counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
+    )
     count_result = bustools_count(
         sort2_result['bus'],
         counts_prefix,
@@ -578,24 +659,24 @@ def count(
     unfiltered_results.update(count_result)
 
     # Convert outputs.
-    if loom:
-        loom_path = convert_matrix_to_loom(
-            count_result['mtx'], count_result['barcodes'],
-            count_result.get('genes') or count_result.get('ec'),
-            os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
+    if loom or h5ad:
+        unfiltered_results.update(
+            convert_matrix(
+                counts_dir,
+                count_result['mtx'],
+                count_result['barcodes'],
+                genes_path=count_result.get('genes'),
+                ec_path=count_result.get('ec'),
+                txnames_path=bus_result['txnames'],
+                loom=loom,
+                h5ad=h5ad,
+                tcc=tcc,
+            )
         )
-        unfiltered_results.update({'loom': loom_path})
-    if h5ad:
-        h5ad_path = convert_matrix_to_h5ad(
-            count_result['mtx'], count_result['barcodes'],
-            count_result.get('genes') or count_result.get('ec'),
-            os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
-        )
-        unfiltered_results.update({'h5ad': h5ad_path})
 
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
-            out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
+            out_dir, FILTERED_COUNTS_DIR, TCC_PREFIX if tcc else COUNTS_PREFIX
         )
         filtered_whitelist_path = os.path.join(
             out_dir, FILTER_WHITELIST_FILENAME
@@ -608,7 +689,8 @@ def count(
             t2g_path,
             filtered_whitelist_path,
             filtered_bus_path,
-            filtered_counts_prefix,
+            counts_prefix=filtered_counts_prefix,
+            tcc=tcc,
             temp_dir=temp_dir,
             threads=threads,
             memory=memory,
@@ -684,9 +766,10 @@ def count_velocity(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    combine_anndatas_func = sum_anndatas if nucleus else overlay_anndatas
-
     results = {}
+
+    os.makedirs(out_dir, exist_ok=True)
+    unfiltered_results = results.setdefault('unfiltered', {})
 
     bus_result = {
         'bus': os.path.join(out_dir, BUS_FILENAME),
@@ -703,7 +786,7 @@ def count_velocity(
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
         )
-    results.update(bus_result)
+    unfiltered_results.update(bus_result)
 
     sort_result = bustools_sort(
         bus_result['bus'],
@@ -717,13 +800,13 @@ def count_velocity(
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
         )
-        results.update({'whitelist': whitelist_path})
+        unfiltered_results.update({'whitelist': whitelist_path})
 
     inspect_result = bustools_inspect(
         sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
         whitelist_path, bus_result['ecmap']
     )
-    results.update(inspect_result)
+    unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
         sort_result['bus'], os.path.join(temp_dir, BUS_SC_FILENAME),
         whitelist_path
@@ -735,7 +818,7 @@ def count_velocity(
         threads=threads,
         memory=memory
     )
-    results.update({'bus_scs': sort2_result['bus']})
+    unfiltered_results.update({'bus_scs': sort2_result['bus']})
 
     prefix_to_t2c = {
         BUS_CDNA_PREFIX: cdna_t2c_path,
@@ -757,9 +840,9 @@ def count_velocity(
             memory=memory
         )
 
-        if prefix not in results:
-            results[prefix] = {}
-        results[prefix].update(sort_result)
+        if prefix not in unfiltered_results:
+            unfiltered_results[prefix] = {}
+        unfiltered_results[prefix].update(sort_result)
 
         counts_prefix = os.path.join(counts_dir, prefix)
         count_result = bustools_count(
@@ -770,42 +853,51 @@ def count_velocity(
             bus_result['txnames'],
             tcc=tcc,
         )
-        results[prefix].update(count_result)
+        unfiltered_results[prefix].update(count_result)
 
     if loom or h5ad:
-        adatas = {}
-        for prefix in prefix_to_t2c:
-            adatas[prefix] = import_matrix_as_anndata(
-                results[prefix]['mtx'], results[prefix]['barcodes'],
-                results[prefix].get('genes') or results[prefix].get('ec')
+        unfiltered_results.update(
+            convert_matrices(
+                counts_dir,
+                [unfiltered_results[prefix]['mtx'] for prefix in prefix_to_t2c],
+                [
+                    unfiltered_results[prefix]['barcodes']
+                    for prefix in prefix_to_t2c
+                ],
+                genes_path=[
+                    unfiltered_results[prefix].get('genes')
+                    for prefix in prefix_to_t2c
+                ],
+                ec_path=[
+                    unfiltered_results[prefix].get('ec')
+                    for prefix in prefix_to_t2c
+                ],
+                txnames_path=bus_result['txnames'],
+                loom=loom,
+                h5ad=h5ad,
+                tcc=tcc,
+                nucleus=nucleus
             )
-        adata = combine_anndatas_func(adatas['spliced'], adatas['unspliced'])
-        if loom:
-            loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
-            logger.info('Writing matrices to loom {}'.format(loom_path))
-            adata.write_loom(loom_path)
-            results.update({'loom': loom_path})
-        if h5ad:
-            h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
-            logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
-            adata.write(h5ad_path)
-            results.update({'h5ad': h5ad_path})
+        )
 
     if filter:
+        filtered_results = results.setdefault('filtered', {})
         if filter == 'bustools':
-            results['filtered'] = filter_with_bustools(
-                sort2_result['bus'],
-                bus_result['ecmap'],
-                bus_result['txnames'],
-                t2g_path,
-                os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
-                os.path.join(out_dir, BUS_FILTERED_FILENAME),
-                count=False
+            filtered_results.update(
+                filter_with_bustools(
+                    sort2_result['bus'],
+                    bus_result['ecmap'],
+                    bus_result['txnames'],
+                    t2g_path,
+                    os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
+                    os.path.join(out_dir, BUS_FILTERED_FILENAME),
+                    count=False
+                )
             )
 
             for prefix, t2c_path in prefix_to_t2c.items():
                 filtered_capture_result = bustools_capture(
-                    results['filtered']['bus_scs'],
+                    filtered_results['bus_scs'],
                     os.path.join(temp_dir, '{}.bus'.format(prefix)), t2c_path,
                     bus_result['ecmap'], bus_result['txnames']
                 )
@@ -819,8 +911,8 @@ def count_velocity(
                     memory=memory
                 )
 
-                results[prefix].setdefault('filtered',
-                                           {}).update(filtered_sort_result)
+                filtered_results.setdefault(prefix,
+                                            {}).update(filtered_sort_result)
 
                 filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
                 os.makedirs(filtered_counts_dir, exist_ok=True)
@@ -835,35 +927,34 @@ def count_velocity(
                     bus_result['txnames'],
                     tcc=tcc,
                 )
-                results[prefix]['filtered'].update(count_result)
+                filtered_results[prefix].update(count_result)
 
         if loom or h5ad:
-            adatas = {}
-            for prefix in prefix_to_t2c:
-                adatas[prefix] = import_matrix_as_anndata(
-                    results[prefix]['filtered']['mtx'],
-                    results[prefix]['filtered']['barcodes'],
-                    results[prefix]['filtered'].get('genes')
-                    or results[prefix]['filtered'].get('ec')
+            filtered_results.update(
+                convert_matrices(
+                    counts_dir,
+                    [
+                        filtered_results[prefix]['mtx']
+                        for prefix in prefix_to_t2c
+                    ],
+                    [
+                        filtered_results[prefix]['barcodes']
+                        for prefix in prefix_to_t2c
+                    ],
+                    genes_path=[
+                        filtered_results[prefix].get('genes')
+                        for prefix in prefix_to_t2c
+                    ],
+                    ec_path=[
+                        filtered_results[prefix].get('ec')
+                        for prefix in prefix_to_t2c
+                    ],
+                    txnames_path=bus_result['txnames'],
+                    loom=loom,
+                    h5ad=h5ad,
+                    tcc=tcc,
+                    nucleus=nucleus,
                 )
-            adata = combine_anndatas_func(
-                adatas['spliced'], adatas['unspliced']
             )
-            if loom:
-                loom_path = os.path.join(
-                    out_dir, FILTERED_COUNTS_DIR,
-                    '{}.loom'.format(ADATA_PREFIX)
-                )
-                logger.info('Writing matrices to loom {}'.format(loom_path))
-                adata.write_loom(loom_path)
-                results.update({'loom': loom_path})
-            if h5ad:
-                h5ad_path = os.path.join(
-                    out_dir, FILTERED_COUNTS_DIR,
-                    '{}.h5ad'.format(ADATA_PREFIX)
-                )
-                logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
-                adata.write(h5ad_path)
-                results.update({'h5ad': h5ad_path})
 
     return results

@@ -6,6 +6,8 @@ import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
 
+import anndata
+
 import kb_python.utils as utils
 from kb_python.config import UnsupportedOSException
 from tests.mixins import TestMixin
@@ -146,9 +148,20 @@ class TestUtils(TestMixin, TestCase):
             threading.thread.assert_not_called()
             urlretrieve.assert_not_called()
 
+    def test_import_tcc_matrix_as_anndata(self):
+        adata = utils.import_tcc_matrix_as_anndata(
+            self.tcc_matrix_path, self.tcc_barcodes_path, self.tcc_ec_path,
+            self.tcc_txnames_path
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertIn('transcripts', adata.var)
+        self.assertIn('transcript_ids', adata.var)
+
     def test_import_matrix_as_anndata(self):
-        utils.import_matrix_as_anndata(
-            self.matrix_path, self.barcodes_path, self.genes_path
+        self.assertIsInstance(
+            utils.import_matrix_as_anndata(
+                self.matrix_path, self.barcodes_path, self.genes_path
+            ), anndata.AnnData
         )
 
     def test_overlay_anndatas(self):
