@@ -441,13 +441,10 @@ def filter_with_bustools(
     results = {}
     whitelist_result = bustools_whitelist(bus_path, whitelist_path)
     results.update(whitelist_result)
-    capture_result = bustools_capture(
+    capture_result = bustools_correct(
         bus_path,
         os.path.join(temp_dir, os.path.basename(filtered_bus_path)),
         whitelist_result['whitelist'],
-        ecmap_path,
-        txnames_path,
-        capture_type='barcode',
     )
     sort_result = bustools_sort(
         capture_result['bus'],
