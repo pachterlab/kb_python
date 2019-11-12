@@ -389,9 +389,10 @@ def import_tcc_matrix_as_anndata(
         transcripts = [
             line.strip() for line in f.readlines() if not line.strip().isspace()
         ]
-    logger.warning(
-        'Anndata will not contain equivalence classes with multiple transcripts.'
-    )
+    logger.warning((
+        'Anndata will not contain equivalence classes with multiple transcripts. '
+        'This feature is planned for a future release.'
+    ))
     mask = ~df_ec.transcripts.str.contains(',')
     adata = anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_ec
