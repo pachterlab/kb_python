@@ -6,7 +6,14 @@ import sys
 import textwrap
 
 from . import __version__
-from .config import PACKAGE_PATH, REFERENCES_MAPPING, TECHNOLOGIES, TEMP_DIR
+from .config import (
+    get_bustools_binary_path,
+    get_kallisto_binary_path,
+    PACKAGE_PATH,
+    REFERENCES_MAPPING,
+    TECHNOLOGIES,
+    TEMP_DIR,
+)
 from .constants import INFO_FILENAME
 from .count import count, count_velocity
 from .ref import download_reference, ref, ref_lamanno
@@ -483,6 +490,12 @@ def main():
     )
     logger = logging.getLogger(__name__)
     logger.debug('Printing verbose output')
+    logger.debug(
+        'kallisto binary located at {}'.format(get_kallisto_binary_path())
+    )
+    logger.debug(
+        'bustools binary located at {}'.format(get_bustools_binary_path())
+    )
     logger.debug('Creating tmp directory')
     os.makedirs(TEMP_DIR, exist_ok=True)
     try:

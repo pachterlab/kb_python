@@ -91,7 +91,8 @@ def run_executable(
         wait=True,
         stream=True,
         quiet=False,
-        returncode=0
+        returncode=0,
+        alias=True,
 ):
     """Execute a single shell command.
 
@@ -116,13 +117,19 @@ def run_executable(
     :param returncode: the return code expected if the command runs as intended,
                        defaults to `0`
     :type returncode: int, optional
+    :param alias: whether to use the basename of the first element of `command`,
+                  defaults to `True`
+    :type alias: bool, optional
 
     :return: the spawned process
     :rtype: subprocess.Process
     """
     command = [str(c) for c in command]
     if not quiet:
-        logger.debug(' '.join(command))
+        c = command.copy()
+        if alias:
+            c[0] = os.path.basename(c[0])
+        logger.debug(' '.join(c))
     p = sp.Popen(
         command,
         stdin=stdin,
