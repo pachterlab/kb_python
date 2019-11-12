@@ -154,15 +154,17 @@ class TestUtils(TestMixin, TestCase):
             self.tcc_txnames_path
         )
         self.assertIsInstance(adata, anndata.AnnData)
-        self.assertIn('transcripts', adata.var)
-        self.assertIn('transcript_ids', adata.var)
+        self.assertIn('ec', adata.var)
+        self.assertEqual('transcript_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
 
     def test_import_matrix_as_anndata(self):
-        self.assertIsInstance(
-            utils.import_matrix_as_anndata(
-                self.matrix_path, self.barcodes_path, self.genes_path
-            ), anndata.AnnData
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path, self.barcodes_path, self.genes_path
         )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
 
     def test_overlay_anndatas(self):
         adata_spliced = utils.import_matrix_as_anndata(

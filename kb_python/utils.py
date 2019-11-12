@@ -377,22 +377,34 @@ def import_tcc_matrix_as_anndata(
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
     df_ec = pd.read_csv(
-        ec_path, index_col=0, header=None, names=['transcripts'], sep='\t'
+        ec_path,
+        index_col=None,
+        header=None,
+        names=['ec', 'transcripts'],
+        sep='\t',
+        dtype=str
     )
+    df_ec.index = df_ec.index.astype(str)  # To prevent logging from anndata
     with open(txnames_path, 'r') as f:
         transcripts = [
             line.strip() for line in f.readlines() if not line.strip().isspace()
         ]
-    df_ec['transcript_ids'] = df_ec.apply(
-        lambda row: [transcripts[int(i)] for i in row.transcripts.split(',')],
-        axis=1
+    logger.warning(
+        'Generated Anndata will not contain equivalence classes with multiple transcripts.'
     )
-    df_ec.index = df_ec.index.astype(
-        str
-    )  # To prevent anndata from printing log
-    return anndata.AnnData(
+    mask = ~df_ec.transcripts.str.contains(',')
+    adata = anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_ec
     )
+    adata = adata[:, mask]
+    df_var = adata.var.copy()
+    df_var['transcript_id'] = df_var.apply(
+        lambda row: transcripts[int(row.transcripts)], axis=1
+    )
+    df_var.drop('transcripts', axis=1, inplace=True)
+    df_var.set_index('transcript_id', inplace=True)
+    adata.var = df_var
+    return adata
 
 
 def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):

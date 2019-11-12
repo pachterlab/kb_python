@@ -326,7 +326,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_filter_with_bustools(self):
         with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
-            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.os.makedirs'),\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
@@ -344,7 +344,7 @@ class TestCount(TestMixin, TestCase):
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
             bustools_whitelist.return_value = {'whitelist': whitelist_path}
-            bustools_capture.return_value = {'bus': capture_path}
+            bustools_correct.return_value = {'bus': capture_path}
             bustools_sort.return_value = {'bus': sort_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -372,13 +372,10 @@ class TestCount(TestMixin, TestCase):
                              ))
 
             bustools_whitelist.assert_called_once_with(bus_path, whitelist_path)
-            bustools_capture.assert_called_once_with(
+            bustools_correct.assert_called_once_with(
                 bus_path,
                 os.path.join(temp_dir, os.path.basename(sort_path)),
                 whitelist_path,
-                ecmap_path,
-                txnames_path,
-                capture_type='barcode'
             )
             bustools_sort.assert_called_once_with(
                 capture_path,
@@ -399,7 +396,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_filter_with_bustools_convert(self):
         with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
-            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.os.makedirs'),\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
@@ -418,7 +415,7 @@ class TestCount(TestMixin, TestCase):
             sort_path = 'path/to/busfile.bus'
             loom_path = mock.MagicMock()
             bustools_whitelist.return_value = {'whitelist': whitelist_path}
-            bustools_capture.return_value = {'bus': capture_path}
+            bustools_correct.return_value = {'bus': capture_path}
             bustools_sort.return_value = {'bus': sort_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -449,13 +446,10 @@ class TestCount(TestMixin, TestCase):
                              ))
 
             bustools_whitelist.assert_called_once_with(bus_path, whitelist_path)
-            bustools_capture.assert_called_once_with(
+            bustools_correct.assert_called_once_with(
                 bus_path,
                 os.path.join(temp_dir, os.path.basename(sort_path)),
                 whitelist_path,
-                ecmap_path,
-                txnames_path,
-                capture_type='barcode'
             )
             bustools_sort.assert_called_once_with(
                 capture_path,
@@ -486,7 +480,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_filter_with_bustools_dont_count(self):
         with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
-            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.os.makedirs'),\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
@@ -504,7 +498,7 @@ class TestCount(TestMixin, TestCase):
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
             bustools_whitelist.return_value = {'whitelist': whitelist_path}
-            bustools_capture.return_value = {'bus': capture_path}
+            bustools_correct.return_value = {'bus': capture_path}
             bustools_sort.return_value = {'bus': sort_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -530,13 +524,10 @@ class TestCount(TestMixin, TestCase):
                              ))
 
             bustools_whitelist.assert_called_once_with(bus_path, whitelist_path)
-            bustools_capture.assert_called_once_with(
+            bustools_correct.assert_called_once_with(
                 bus_path,
                 os.path.join(temp_dir, os.path.basename(sort_path)),
                 whitelist_path,
-                ecmap_path,
-                txnames_path,
-                capture_type='barcode'
             )
             bustools_sort.assert_called_once_with(
                 capture_path,
@@ -550,7 +541,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_filter_with_bustools_tcc(self):
         with mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
-            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.os.makedirs'),\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
@@ -568,7 +559,7 @@ class TestCount(TestMixin, TestCase):
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
             bustools_whitelist.return_value = {'whitelist': whitelist_path}
-            bustools_capture.return_value = {'bus': capture_path}
+            bustools_correct.return_value = {'bus': capture_path}
             bustools_sort.return_value = {'bus': sort_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
@@ -597,13 +588,10 @@ class TestCount(TestMixin, TestCase):
                              ))
 
             bustools_whitelist.assert_called_once_with(bus_path, whitelist_path)
-            bustools_capture.assert_called_once_with(
+            bustools_correct.assert_called_once_with(
                 bus_path,
                 os.path.join(temp_dir, os.path.basename(sort_path)),
                 whitelist_path,
-                ecmap_path,
-                txnames_path,
-                capture_type='barcode'
             )
             bustools_sort.assert_called_once_with(
                 capture_path,
