@@ -390,7 +390,7 @@ def import_tcc_matrix_as_anndata(
             line.strip() for line in f.readlines() if not line.strip().isspace()
         ]
     logger.warning(
-        'Generated Anndata will not contain equivalence classes with multiple transcripts.'
+        'Anndata will not contain equivalence classes with multiple transcripts.'
     )
     mask = ~df_ec.transcripts.str.contains(',')
     adata = anndata.AnnData(
@@ -443,9 +443,10 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     :return: a new Anndata object
     :rtype: anndata.Anndata
     """
-    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
-    spliced_intersection = adata_spliced[idx]
-    unspliced_intersection = adata_unspliced[idx]
+    obs_idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
+    spliced_intersection = adata_spliced[obs_idx][:, var_idx]
+    unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
     spliced_unspliced = spliced_intersection.copy()
     spliced_unspliced.layers['spliced'] = spliced_intersection.X
     spliced_unspliced.layers['unspliced'] = unspliced_intersection.X
@@ -464,9 +465,10 @@ def sum_anndatas(adata_spliced, adata_unspliced):
     :return: a new Anndata object
     :rtype: anndata.Anndata
     """
-    idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
-    spliced_intersection = adata_spliced[idx]
-    unspliced_intersection = adata_unspliced[idx]
+    obs_idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
+    var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
+    spliced_intersection = adata_spliced[obs_idx][:, var_idx]
+    unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
     spliced_unspliced = spliced_intersection.copy()
     spliced_unspliced.X = spliced_intersection.X + unspliced_intersection.X
     return spliced_unspliced
