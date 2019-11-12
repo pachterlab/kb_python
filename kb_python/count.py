@@ -235,6 +235,7 @@ def bustools_capture(
     command += ['-c', capture_path]
     command += ['-e', ecmap_path]
     command += ['-t', txnames_path]
+    command += ['--complement']
     command += ['--{}'.format(capture_type)]
     command += [bus_path]
     run_executable(command)
