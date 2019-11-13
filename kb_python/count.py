@@ -298,7 +298,8 @@ def convert_matrix(
         txnames_path=None,
         loom=False,
         h5ad=False,
-        tcc=False
+        tcc=False,
+        threads=8,
 ):
     """Convert a gene count or TCC matrix to loom or h5ad.
 
@@ -320,6 +321,8 @@ def convert_matrix(
     :type h5ad: bool, optional
     :param tcc: whether the matrix is a TCC matrix, defaults to `False`
     :type tcc: bool, optional
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
 
     :return: dictionary of generated files
     :rtype: dict
@@ -327,7 +330,7 @@ def convert_matrix(
     results = {}
     logger.info('Reading matrix {}'.format(matrix_path))
     adata = import_tcc_matrix_as_anndata(
-        matrix_path, barcodes_path, ec_path, txnames_path
+        matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
     ) if tcc else import_matrix_as_anndata(
         matrix_path, barcodes_path, genes_path
     )
@@ -354,7 +357,8 @@ def convert_matrices(
         loom=False,
         h5ad=False,
         nucleus=False,
-        tcc=False
+        tcc=False,
+        threads=8,
 ):
     """Convert a gene count or TCC matrix to loom or h5ad.
 
@@ -378,6 +382,8 @@ def convert_matrices(
     :type nucleus: bool, optional
     :param tcc: whether the matrix is a TCC matrix, defaults to `False`
     :type tcc: bool, optional
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
 
     :return: dictionary of generated files
     :rtype: dict
@@ -394,7 +400,11 @@ def convert_matrices(
         logger.info('Reading matrix {}'.format(matrix_path))
         adatas.append(
             import_tcc_matrix_as_anndata(
-                matrix_path, barcodes_path, genes_ec_path, txnames_path
+                matrix_path,
+                barcodes_path,
+                genes_ec_path,
+                txnames_path,
+                threads=threads
             ) if tcc else
             import_matrix_as_anndata(matrix_path, barcodes_path, genes_ec_path)
         )

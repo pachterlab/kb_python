@@ -1,3 +1,4 @@
+import concurrent.futures
 import functools
 import gzip
 import logging
@@ -423,7 +424,7 @@ def stream_file(url, path):
 
 
 def import_tcc_matrix_as_anndata(
-        matrix_path, barcodes_path, ec_path, txnames_path
+        matrix_path, barcodes_path, ec_path, txnames_path, threads=8
 ):
     """Import a TCC matrix as an Anndata object.
 
@@ -455,10 +456,23 @@ def import_tcc_matrix_as_anndata(
         transcripts = [
             line.strip() for line in f.readlines() if not line.strip().isspace()
         ]
-    df_ec['transcript_ids'] = df_ec.apply(
-        lambda row: [transcripts[int(i)] for i in row.transcripts.split(',')],
-        axis=1,
-    )
+
+    ts = list(df_ec.transcripts)
+    get_transcript_ids = lambda ts, transcripts: [
+        [transcripts[int(i)] for i in t.split(',')] for t in ts
+    ]
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
+        chunk = int(len(ts) / threads) + 1
+        for i in range(threads):
+            future = executor.submit(
+                get_transcript_ids, ts[i * chunk:(i + 1) * chunk], transcripts
+            )
+            futures.append(future)
+    transcript_ids = []
+    for future in futures:
+        transcript_ids += future.result()
+    df_ec['transcript_ids'] = transcript_ids
     df_ec.drop('transcripts', axis=1, inplace=True)
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_ec
