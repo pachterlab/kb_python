@@ -7,6 +7,7 @@ PLATFORM = platform.system().lower()
 BINS_DIR = 'bins'
 
 TEMP_DIR = 'tmp'
+DRY = False
 
 # Technology to file position mapping
 Technology = namedtuple(
@@ -147,3 +148,19 @@ def get_bustools_binary_path():
             'This operating system ({}) is not supported.'.format(PLATFORM)
         )
     return path
+
+
+def set_dry():
+    """Set this run to be a dry run.
+    """
+    global DRY
+    DRY = True
+
+
+def is_dry():
+    """Return whether the current run is a dry run.
+
+    :return: whether the current run is a dry run
+    :rtype: bool
+    """
+    return DRY
