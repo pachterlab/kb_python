@@ -63,3 +63,4 @@ def copy_whitelist(technology, out_dir):
         os.path.splitext(technology.whitelist_archive)[0]
     )
     print('gzip -dc {} > {}'.format(archive_path, whitelist_path))
+    return whitelist_path

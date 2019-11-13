@@ -41,5 +41,8 @@ class TestUtils(TestCase):
 
     def test_copy_whitelist(self):
         with mock.patch('kb_python.dry.utils.print') as p:
-            self.assertIsNone(utils.copy_whitelist('10xv2', 'path'))
+            self.assertEquals(
+                'path/10xv2_whitelist.txt',
+                utils.copy_whitelist('10xv2', 'path')
+            )
             p.assert_called()

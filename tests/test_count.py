@@ -196,7 +196,7 @@ class TestCount(TestMixin, TestCase):
                                  tcc=True
                              ))
             import_tcc_matrix_as_anndata.assert_called_once_with(
-                matrix_path, barcodes_path, ec_path, txnames_path
+                matrix_path, barcodes_path, ec_path, txnames_path, threads=8
             )
             import_tcc_matrix_as_anndata.return_value.write_loom.assert_called_once_with(
                 loom_path
@@ -296,8 +296,9 @@ class TestCount(TestMixin, TestCase):
                              ))
             self.assertEqual(2, import_tcc_matrix_as_anndata.call_count)
             import_tcc_matrix_as_anndata.assert_has_calls([
-                call(matrix_path, barcode_path, ec_path, txnames_path)
-                for matrix_path, barcode_path, ec_path in
+                call(
+                    matrix_path, barcode_path, ec_path, txnames_path, threads=8
+                ) for matrix_path, barcode_path, ec_path in
                 zip(matrix_paths, barcodes_paths, ec_paths)
             ])
             import_matrix_as_anndata.assert_not_called()
