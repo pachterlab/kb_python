@@ -8,6 +8,7 @@ from . import __version__
 from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
+    is_dry,
     PACKAGE_PATH,
     REFERENCES_MAPPING,
     set_dry,
@@ -498,7 +499,7 @@ def main():
             )
 
         if args.dry_run:
-            logging.disable(level=logging.WARNING)
+            logging.disable(level=logging.CRITICAL)
             set_dry()
 
     logging.basicConfig(
@@ -519,6 +520,8 @@ def main():
         logger.debug(args)
         COMMAND_TO_FUNCTION[args.command](args)
     except Exception:
+        if is_dry:
+            raise
         logger.exception('An exception occurred')
     finally:
         # Always clean temp dir
