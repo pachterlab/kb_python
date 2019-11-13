@@ -17,7 +17,7 @@ from .config import (
 )
 from .constants import INFO_FILENAME
 from .count import count, count_velocity
-from .ref import download_reference, ref, ref_lamanno
+from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
     get_kallisto_version,
@@ -100,7 +100,7 @@ def parse_ref(args):
         }
         reference = REFERENCES_MAPPING[args.d]
         download_reference(reference, files, overwrite=args.overwrite)
-    elif args.workflow == 'lamanno':
+    elif args.workflow in {'lamanno', 'nucleus'}:
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -111,6 +111,10 @@ def parse_ref(args):
             args.c1,
             args.c2,
             overwrite=args.overwrite
+        )
+    elif args.workflow == 'kite':
+        ref_kite(
+            args.feature, args.f1, args.i, args.g, overwrite=args.overwrite
         )
     else:
         ref(
@@ -204,6 +208,9 @@ def setup_ref_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
+    workflow = sys.argv[sys.argv.index('--workflow') +
+                        1] if '--workflow' in sys.argv else 'standard'
+
     parser_ref = parser.add_parser(
         'ref',
         description='Build a kallisto index and transcript-to-gene mapping',
@@ -230,7 +237,10 @@ def setup_ref_args(parser, parent):
     required_ref.add_argument(
         '-f1',
         metavar='FASTA',
-        help=('[Optional with -d] Path to the cDNA FASTA to be generated '),
+        help=(
+            '[Optional with -d] Path to the cDNA FASTA (lamanno, nucleus) '
+            'or mismatch FASTA (kite) to be generated '
+        ),
         type=str,
         required='-d' not in sys.argv
     )
@@ -242,24 +252,21 @@ def setup_ref_args(parser, parent):
         metavar='FASTA',
         help='Path to the intron FASTA to be generated',
         type=str,
-        required='--workflow' in sys.argv and
-        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
-        required='--workflow' in sys.argv and
-        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to generate intron transcripts-to-capture',
         type=str,
-        required='--workflow' in sys.argv and
-        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno', 'nucleus'}
     )
 
     parser_ref.add_argument(
@@ -281,13 +288,21 @@ def setup_ref_args(parser, parent):
         'fasta',
         help='Genomic FASTA file',
         type=str,
-        nargs=None if '-d' not in sys.argv else '?'
+        nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
     )
     parser_ref.add_argument(
         'gtf',
         help='Reference GTF file',
         type=str,
-        nargs=None if '-d' not in sys.argv else '?'
+        nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
+    )
+    parser_ref.add_argument(
+        'feature',
+        help=(
+            '[`kite` workflow only] Path to TSV containing barcodes and feature names.'
+        ),
+        type=str,
+        nargs=None if '-d' not in sys.argv and workflow == 'kite' else '?'
     )
     return parser_ref
 
@@ -303,6 +318,9 @@ def setup_count_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
+    workflow = sys.argv[sys.argv.index('--workflow') +
+                        1] if '--workflow' in sys.argv else 'standard'
+
     # count
     parser_count = parser.add_parser(
         'count',
@@ -380,16 +398,14 @@ def setup_count_args(parser, parent):
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required='--workflow' in sys.argv and
-        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required='--workflow' in sys.argv and
-        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno', 'nucleus'}
     )
     parser_count.add_argument(
         '--overwrite',
@@ -450,7 +466,7 @@ def main():
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus']
+        choices=['standard', 'lamanno', 'nucleus', 'kite']
     )
     parent.add_argument(
         '--keep-tmp',

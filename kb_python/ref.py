@@ -13,6 +13,7 @@ from .fasta import (
     FASTA,
     generate_cdna_fasta,
     generate_intron_fasta,
+    generate_kite_fasta,
 )
 from .gtf import GTF
 from .utils import (
@@ -70,12 +71,20 @@ def create_t2g_from_fasta(fasta_path, t2g_path):
     with open_as_text(t2g_path, 'w') as f:
         fasta = FASTA(fasta_path)
         for info, _ in fasta.entries():
-            f.write(
-                '{}\t{}\t{}\n'.format(
-                    info['sequence_id'], info['group']['gene_id'],
-                    info['group'].get('gene_name', '')
+            if 'feature_id' in info['group']:
+                f.write(
+                    '{}\t{}\t{}\n'.format(
+                        info['sequence_id'], info['group']['feature_id'],
+                        info['group']['feature_id']
+                    )
                 )
-            )
+            else:
+                f.write(
+                    '{}\t{}\t{}\n'.format(
+                        info['sequence_id'], info['group']['gene_id'],
+                        info['group'].get('gene_name', '')
+                    )
+                )
     return {'t2g': t2g_path}
 
 
@@ -232,12 +241,15 @@ def decompress_file(path, temp_dir='tmp'):
              uncompressed file
     :rtype: str
     """
-    logger.info('Decompressing {} to {}'.format(path, temp_dir))
-    return decompress_gzip(
-        path,
-        os.path.join(temp_dir,
-                     os.path.splitext(os.path.basename(path))[0])
-    ) if path.endswith('.gz') else path
+    if path.endswith('.gz'):
+        logger.info('Decompressing {} to {}'.format(path, temp_dir))
+        decompress_gzip(
+            path,
+            os.path.join(temp_dir,
+                         os.path.splitext(os.path.basename(path))[0])
+        )
+    else:
+        return path
 
 
 def ref(
@@ -285,6 +297,51 @@ def ref(
         )
 
         index_result = kallisto_index(cdna_fasta_path, index_path)
+        results.update(index_result)
+    else:
+        logger.info(
+            'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
+            .format(index_path)
+        )
+    return results
+
+
+def ref_kite(
+        feature_path,
+        fasta_path,
+        index_path,
+        t2g_path,
+        temp_dir='tmp',
+        overwrite=False
+):
+    """Generates files necessary for feature barcoding with the KITE workflow.
+
+    :param feature_path: path to TSV containing barcodes and feature names
+    :type feature_path: str
+    :param fasta_path: path to generate fasta file containing all sequences
+                       that are 1 hamming distance from the provide barcodes
+                       (including the actual sequence)
+    :type fasta_path: str
+    :param t2g_path: path to output transcript-to-gene mapping
+    :type t2g_path: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param overwrite: overwrite an existing index file, defaults to `False`
+    :type overwrite: bool, optional
+
+    :return: dictionary containing paths to generated file(s)
+    :rtype: dict
+    """
+    results = {}
+    feature_path = decompress_file(feature_path, temp_dir=temp_dir)
+    logger.info('Generating mismatch FASTA at {}'.format(fasta_path))
+    kite_path, lengths = generate_kite_fasta(feature_path, fasta_path)
+    results.update({'fasta': kite_path})
+    t2g_result = create_t2g_from_fasta(fasta_path, t2g_path)
+    results.update(t2g_result)
+
+    if not os.path.exists(index_path) or overwrite:
+        index_result = kallisto_index(kite_path, index_path, k=min(lengths))
         results.update(index_result)
     else:
         logger.info(

@@ -48,6 +48,14 @@ class TestFASTA(TestMixin, TestCase):
                                             'r') as sorted:
             self.assertEqual(f.read(), sorted.read())
 
+    def test_generate_kite_fasta(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        fasta.generate_kite_fasta(self.kite_feature_path, out_path)
+        with open(out_path, 'r') as f, open(self.kite_fasta_path, 'r') as fa:
+            self.assertEqual(fa.read(), f.read())
+
     def test_generate_cdna_fasta(self):
         out_path = os.path.join(
             tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())

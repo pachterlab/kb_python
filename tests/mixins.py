@@ -103,3 +103,8 @@ class TestMixin(TestCase):
         )
         cls.tcc_ec_path = os.path.join(cls.tcc_dir, 'cells_x_tcc.ec.txt')
         cls.tcc_txnames_path = os.path.join(cls.tcc_dir, 'transcripts.txt')
+
+        cls.kite_dir = os.path.join(cls.fixtures_dir, 'kite')
+        cls.kite_feature_path = os.path.join(cls.kite_dir, 'features.tsv')
+        cls.kite_fasta_path = os.path.join(cls.kite_dir, 'fasta.fa')
+        cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')

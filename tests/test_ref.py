@@ -48,6 +48,15 @@ class TestRef(TestMixin, TestCase):
                                                  'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
+    def test_create_t2g_from_fasta_kite(self):
+        t2g_path = os.path.join(
+            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
+        )
+        result = ref.create_t2g_from_fasta(self.kite_fasta_path, t2g_path)
+        with open(result['t2g'], 'r') as f, open(self.kite_t2g_path,
+                                                 'r') as t2g:
+            self.assertEqual(f.read(), t2g.read())
+
     def test_create_t2g_from_gtf(self):
         t2g_path = os.path.join(
             tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
