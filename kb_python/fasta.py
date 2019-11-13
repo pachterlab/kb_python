@@ -1,6 +1,8 @@
 import logging
 import re
 
+import pandas as pd
+
 from .gtf import GTF
 from .utils import open_as_text
 
@@ -140,6 +142,69 @@ class FASTA:
                 else:
                     for line in fasta:
                         f.write(line)
+
+
+def generate_kite_fasta(feature_path, out_path):
+    """Generate a FASTA file for feature barcoding with the KITE workflow.
+
+    This FASTA contains all sequences that are 1 hamming distance from the
+    provided barcodes. The file of barcodes must be a 2-column TSV containing
+    the barcode sequences in the first column and their corresponding feature
+    name in the second column.
+
+    :param feature_path: path to TSV containing barcodes and feature names
+    :type feature_path: str
+    :param out_path: path to FASTA to generate
+    :type out_path: str
+
+    :return: (path to generated FASTA, set of barcode lengths)
+    :rtype: tuple
+    """
+
+    def generate_mismatches(sequence, name):
+        """Helper function to generate 1 hamming distance mismatches.
+
+        :param sequence: the sequence
+        :type sequence: str
+        :param name: name of the sequence
+        :type name: str
+
+        :return: a generator that yields a tuple of (mismatched sequence, unique name)
+        :rtype: generator
+        """
+        sequence = sequence.upper()
+        for i in range(len(sequence)):
+            base = sequence[i]
+            before = sequence[:i]
+            after = sequence[i + 1:]
+
+            for j, different in enumerate([b for b in ['A', 'C', 'G', 'T']
+                                           if b != base]):
+                yield '{}{}{}'.format(before, different,
+                                      after), '{}-{}.{}'.format(name, i, j + 1)
+
+    df_features = pd.read_csv(
+        feature_path, sep='\t', header=None, names=['sequence', 'name']
+    )
+
+    lengths = set()
+    with open_as_text(out_path, 'w') as f:
+        for i, row in df_features.iterrows():
+            lengths.add(len(row.sequence))
+            attributes = [('feature_id', row['name'])]
+            f.write('{}\n'.format(FASTA.make_header(row['name'], attributes)))
+            f.write('{}\n'.format(row.sequence))
+
+            for seq, name in generate_mismatches(row.sequence, row['name']):
+                f.write('{}\n'.format(FASTA.make_header(name, attributes)))
+                f.write('{}\n'.format(seq))
+    if len(lengths) > 1:
+        logger.warning(
+            'Detected barcodes of different lengths: {}'.format(
+                ','.join(lengths)
+            )
+        )
+    return out_path, lengths
 
 
 def generate_cdna_fasta(fasta_path, gtf_path, out_path):
