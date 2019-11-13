@@ -384,6 +384,7 @@ def import_tcc_matrix_as_anndata(
         sep='\t',
         dtype=str
     )
+    df_ec.index = df_ec.index.astype(str)  # To prevent logging from anndata
     with open(txnames_path, 'r') as f:
         transcripts = [
             line.strip() for line in f.readlines() if not line.strip().isspace()
