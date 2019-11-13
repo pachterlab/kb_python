@@ -100,7 +100,7 @@ def parse_ref(args):
         }
         reference = REFERENCES_MAPPING[args.d]
         download_reference(reference, files, overwrite=args.overwrite)
-    elif args.lamanno:
+    elif args.workflow == 'lamanno':
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -129,7 +129,7 @@ def parse_count(args):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    if args.lamanno or args.nucleus:
+    if args.workflow in {'lamanno', 'nucleus'}:
         count_velocity(
             args.i,
             args.g,
@@ -146,7 +146,7 @@ def parse_count(args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
-            nucleus=args.nucleus,
+            nucleus=args.workflow == 'nucleus',
         )
     else:
         count(
@@ -235,28 +235,31 @@ def setup_ref_args(parser, parent):
         required='-d' not in sys.argv
     )
     required_lamanno = parser_ref.add_argument_group(
-        'required arguments for --lamanno'
+        'required arguments for `lamanno` and `nucleus` workflows'
     )
     required_lamanno.add_argument(
         '-f2',
         metavar='FASTA',
         help='Path to the intron FASTA to be generated',
         type=str,
-        required='--lamanno' in sys.argv
+        required='--workflow' in sys.argv and
+        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
-        required='--lamanno' in sys.argv
+        required='--workflow' in sys.argv and
+        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to generate intron transcripts-to-capture',
         type=str,
-        required='--lamanno' in sys.argv
+        required='--workflow' in sys.argv and
+        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
     )
 
     parser_ref.add_argument(
@@ -268,14 +271,6 @@ def setup_ref_args(parser, parent):
         type=str,
         choices=list(REFERENCES_MAPPING.keys()),
         required=False
-    )
-    parser_ref.add_argument(
-        '--lamanno',
-        help=(
-            'Prepare files for RNA velocity based on '
-            'La Manno et al. 2018 logic'
-        ),
-        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
@@ -378,21 +373,23 @@ def setup_count_args(parser, parent):
         action='store_true'
     )
     required_lamanno = parser_count.add_argument_group(
-        'required arguments for --lamanno and --nucleus'
+        'required arguments for `lamanno` and `nucleus` workflows'
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required=any(arg in sys.argv for arg in ('--lamanno', '--nucleus'))
+        required='--workflow' in sys.argv and
+        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required=any(arg in sys.argv for arg in ('--lamanno', '--nucleus'))
+        required='--workflow' in sys.argv and
+        sys.argv[sys.argv.index('--workflow') + 1] in {'lamanno', 'nucleus'}
     )
     parser_count.add_argument(
         '--overwrite',
@@ -401,17 +398,6 @@ def setup_count_args(parser, parent):
     )
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
 
-    velocity_group = parser_count.add_mutually_exclusive_group()
-    velocity_group.add_argument(
-        '--lamanno',
-        help='Calculate RNA velocity based on La Manno et al. 2018 logic',
-        action='store_true'
-    )
-    velocity_group.add_argument(
-        '--nucleus',
-        help='Calculate RNA velocity on single-nucleus RNA-seq reads',
-        action='store_true'
-    )
     parser_count.add_argument(
         '--filter',
         help='Produce a filtered gene count matrix (default: bustools)',
@@ -456,6 +442,17 @@ def main():
     # Add common options to this parent parser
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
+        '--workflow',
+        help=(
+            'Type of workflow. Use `lamanno` to calculate '
+            'RNA velocity based on La Manno et al. 2018 logic. Use `nucleus` to '
+            'calculate RNA velocity on single-nucleus RNA-seq reads (default: standard)'
+        ),
+        type=str,
+        default='standard',
+        choices=['standard', 'lamanno', 'nucleus']
+    )
+    parent.add_argument(
         '--keep-tmp',
         help='Do not delete the tmp directory',
         action='store_true'
@@ -489,7 +486,19 @@ def main():
             parser.print_help(sys.stderr)
         sys.exit(1)
 
+    if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
+        parser.error((
+            'The --lamanno and --nucleus flags are deprecated. '
+            'Please use --workflow instead.'
+        ))
+
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format='[%(asctime)s] %(levelname)7s %(message)s',
+        level=logging.DEBUG if args.verbose else logging.INFO,
+    )
+    logger = logging.getLogger(__name__)
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
@@ -502,11 +511,6 @@ def main():
             logging.disable(level=logging.CRITICAL)
             set_dry()
 
-    logging.basicConfig(
-        format='[%(asctime)s] %(levelname)7s %(message)s',
-        level=logging.DEBUG if args.verbose else logging.INFO,
-    )
-    logger = logging.getLogger(__name__)
     logger.debug('Printing verbose output')
     logger.debug(
         'kallisto binary located at {}'.format(get_kallisto_binary_path())
