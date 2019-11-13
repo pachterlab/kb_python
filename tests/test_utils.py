@@ -154,8 +154,9 @@ class TestUtils(TestMixin, TestCase):
             self.tcc_txnames_path
         )
         self.assertIsInstance(adata, anndata.AnnData)
-        self.assertIn('ec', adata.var)
-        self.assertEqual('transcript_id', adata.var.index.name)
+        self.assertEqual({'transcript_ids'}, set(adata.var))
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('ec', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
 
     def test_import_matrix_as_anndata(self):
@@ -163,6 +164,8 @@ class TestUtils(TestMixin, TestCase):
             self.matrix_path, self.barcodes_path, self.genes_path
         )
         self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.var))
+        self.assertEqual(set(), set(adata.obs))
         self.assertEqual('gene_id', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
 

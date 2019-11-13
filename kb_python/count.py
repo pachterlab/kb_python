@@ -394,6 +394,7 @@ def convert_matrices(
             ) if tcc else
             import_matrix_as_anndata(matrix_path, barcodes_path, genes_ec_path)
         )
+    logger.info('Combining matrices')
     adata = sum_anndatas(*adatas) if nucleus else overlay_anndatas(*adatas)
     if loom:
         loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
