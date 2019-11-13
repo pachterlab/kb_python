@@ -38,3 +38,8 @@ class TestUtils(TestCase):
             with self.assertRaises(UnsupportedOSException):
                 utils.stream_file('url', 'path')
             p.assert_not_called()
+
+    def test_copy_whitelist(self):
+        with mock.patch('kb_python.dry.utils.print') as p:
+            self.assertIsNone(utils.copy_whitelist('10xv2', 'path'))
+            p.assert_called()

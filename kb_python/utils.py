@@ -341,6 +341,7 @@ def whitelist_provided(technology):
         upper].whitelist_archive
 
 
+@dryable(dry_utils.copy_whitelist)
 def copy_whitelist(technology, out_dir):
     """Copies provided whitelist for specified technology.
 

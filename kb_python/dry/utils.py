@@ -1,6 +1,12 @@
 import os
 
-from ..config import PLATFORM, UnsupportedOSException
+from ..config import (
+    PACKAGE_PATH,
+    PLATFORM,
+    TECHNOLOGIES_MAPPING,
+    WHITELIST_DIR,
+    UnsupportedOSException,
+)
 
 
 def run_executable(command, quiet=False, alias=True, *args, **kwargs):
@@ -43,3 +49,17 @@ def stream_file(url, path):
     else:
         print('mkfifo {}'.format(path))
         print('wget -bq {} -O {}'.format(url, path))
+
+
+def copy_whitelist(technology, out_dir):
+    """Dry version of `utils.copy_whitelist`.
+    """
+    technology = TECHNOLOGIES_MAPPING[technology.upper()]
+    archive_path = os.path.join(
+        PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
+    )
+    whitelist_path = os.path.join(
+        out_dir,
+        os.path.splitext(technology.whitelist_archive)[0]
+    )
+    print('gzip -dc {} > {}'.format(archive_path, whitelist_path))
