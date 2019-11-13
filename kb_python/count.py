@@ -25,13 +25,16 @@ from .constants import (
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
+from .dry import count as dry_count
 from .utils import (
     copy_whitelist,
-    stream_file,
+    dryable,
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
+    make_directory,
     overlay_anndatas,
     run_executable,
+    stream_file,
     sum_anndatas,
     whitelist_provided,
 )
@@ -41,6 +44,7 @@ logger = logging.getLogger(__name__)
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
+@dryable(dry_count.count_bus_records)
 def count_bus_records(bus_path):
     """Run `bustools inspect` to get the number of BUS records in the BUS file.
 
@@ -480,7 +484,7 @@ def filter_with_bustools(
 
     if count:
         counts_dir = os.path.dirname(counts_prefix)
-        os.makedirs(counts_dir, exist_ok=True)
+        make_directory(counts_dir)
         count_result = bustools_count(
             sort_result['bus'],
             counts_prefix,
@@ -611,7 +615,7 @@ def count(
     """
     results = {}
 
-    os.makedirs(out_dir, exist_ok=True)
+    make_directory(out_dir)
     unfiltered_results = results.setdefault('unfiltered', {})
 
     bus_result = {
@@ -665,7 +669,7 @@ def count(
     unfiltered_results.update({'bus_scs': sort2_result['bus']})
 
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
-    os.makedirs(counts_dir, exist_ok=True)
+    make_directory(counts_dir)
     counts_prefix = os.path.join(
         counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
     )
@@ -789,7 +793,7 @@ def count_velocity(
     """
     results = {}
 
-    os.makedirs(out_dir, exist_ok=True)
+    make_directory(out_dir)
     unfiltered_results = results.setdefault('unfiltered', {})
 
     bus_result = {
@@ -849,7 +853,7 @@ def count_velocity(
         BUS_INTRON_PREFIX: cdna_t2c_path,
     }
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
-    os.makedirs(counts_dir, exist_ok=True)
+    make_directory(counts_dir)
     for prefix, t2c_path in prefix_to_t2c.items():
         capture_result = bustools_capture(
             sort2_result['bus'],
@@ -935,7 +939,7 @@ def count_velocity(
                                             {}).update(filtered_sort_result)
 
                 filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
-                os.makedirs(filtered_counts_dir, exist_ok=True)
+                make_directory(filtered_counts_dir)
                 filtered_counts_prefix = os.path.join(
                     filtered_counts_dir, prefix
                 )

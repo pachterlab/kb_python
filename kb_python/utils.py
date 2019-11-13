@@ -1,3 +1,4 @@
+import functools
 import gzip
 import logging
 import os
@@ -15,12 +16,14 @@ import scipy.io
 from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
+    is_dry,
     PACKAGE_PATH,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
     WHITELIST_DIR,
     UnsupportedOSException,
 )
+from .dry import utils as dry_utils
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,33 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+
+def dryable(dry_func):
+    """Function decorator to set a function as dryable.
+
+    When this decorator is applied, the provided `dry_func` will be called
+    instead of the actual function when the current run is a dry run.
+
+    :param dry_func: function to call when it is a dry run
+    :type dry_func: function
+
+    :return: wrapped function
+    :rtype: function
+    """
+
+    def wrapper(func):
+
+        @functools.wraps(func)
+        def inner(*args, **kwargs):
+            if not is_dry():
+                return func(*args, **kwargs)
+            else:
+                return dry_func(*args, **kwargs)
+
+        return inner
+
+    return wrapper
 
 
 def open_as_text(path, mode):
@@ -83,6 +113,33 @@ def compress_gzip(file_path, out_path):
     return out_path
 
 
+@dryable(dry_utils.make_directory)
+def make_directory(path):
+    """Quietly make the specified directory (and any subdirectories).
+
+    This function is a wrapper around os.makedirs. It is used so that
+    the appropriate mkdir command can be printed for dry runs.
+
+    :param path: path to directory to make
+    :type path: str
+    """
+    os.makedirs(path, exist_ok=True)
+
+
+@dryable(dry_utils.remove_directory)
+def remove_directory(path):
+    """Quietly make the specified directory (and any subdirectories).
+
+    This function is a wrapper around shutil.rmtree. It is used so that
+    the appropriate rm command can be printed for dry runs.
+
+    :param path: path to directory to remove
+    :type path: str
+    """
+    shutil.rmtree(path, ignore_errors=True)
+
+
+@dryable(dry_utils.run_executable)
 def run_executable(
         command,
         stdin=None,
@@ -333,6 +390,7 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
     return out_path
 
 
+@dryable(dry_utils.stream_file)
 def stream_file(url, path):
     """Creates a FIFO file to use for piping remote files into processes.
 

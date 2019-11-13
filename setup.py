@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 def read(path):
@@ -22,7 +22,7 @@ setup(
     keywords='kallisto bustools',
     python_requires='>=3.6',
     license='BSD',
-    packages=['kb_python'],
+    packages=find_packages(),
     zip_safe=False,
     include_package_data=True,
     install_requires=read('requirements.txt').strip().split('\n'),

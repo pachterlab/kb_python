@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import shutil
 import sys
 import textwrap
 
@@ -11,13 +10,19 @@ from .config import (
     get_kallisto_binary_path,
     PACKAGE_PATH,
     REFERENCES_MAPPING,
+    set_dry,
     TECHNOLOGIES,
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
 from .count import count, count_velocity
 from .ref import download_reference, ref, ref_lamanno
-from .utils import get_bustools_version, get_kallisto_version
+from .utils import (
+    get_bustools_version,
+    get_kallisto_version,
+    make_directory,
+    remove_directory,
+)
 
 
 def display_info():
@@ -393,6 +398,7 @@ def setup_count_args(parser, parent):
         help='Overwrite existing output.bus file',
         action='store_true'
     )
+    parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
 
     velocity_group = parser_count.add_mutually_exclusive_group()
     velocity_group.add_argument(
@@ -484,6 +490,17 @@ def main():
 
     args = parser.parse_args()
 
+    if 'dry_run' in args:
+        # Dry run can not be specified with matrix conversion.
+        if args.dry_run and (args.loom or args.h5ad):
+            raise parser.error(
+                '--dry-run can not be used with --loom or --h5ad'
+            )
+
+        if args.dry_run:
+            logging.disable(level=logging.WARNING)
+            set_dry()
+
     logging.basicConfig(
         format='[%(asctime)s] %(levelname)7s %(message)s',
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -497,7 +514,7 @@ def main():
         'bustools binary located at {}'.format(get_bustools_binary_path())
     )
     logger.debug('Creating tmp directory')
-    os.makedirs(TEMP_DIR, exist_ok=True)
+    make_directory(TEMP_DIR)
     try:
         logger.debug(args)
         COMMAND_TO_FUNCTION[args.command](args)
@@ -507,4 +524,4 @@ def main():
         # Always clean temp dir
         if not args.keep_tmp:
             logger.debug('Removing tmp directory')
-            shutil.rmtree(TEMP_DIR, ignore_errors=True)
+            remove_directory(TEMP_DIR)

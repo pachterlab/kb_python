@@ -13,7 +13,26 @@ from kb_python.config import UnsupportedOSException
 from tests.mixins import TestMixin
 
 
+def dry_dummy_function(i):
+    return i + 1
+
+
+@utils.dryable(dry_dummy_function)
+def dummy_function(i):
+    return i
+
+
 class TestUtils(TestMixin, TestCase):
+
+    def test_dryable_not_dry(self):
+        with mock.patch('kb_python.utils.is_dry') as is_dry:
+            is_dry.return_value = False
+            self.assertEqual(1, dummy_function(1))
+
+    def test_dryable_dry(self):
+        with mock.patch('kb_python.utils.is_dry') as is_dry:
+            is_dry.return_value = True
+            self.assertEqual(2, dummy_function(1))
 
     def test_open_as_text_textfile(self):
         path = os.path.join(
@@ -56,6 +75,16 @@ class TestUtils(TestMixin, TestCase):
         self.assertTrue(os.path.exists(out_path))
         with gzip.open(out_path, 'rt') as f:
             self.assertEqual('TESTING\nTEST', f.read())
+
+    def test_make_directory(self):
+        with mock.patch('kb_python.utils.os.makedirs') as makedirs:
+            utils.make_directory('path')
+            makedirs.assert_called_once_with('path', exist_ok=True)
+
+    def test_remove_directory(self):
+        with mock.patch('kb_python.utils.shutil.rmtree') as rmtree:
+            utils.remove_directory('path')
+            rmtree.assert_called_once_with('path', ignore_errors=True)
 
     def test_run_executable(self):
         p = utils.run_executable(['echo', 'TEST'], stream=False)
