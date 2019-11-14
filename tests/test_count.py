@@ -30,7 +30,7 @@ from tests.mixins import TestMixin
 class TestCount(TestMixin, TestCase):
 
     def setUp(self):
-        makedirs_mock = mock.patch('kb_python.count.os.makedirs')
+        makedirs_mock = mock.patch('kb_python.count.make_directory')
         makedirs_mock.start()
         self.addCleanup(makedirs_mock.stop)
 
