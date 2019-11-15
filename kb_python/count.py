@@ -38,6 +38,7 @@ from .utils import (
     sum_anndatas,
     whitelist_provided,
 )
+from .validate import validate_files
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ def count_bus_records(bus_path):
     return int(match.groupdict().get('count', 0)) if match else None
 
 
+@validate_files()
 def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     """Runs `kallisto bus`.
 
@@ -98,6 +100,7 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     }
 
 
+@validate_files(pre=False)
 def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     """Runs `bustools sort`.
 
@@ -126,6 +129,7 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
     """Runs `bustools inspect`.
 
@@ -151,6 +155,7 @@ def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
     return {'inspect': out_path}
 
 
+@validate_files(pre=False)
 def bustools_correct(bus_path, out_path, whitelist_path):
     """Runs `bustools correct`.
 
@@ -177,6 +182,7 @@ def bustools_correct(bus_path, out_path, whitelist_path):
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_count(
         bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
 ):
@@ -224,6 +230,7 @@ def bustools_count(
     }
 
 
+@validate_files(pre=False)
 def bustools_capture(
         bus_path,
         out_path,
@@ -268,6 +275,7 @@ def bustools_capture(
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_whitelist(bus_path, out_path):
     """Runs `bustools whitelist`.
 
