@@ -34,9 +34,6 @@ class TestCount(TestMixin, TestCase):
         makedirs_mock.start()
         self.addCleanup(makedirs_mock.stop)
 
-    def test_count_bus_records(self):
-        self.assertEqual(34, count.count_bus_records(self.bus_path))
-
     def test_kallisto_bus(self):
         out_dir = tempfile.mkdtemp()
         result = count.kallisto_bus(
@@ -49,20 +46,6 @@ class TestCount(TestMixin, TestCase):
         }, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
-
-    def test_kallisto_bus_raises_exception(self):
-        with mock.patch('kb_python.count.count_bus_records'
-                        ) as count_bus_records:
-            count_bus_records.return_value = 0
-            out_dir = tempfile.mkdtemp()
-            with self.assertRaises(Exception):
-                count.kallisto_bus(
-                    self.fastqs,
-                    self.index_path,
-                    self.technology,
-                    out_dir,
-                    threads=1
-                )
 
     def test_bustools_sort(self):
         out_dir = tempfile.mkdtemp()
