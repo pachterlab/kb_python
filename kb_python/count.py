@@ -25,10 +25,8 @@ from .constants import (
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
-from .dry import count as dry_count
 from .utils import (
     copy_whitelist,
-    dryable,
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
     make_directory,
@@ -38,28 +36,14 @@ from .utils import (
     sum_anndatas,
     whitelist_provided,
 )
+from .validate import validate_files
 
 logger = logging.getLogger(__name__)
 
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
-@dryable(dry_count.count_bus_records)
-def count_bus_records(bus_path):
-    """Run `bustools inspect` to get the number of BUS records in the BUS file.
-
-    :param bus_path: path to BUS file
-    :type bus_path: str
-
-    :return: number of BUS records in the file
-    :rtype: int
-    """
-    command = [get_bustools_binary_path(), 'inspect', bus_path]
-    p = run_executable(command, quiet=True)
-    match = INSPECT_PARSER.match(p.stdout.read())
-    return int(match.groupdict().get('count', 0)) if match else None
-
-
+@validate_files()
 def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     """Runs `kallisto bus`.
 
@@ -89,8 +73,6 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     run_executable(command)
 
     bus_path = os.path.join(out_dir, BUS_FILENAME)
-    if not count_bus_records(bus_path):
-        raise Exception('No reads aligned')
     return {
         'bus': bus_path,
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
@@ -98,6 +80,7 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     }
 
 
+@validate_files(pre=False)
 def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     """Runs `bustools sort`.
 
@@ -126,6 +109,7 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
     """Runs `bustools inspect`.
 
@@ -151,6 +135,7 @@ def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
     return {'inspect': out_path}
 
 
+@validate_files(pre=False)
 def bustools_correct(bus_path, out_path, whitelist_path):
     """Runs `bustools correct`.
 
@@ -177,6 +162,7 @@ def bustools_correct(bus_path, out_path, whitelist_path):
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_count(
         bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
 ):
@@ -224,6 +210,7 @@ def bustools_count(
     }
 
 
+@validate_files(pre=False)
 def bustools_capture(
         bus_path,
         out_path,
@@ -268,6 +255,7 @@ def bustools_capture(
     return {'bus': out_path}
 
 
+@validate_files(pre=False)
 def bustools_whitelist(bus_path, out_path):
     """Runs `bustools whitelist`.
 

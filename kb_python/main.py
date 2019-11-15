@@ -100,7 +100,7 @@ def parse_ref(args):
         }
         reference = REFERENCES_MAPPING[args.d]
         download_reference(reference, files, overwrite=args.overwrite)
-    elif args.workflow in {'lamanno', 'nucleus'}:
+    elif args.workflow in {'lamanno', 'nucleus'} or args.lamanno:
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -133,7 +133,7 @@ def parse_count(args):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    if args.workflow in {'lamanno', 'nucleus'}:
+    if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
         count_velocity(
             args.i,
             args.g,
@@ -150,7 +150,7 @@ def parse_count(args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
-            nucleus=args.workflow == 'nucleus',
+            nucleus=args.workflow == 'nucleus' or args.nucleus,
         )
     else:
         count(
@@ -253,6 +253,7 @@ def setup_ref_args(parser, parent):
         help='Path to the intron FASTA to be generated',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
+        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c1',
@@ -260,6 +261,7 @@ def setup_ref_args(parser, parent):
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
+        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c2',
@@ -267,6 +269,7 @@ def setup_ref_args(parser, parent):
         help='Path to generate intron transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
+        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
 
     parser_ref.add_argument(
@@ -278,6 +281,11 @@ def setup_ref_args(parser, parent):
         type=str,
         choices=list(REFERENCES_MAPPING.keys()),
         required=False
+    )
+    parser_ref.add_argument(
+        '--lamanno',
+        help='Deprecated. Use `--workflow lamanno` instead.',
+        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
@@ -399,6 +407,7 @@ def setup_count_args(parser, parent):
         help='Path to cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
+        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c2',
@@ -406,6 +415,7 @@ def setup_count_args(parser, parent):
         help='Path to intron transcripts-to-captured',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
+        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     parser_count.add_argument(
         '--overwrite',
@@ -414,6 +424,17 @@ def setup_count_args(parser, parent):
     )
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
 
+    velocity_group = parser_count.add_mutually_exclusive_group()
+    velocity_group.add_argument(
+        '--lamanno',
+        help='Deprecated. Use `--workflow lamanno` instead.',
+        action='store_true'
+    )
+    velocity_group.add_argument(
+        '--nucleus',
+        help='Deprecated. Use `--workflow nucleus` instead.',
+        action='store_true'
+    )
     parser_count.add_argument(
         '--filter',
         help='Produce a filtered gene count matrix (default: bustools)',
@@ -502,12 +523,6 @@ def main():
             parser.print_help(sys.stderr)
         sys.exit(1)
 
-    if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
-        parser.error((
-            'The --lamanno and --nucleus flags are deprecated. '
-            'Please use --workflow instead.'
-        ))
-
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -527,6 +542,13 @@ def main():
             logging.disable(level=logging.CRITICAL)
             set_dry()
 
+    if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
+        logger.warning((
+            'The `--lamanno` and `--nucleus` flags are deprecated. '
+            'These options will be removed in a future release. '
+            'Please use `--workflow lamanno` or `--workflow nucleus` instead.'
+        ))
+
     logger.debug('Printing verbose output')
     logger.debug(
         'kallisto binary located at {}'.format(get_kallisto_binary_path())
@@ -540,7 +562,7 @@ def main():
         logger.debug(args)
         COMMAND_TO_FUNCTION[args.command](args)
     except Exception:
-        if is_dry:
+        if is_dry():
             raise
         logger.exception('An exception occurred')
     finally:
