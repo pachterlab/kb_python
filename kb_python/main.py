@@ -13,10 +13,11 @@ from .config import (
     REFERENCES_MAPPING,
     set_dry,
     TECHNOLOGIES,
+    TECHNOLOGIES_MAPPING,
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
-from .count import count, count_velocity
+from .count import count, count_kite, count_velocity
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
@@ -84,7 +85,7 @@ def display_technologies():
     sys.exit(1)
 
 
-def parse_ref(args):
+def parse_ref(parser, args):
     """Parser for the `ref` command.
 
     :param args: Command-line arguments dictionary, as parsed by argparse
@@ -127,12 +128,15 @@ def parse_ref(args):
         )
 
 
-def parse_count(args):
+def parse_count(parser, args):
     """Parser for the `count` command.
 
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    if args.x.upper() not in TECHNOLOGIES_MAPPING:
+        parser.error(f'technology {args.x} is not suppoerted')
+
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
         count_velocity(
             args.i,
@@ -151,6 +155,27 @@ def parse_count(args):
             loom=args.loom,
             h5ad=args.h5ad,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
+        )
+    elif args.workflow == 'kite':
+        if not TECHNOLOGIES_MAPPING[args.x.upper()].map_archive:
+            parser.error(
+                f'kite workflow is not supported with technology {args.x}'
+            )
+
+        count_kite(
+            args.i,
+            args.g,
+            args.x,
+            args.o,
+            args.fastqs,
+            args.w,
+            tcc=args.tcc,
+            filter=args.filter,
+            threads=args.t,
+            memory=args.m,
+            overwrite=args.overwrite,
+            loom=args.loom,
+            h5ad=args.h5ad,
         )
     else:
         count(
@@ -359,7 +384,7 @@ def setup_count_args(parser, parent):
         metavar='TECHNOLOGY',
         help='Single-cell technology used (`kb --list` to view)',
         type=str,
-        required=True
+        required=True,
     )
     parser_count.add_argument(
         '-o',
@@ -560,7 +585,7 @@ def main():
     make_directory(TEMP_DIR)
     try:
         logger.debug(args)
-        COMMAND_TO_FUNCTION[args.command](args)
+        COMMAND_TO_FUNCTION[args.command](parser, args)
     except Exception:
         if is_dry():
             raise

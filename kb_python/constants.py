@@ -29,3 +29,12 @@ FILTERED_COUNTS_DIR = 'counts_filtered'
 
 BUS_UNFILTERED_SUFFIX = '.unfiltered.bus'
 BUS_FILTERED_SUFFIX = '.filtered.bus'
+
+# File codes.
+# These are appended to the filename whenever it undergoes some kind of
+# transformation.
+SORT_CODE = 's'
+CORRECT_CODE = 'c'
+FILTERED_CODE = 'filtered'
+UNFILTERED_CODE = 'unfiltered'
+PROJECT_CODE = 'p'
