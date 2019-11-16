@@ -24,6 +24,11 @@ def dummy_function(i):
 
 class TestUtils(TestMixin, TestCase):
 
+    def test_update_filename(self):
+        self.assertEqual(
+            'output.s.c.bus', utils.update_filename('output.s.bus', 'c')
+        )
+
     def test_dryable_not_dry(self):
         with mock.patch('kb_python.utils.is_dry') as is_dry:
             is_dry.return_value = False

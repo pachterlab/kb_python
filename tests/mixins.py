@@ -108,3 +108,4 @@ class TestMixin(TestCase):
         cls.kite_feature_path = os.path.join(cls.kite_dir, 'features.tsv')
         cls.kite_fasta_path = os.path.join(cls.kite_dir, 'fasta.fa')
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
+        cls.kite_map_path = os.path.join(cls.kite_dir, 'map.txt')
