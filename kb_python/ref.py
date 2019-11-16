@@ -248,8 +248,7 @@ def decompress_file(path, temp_dir='tmp'):
             os.path.join(temp_dir,
                          os.path.splitext(os.path.basename(path))[0])
         )
-    else:
-        return path
+    return path
 
 
 def ref(
