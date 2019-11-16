@@ -190,7 +190,7 @@ class TestRef(TestMixin, TestCase):
                 ref.download_reference(reference, files, temp_dir=temp_dir)
             urlretrieve.assert_not_called()
 
-    def decompress_file_text(self):
+    def test_decompress_file_text(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
             temp_dir = tempfile.mkdtemp()
             self.assertEqual(
@@ -199,11 +199,12 @@ class TestRef(TestMixin, TestCase):
             )
             decompress_gzip.assert_not_called()
 
-    def decompress_file_gzip(self):
+    def test_decompress_file_gzip(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
             temp_dir = tempfile.mkdtemp()
+            decompress_gzip.return_value = 'textfile.txt'
             self.assertEqual(
-                decompress_gzip.return_value,
+                'textfile.txt',
                 ref.decompress_file('textfile.txt.gz', temp_dir=temp_dir)
             )
             decompress_gzip.assert_called_once_with(
