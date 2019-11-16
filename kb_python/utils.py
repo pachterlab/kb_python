@@ -18,6 +18,7 @@ from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
+    MAP_DIR,
     PACKAGE_PATH,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
@@ -38,6 +39,24 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+
+def update_filename(filename, code):
+    """Update the provided path with the specified code.
+
+    For instance, if the `path` is 'output.bus' and `code` is `s` (for sort),
+    this function returns `output.s.bus`.
+
+    :param filename: filename (NOT path)
+    :type filename: str
+    :param code: code to append to filename
+    :type code: str
+
+    :return: path updated with provided code
+    :rtype: str
+    """
+    name, extension = os.path.splitext(filename)
+    return f'{name}.{code}{extension}'
 
 
 def dryable(dry_func):
@@ -365,6 +384,29 @@ def copy_whitelist(technology, out_dir):
     with open_as_text(archive_path, 'r') as f, open(whitelist_path, 'w') as out:
         out.write(f.read())
     return whitelist_path
+
+
+@dryable(dry_utils.copy_map)
+def copy_map(technology, out_dir):
+    """Copies provided feature-to-cell barcode mapping for the speified technology.
+
+    :param technology: the name of the technology
+    :type technology: str
+    :param out_dir: directory to put the map
+    :type out_dir: str
+
+    :return: path to map
+    :rtype: str
+    """
+    technology = TECHNOLOGIES_MAPPING[technology.upper()]
+    archive_path = os.path.join(PACKAGE_PATH, MAP_DIR, technology.map_archive)
+    map_path = os.path.join(
+        out_dir,
+        os.path.splitext(technology.map_archive)[0]
+    )
+    with open_as_text(archive_path, 'r') as f, open(map_path, 'w') as out:
+        out.write(f.read())
+    return map_path
 
 
 def concatenate_files(*paths, out_path, temp_dir='tmp'):
