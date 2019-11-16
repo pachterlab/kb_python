@@ -199,16 +199,20 @@ def run_executable(
 
     # Wait if desired.
     if wait:
+        out = []
         while p.poll() is None:
             if stream and not quiet:
                 for line in p.stdout:
+                    out.append(line.strip())
                     logger.debug(line.strip())
                 for line in p.stderr:
+                    out.append(line.strip())
                     logger.debug(line.strip())
             else:
                 time.sleep(1)
 
         if not quiet and p.returncode != returncode:
+            logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
 
     return p
