@@ -106,5 +106,14 @@ class TestMixin(TestCase):
 
         cls.kite_dir = os.path.join(cls.fixtures_dir, 'kite')
         cls.kite_feature_path = os.path.join(cls.kite_dir, 'features.tsv')
+        cls.kite_collision_feature_path = os.path.join(
+            cls.kite_dir, 'features_collision.tsv'
+        )
+        cls.kite_duplicate_feature_path = os.path.join(
+            cls.kite_dir, 'features_duplicate.tsv'
+        )
         cls.kite_fasta_path = os.path.join(cls.kite_dir, 'fasta.fa')
+        cls.kite_collision_fasta_path = os.path.join(
+            cls.kite_dir, 'fasta_collision.fa'
+        )
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
