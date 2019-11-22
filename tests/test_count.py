@@ -404,7 +404,8 @@ class TestCount(TestMixin, TestCase):
                 t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_not_called()
 
@@ -480,7 +481,8 @@ class TestCount(TestMixin, TestCase):
                 t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -626,7 +628,8 @@ class TestCount(TestMixin, TestCase):
                 t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=True
+                tcc=True,
+                mm=False
             )
             convert_matrix.assert_not_called()
 
@@ -785,7 +788,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -900,7 +904,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_called_once_with(
                 os.path.join(out_dir, UNFILTERED_COUNTS_DIR),
@@ -1055,7 +1060,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             filter_with_bustools.assert_called_once_with(
                 bus_scs_path,
@@ -1185,7 +1191,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1316,7 +1323,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1448,7 +1456,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False,
             )
             convert_matrix.assert_called_once_with(
                 os.path.join(out_dir, UNFILTERED_COUNTS_DIR),
@@ -1608,7 +1617,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             filter_with_bustools.assert_called_once_with(
                 bus_spscs_path,
@@ -1758,7 +1768,8 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 ecmap_path,
                 txnames_path,
-                tcc=False
+                tcc=False,
+                mm=False
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1959,7 +1970,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_s_path,
@@ -1967,7 +1979,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -2175,7 +2188,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_s_path,
@@ -2183,7 +2197,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -2416,7 +2431,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_s_path,
@@ -2424,7 +2440,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -2760,7 +2777,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_s_path,
@@ -2768,7 +2786,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     cdna_filtered_path,
@@ -2776,7 +2795,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_filtered_path,
@@ -2786,7 +2806,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 )
             ])
             filter_with_bustools.assert_called_once_with(
@@ -3131,7 +3152,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_s_path,
@@ -3139,7 +3161,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     cdna_filtered_path,
@@ -3147,7 +3170,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 ),
                 call(
                     intron_filtered_path,
@@ -3157,7 +3181,8 @@ class TestCount(TestMixin, TestCase):
                     self.t2g_path,
                     ecmap_path,
                     txnames_path,
-                    tcc=False
+                    tcc=False,
+                    mm=False
                 )
             ])
             filter_with_bustools.assert_called_once_with(

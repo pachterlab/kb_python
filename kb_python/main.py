@@ -308,6 +308,18 @@ def setup_ref_args(parser, parent):
         required=False
     )
     parser_ref.add_argument(
+        '--workflow',
+        help=(
+            'Type of workflow to prepare files for. '
+            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
+            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `kite` for feature barcoding. (default: standard)'
+        ),
+        type=str,
+        default='standard',
+        choices=['standard', 'lamanno', 'nucleus', 'kite']
+    )
+    parser_ref.add_argument(
         '--lamanno',
         help='Deprecated. Use `--workflow lamanno` instead.',
         action='store_true'
@@ -419,9 +431,36 @@ def setup_count_args(parser, parent):
         default='4G'
     )
     parser_count.add_argument(
+        '--workflow',
+        help=(
+            'Type of workflow. '
+            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
+            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `kite` for feature barcoding. (default: standard)'
+        ),
+        type=str,
+        default='standard',
+        choices=['standard', 'lamanno', 'nucleus', 'kite']
+    )
+
+    count_group = parser_count.add_mutually_exclusive_group()
+    count_group.add_argument(
+        '--mm',
+        help='Include reads that pseudoalign to multiple genes.',
+        action='store_true'
+    )
+    count_group.add_argument(
         '--tcc',
         help='Generate a TCC matrix instead of a gene count matrix.',
         action='store_true'
+    )
+    parser_count.add_argument(
+        '--filter',
+        help='Produce a filtered gene count matrix (default: bustools)',
+        type=str,
+        const='bustools',
+        nargs='?',
+        choices=['bustools']
     )
     required_lamanno = parser_count.add_argument_group(
         'required arguments for `lamanno` and `nucleus` workflows'
@@ -460,14 +499,6 @@ def setup_count_args(parser, parent):
         help='Deprecated. Use `--workflow nucleus` instead.',
         action='store_true'
     )
-    parser_count.add_argument(
-        '--filter',
-        help='Produce a filtered gene count matrix (default: bustools)',
-        type=str,
-        const='bustools',
-        nargs='?',
-        choices=['bustools']
-    )
     conversion_group = parser_count.add_mutually_exclusive_group()
     conversion_group.add_argument(
         '--loom',
@@ -503,17 +534,6 @@ def main():
 
     # Add common options to this parent parser
     parent = argparse.ArgumentParser(add_help=False)
-    parent.add_argument(
-        '--workflow',
-        help=(
-            'Type of workflow. Use `lamanno` to calculate '
-            'RNA velocity based on La Manno et al. 2018 logic. Use `nucleus` to '
-            'calculate RNA velocity on single-nucleus RNA-seq reads (default: standard)'
-        ),
-        type=str,
-        default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite']
-    )
     parent.add_argument(
         '--keep-tmp',
         help='Do not delete the tmp directory',

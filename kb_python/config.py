@@ -37,7 +37,7 @@ TECHNOLOGIES = [
         [(0, 16, 26)],
         [(0, 0, 16)],
         '10xv2_whitelist.txt.gz',
-        '10x_feature_barcode_map.txt.gz',
+        None,
     ),
     Technology(
         '10XV3',
@@ -47,7 +47,7 @@ TECHNOLOGIES = [
         [(0, 16, 28)],
         [(0, 0, 16)],
         '10xv3_whitelist.txt.gz',
-        '10x_feature_barcode_map.txt.gz',
+        '10xv3_feature_barcode_map.txt.gz',
     ),
     Technology(
         'CELSEQ',
