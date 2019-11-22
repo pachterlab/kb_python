@@ -1,3 +1,4 @@
+import itertools
 import logging
 import re
 
@@ -150,7 +151,9 @@ def generate_kite_fasta(feature_path, out_path):
     This FASTA contains all sequences that are 1 hamming distance from the
     provided barcodes. The file of barcodes must be a 2-column TSV containing
     the barcode sequences in the first column and their corresponding feature
-    name in the second column.
+    name in the second column. If hamming distance 1 variants collide for any
+    pair of barcodes, the hamming distance 1 variants for those barcodes are
+    not generated.
 
     :param feature_path: path to TSV containing barcodes and feature names
     :type feature_path: str
@@ -161,15 +164,15 @@ def generate_kite_fasta(feature_path, out_path):
     :rtype: tuple
     """
 
-    def generate_mismatches(sequence, name):
+    def generate_mismatches(name, sequence):
         """Helper function to generate 1 hamming distance mismatches.
 
-        :param sequence: the sequence
-        :type sequence: str
         :param name: name of the sequence
         :type name: str
+        :param sequence: the sequence
+        :type sequence: str
 
-        :return: a generator that yields a tuple of (mismatched sequence, unique name)
+        :return: a generator that yields a tuple of (unique name, mismatched sequence)
         :rtype: generator
         """
         sequence = sequence.upper()
@@ -180,30 +183,60 @@ def generate_kite_fasta(feature_path, out_path):
 
             for j, different in enumerate([b for b in ['A', 'C', 'G', 'T']
                                            if b != base]):
-                yield '{}{}{}'.format(before, different,
-                                      after), '{}-{}.{}'.format(name, i, j + 1)
+                yield f'{name}-{i}.{j+1}', f'{before}{different}{after}'
 
     df_features = pd.read_csv(
         feature_path, sep='\t', header=None, names=['sequence', 'name']
     )
 
     lengths = set()
-    with open_as_text(out_path, 'w') as f:
-        for i, row in df_features.iterrows():
-            lengths.add(len(row.sequence))
-            attributes = [('feature_id', row['name'])]
-            f.write('{}\n'.format(FASTA.make_header(row['name'], attributes)))
-            f.write('{}\n'.format(row.sequence))
+    features = {}
+    variants = {}
+    # Generate all feature barcode variations before saving to check for collisions.
+    for i, row in df_features.iterrows():
+        lengths.add(len(row.sequence))
+        features[row['name']] = row.sequence
+        variants[row['name']] = {
+            name: seq
+            for name, seq in generate_mismatches(row['name'], row.sequence)
+        }
 
-            for seq, name in generate_mismatches(row.sequence, row['name']):
-                f.write('{}\n'.format(FASTA.make_header(name, attributes)))
-                f.write('{}\n'.format(seq))
+    # Check duplicate barcodes.
+    duplicates = set([
+        bc for bc in features.values() if list(features.values()).count(bc) > 1
+    ])
+    if len(duplicates) > 0:
+        raise Exception(
+            'Duplicate feature barcodes: {}'.format(' '.join(duplicates))
+        )
     if len(lengths) > 1:
         logger.warning(
             'Detected barcodes of different lengths: {}'.format(
-                ','.join(lengths)
+                ','.join(str(l) for l in lengths)
             )
         )
+    for f1, f2 in itertools.combinations(variants.keys(), 2):
+        v1 = variants[f1]
+        v2 = variants[f2]
+        if len(set(v1.values()).intersection(set(v2.values()))) > 0:
+            logger.warning((
+                f'Detected collision between variants of feature barcodes {f1} and {f2}. '
+                f'Hamming distance 1 variants for these barcodes will not be generated.'
+            ))
+            variants[f1] = {}
+            variants[f2] = {}
+
+    # Write FASTA
+    with open_as_text(out_path, 'w') as f:
+        for feature, barcode in features.items():
+            attributes = [('feature_id', feature)]
+            f.write(f'{FASTA.make_header(feature, attributes)}\n')
+            f.write(f'{barcode}\n')
+
+            for name, variant in variants[feature].items():
+                f.write(f'{FASTA.make_header(name, attributes)}\n')
+                f.write(f'{variant}\n')
+
     return out_path, lengths
 
 
