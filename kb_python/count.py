@@ -195,7 +195,13 @@ def bustools_correct(bus_path, out_path, whitelist_path):
 
 @validate_files(pre=False)
 def bustools_count(
-        bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
+        bus_path,
+        out_prefix,
+        t2g_path,
+        ecmap_path,
+        txnames_path,
+        tcc=False,
+        mm=False
 ):
     """Runs `bustools count`.
 
@@ -212,6 +218,9 @@ def bustools_count(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -228,6 +237,8 @@ def bustools_count(
     command += ['-t', txnames_path]
     if not tcc:
         command += ['--genecounts']
+    if mm:
+        command += ['--multimapping']
     command += [bus_path]
     run_executable(command)
     return {
@@ -451,6 +462,7 @@ def filter_with_bustools(
         filtered_bus_path,
         counts_prefix=None,
         tcc=False,
+        mm=False,
         temp_dir='tmp',
         threads=8,
         memory='4G',
@@ -477,6 +489,9 @@ def filter_with_bustools(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -523,6 +538,7 @@ def filter_with_bustools(
             ecmap_path,
             txnames_path,
             tcc=tcc,
+            mm=mm,
         )
         results.update(count_result)
 
@@ -598,6 +614,7 @@ def count(
         fastqs,
         whitelist_path=None,
         tcc=False,
+        mm=False,
         filter=None,
         temp_dir='tmp',
         threads=8,
@@ -623,6 +640,9 @@ def count(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
@@ -717,6 +737,7 @@ def count(
         bus_result['ecmap'],
         bus_result['txnames'],
         tcc=tcc,
+        mm=mm,
     )
     unfiltered_results.update(count_result)
 
@@ -771,6 +792,7 @@ def count_kite(
         fastqs,
         whitelist_path=None,
         tcc=False,
+        mm=False,
         filter=None,
         temp_dir='tmp',
         threads=8,
@@ -796,6 +818,9 @@ def count_kite(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
@@ -913,6 +938,7 @@ def count_kite(
         bus_result['ecmap'],
         bus_result['txnames'],
         tcc=tcc,
+        mm=mm,
     )
     unfiltered_results.update(count_result)
 
@@ -969,6 +995,7 @@ def count_velocity(
         fastqs,
         whitelist_path=None,
         tcc=False,
+        mm=False,
         filter=None,
         temp_dir='tmp',
         threads=8,
@@ -999,6 +1026,9 @@ def count_velocity(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
@@ -1119,6 +1149,7 @@ def count_velocity(
             bus_result['ecmap'],
             bus_result['txnames'],
             tcc=tcc,
+            mm=mm,
         )
         unfiltered_results[prefix].update(count_result)
 
@@ -1187,6 +1218,7 @@ def count_velocity(
                     bus_result['ecmap'],
                     bus_result['txnames'],
                     tcc=tcc,
+                    mm=mm,
                 )
                 filtered_results[prefix].update(count_result)
 
