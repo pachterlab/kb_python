@@ -163,6 +163,9 @@ def generate_kite_fasta(feature_path, out_path):
     :param out_path: path to FASTA to generate
     :type out_path: str
 
+    :raises Exception: if there are barcodes of different lengths
+    :raises Exception: if there are duplicate barcodes
+
     :return: (path to generated FASTA, set of barcode lengths)
     :rtype: tuple
     """
@@ -213,7 +216,7 @@ def generate_kite_fasta(feature_path, out_path):
             'Duplicate feature barcodes: {}'.format(' '.join(duplicates))
         )
     if len(lengths) > 1:
-        logger.warning(
+        raise Exception(
             'Detected barcodes of different lengths: {}'.format(
                 ','.join(str(l) for l in lengths)
             )
@@ -240,7 +243,7 @@ def generate_kite_fasta(feature_path, out_path):
                 f.write(f'{FASTA.make_header(name, attributes)}\n')
                 f.write(f'{variant}\n')
 
-    return out_path, lengths
+    return out_path, min(lengths)
 
 
 def generate_cdna_fasta(fasta_path, gtf_path, out_path):

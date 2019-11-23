@@ -346,7 +346,7 @@ class TestRef(TestMixin, TestCase):
             )
             kallisto_index.assert_called_once_with(cdna_fasta_path, index_path)
 
-    def test_ref_kite(self):
+    def test_ref_kite_odd(self):
         with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.generate_kite_fasta') as generate_kite_fasta,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
@@ -359,7 +359,45 @@ class TestRef(TestMixin, TestCase):
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             decompress_file.return_value = feature_path
-            generate_kite_fasta.return_value = fasta_path, {1}
+            generate_kite_fasta.return_value = fasta_path, 1
+            create_t2g_from_fasta.return_value = {'t2g': t2g_path}
+            kallisto_index.return_value = {'index': index_path}
+
+            self.assertEqual({
+                'fasta': fasta_path,
+                't2g': t2g_path,
+                'index': index_path,
+            },
+                             ref.ref_kite(
+                                 feature_path,
+                                 fasta_path,
+                                 index_path,
+                                 t2g_path,
+                                 temp_dir=temp_dir
+                             ))
+            decompress_file.assert_called_once_with(
+                feature_path, temp_dir=temp_dir
+            )
+            generate_kite_fasta.assert_called_once_with(
+                feature_path, fasta_path
+            )
+            create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
+            kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)
+
+    def test_ref_kite_even(self):
+        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.generate_kite_fasta') as generate_kite_fasta,\
+            mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
+            mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
+            mock.patch('kb_python.ref.os.path.exists') as exists:
+            exists.return_value = False
+            temp_dir = tempfile.mkdtemp()
+            feature_path = mock.MagicMock()
+            fasta_path = mock.MagicMock()
+            index_path = mock.MagicMock()
+            t2g_path = mock.MagicMock()
+            decompress_file.return_value = feature_path
+            generate_kite_fasta.return_value = fasta_path, 2
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             kallisto_index.return_value = {'index': index_path}
 
@@ -397,7 +435,7 @@ class TestRef(TestMixin, TestCase):
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             decompress_file.return_value = feature_path
-            generate_kite_fasta.return_value = fasta_path, {1}
+            generate_kite_fasta.return_value = fasta_path, 1
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
 
             self.assertEqual({
@@ -433,7 +471,7 @@ class TestRef(TestMixin, TestCase):
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             decompress_file.return_value = feature_path
-            generate_kite_fasta.return_value = fasta_path, {1}
+            generate_kite_fasta.return_value = fasta_path, 1
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             kallisto_index.return_value = {'index': index_path}
 

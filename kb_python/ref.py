@@ -335,13 +335,15 @@ def ref_kite(
     results = {}
     feature_path = decompress_file(feature_path, temp_dir=temp_dir)
     logger.info('Generating mismatch FASTA at {}'.format(fasta_path))
-    kite_path, lengths = generate_kite_fasta(feature_path, fasta_path)
+    kite_path, length = generate_kite_fasta(feature_path, fasta_path)
     results.update({'fasta': kite_path})
     t2g_result = create_t2g_from_fasta(fasta_path, t2g_path)
     results.update(t2g_result)
 
     if not os.path.exists(index_path) or overwrite:
-        index_result = kallisto_index(kite_path, index_path, k=min(lengths))
+        index_result = kallisto_index(
+            kite_path, index_path, k=length if length % 2 else length - 1
+        )
         results.update(index_result)
     else:
         logger.info(
