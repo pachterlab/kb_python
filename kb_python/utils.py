@@ -521,7 +521,9 @@ def import_tcc_matrix_as_anndata(
     )
 
 
-def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
+def import_matrix_as_anndata(
+        matrix_path, barcodes_path, genes_path, name='gene_id'
+):
     """Import a matrix as an Anndata object.
 
     :param matrix_path: path to the matrix ec file
@@ -530,6 +532,8 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     :type barcodes_path: str
     :param genes_path: path to the genes txt file
     :type genes_path: str
+    :param name: name of header that contains ids, defaults to "gene_id"
+    :type name: str, optional
 
     :return: a new Anndata object
     :rtype: anndata.Anndata
@@ -538,7 +542,7 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
     df_genes = pd.read_csv(
-        genes_path, header=None, index_col=0, names=['gene_id'], sep='\t'
+        genes_path, header=None, index_col=0, names=[name], sep='\t'
     )
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes

@@ -12,9 +12,12 @@ from .constants import (
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    FEATURE_ID_NAME,
+    FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
+    GENE_ID_NAME,
     INSPECT_FILENAME,
     PROJECT_CODE,
     SORT_CODE,
@@ -326,6 +329,7 @@ def convert_matrix(
         genes_path=None,
         ec_path=None,
         txnames_path=None,
+        name='gene_id',
         loom=False,
         h5ad=False,
         tcc=False,
@@ -345,6 +349,8 @@ def convert_matrix(
     :type ec_path: str, optional
     :param txnames_path: path to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
+    :param name: name of header that contains ids, defaults to "gene_id"
+    :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
     :param h5ad: whether to generate h5ad file, defaults to `False`
@@ -362,7 +368,7 @@ def convert_matrix(
     adata = import_tcc_matrix_as_anndata(
         matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
     ) if tcc else import_matrix_as_anndata(
-        matrix_path, barcodes_path, genes_path
+        matrix_path, barcodes_path, genes_path, name=name
     )
     if loom:
         loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
@@ -384,6 +390,7 @@ def convert_matrices(
         genes_paths=None,
         ec_paths=None,
         txnames_path=None,
+        name='gene_id',
         loom=False,
         h5ad=False,
         nucleus=False,
@@ -404,6 +411,8 @@ def convert_matrices(
     :type ec_paths: str, optional
     :param txnames_path: list of paths to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
+    :param name: name of header that contains ids, defaults to "gene_id"
+    :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
     :param h5ad: whether to generate h5ad file, defaults to `False`
@@ -435,8 +444,9 @@ def convert_matrices(
                 genes_ec_path,
                 txnames_path,
                 threads=threads
-            ) if tcc else
-            import_matrix_as_anndata(matrix_path, barcodes_path, genes_ec_path)
+            ) if tcc else import_matrix_as_anndata(
+                matrix_path, barcodes_path, genes_ec_path, name=name
+            )
         )
     logger.info('Combining matrices')
     adata = sum_anndatas(*adatas) if nucleus else overlay_anndatas(*adatas)
@@ -463,6 +473,7 @@ def filter_with_bustools(
         counts_prefix=None,
         tcc=False,
         mm=False,
+        kite=False,
         temp_dir='tmp',
         threads=8,
         memory='4G',
@@ -492,6 +503,8 @@ def filter_with_bustools(
     :param mm: whether to include BUS records that pseudoalign to multiple genes,
                defaults to `False`
     :type mm: bool, optional
+    :param kite: Whether this is a KITE workflow
+    :type kite: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -551,9 +564,11 @@ def filter_with_bustools(
                     genes_path=count_result.get('genes'),
                     ec_path=count_result.get('ec'),
                     txnames_path=txnames_path,
+                    name=FEATURE_ID_NAME if kite else GENE_ID_NAME,
                     loom=loom,
                     h5ad=h5ad,
-                    tcc=tcc
+                    tcc=tcc,
+                    threads=threads
                 )
             )
 
@@ -616,6 +631,8 @@ def count(
         tcc=False,
         mm=False,
         filter=None,
+        kite=False,
+        FB=False,
         temp_dir='tmp',
         threads=8,
         memory='4G',
@@ -646,6 +663,11 @@ def count(
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
+    :param kite: Whether this is a KITE workflow
+    :type kite: bool, optional
+    :param FB: whether 10x Genomics Feature Barcoding technology was used,
+               defaults to `False`
+    :type FB: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -704,217 +726,44 @@ def count(
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
-    inspect_result = bustools_inspect(
-        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-        whitelist_path, bus_result['ecmap']
-    )
-    unfiltered_results.update(inspect_result)
-    correct_result = bustools_correct(
-        sort_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(sort_result['bus']), CORRECT_CODE)
-        ), whitelist_path
-    )
-    sort2_result = bustools_sort(
-        correct_result['bus'],
-        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory
-    )
-    unfiltered_results.update({'bus_scs': sort2_result['bus']})
-
-    counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
-    make_directory(counts_dir)
-    counts_prefix = os.path.join(
-        counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
-    )
-    count_result = bustools_count(
-        sort2_result['bus'],
-        counts_prefix,
-        t2g_path,
-        bus_result['ecmap'],
-        bus_result['txnames'],
-        tcc=tcc,
-        mm=mm,
-    )
-    unfiltered_results.update(count_result)
-
-    # Convert outputs.
-    if loom or h5ad:
-        unfiltered_results.update(
-            convert_matrix(
-                counts_dir,
-                count_result['mtx'],
-                count_result['barcodes'],
-                genes_path=count_result.get('genes'),
-                ec_path=count_result.get('ec'),
-                txnames_path=bus_result['txnames'],
-                loom=loom,
-                h5ad=h5ad,
-                tcc=tcc,
-            )
+    prev_result = sort_result
+    if FB:
+        logger.info(f'Copying {technology} feature-to-barcode map to {out_dir}')
+        map_path = copy_map(technology, out_dir)
+        project_result = bustools_project(
+            sort_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(sort_result['bus']), PROJECT_CODE
+                )
+            ), map_path, bus_result['ecmap'], bus_result['txnames']
         )
 
-    if filter == 'bustools':
-        filtered_counts_prefix = os.path.join(
-            out_dir, FILTERED_COUNTS_DIR, TCC_PREFIX if tcc else COUNTS_PREFIX
-        )
-        filtered_whitelist_path = os.path.join(
-            out_dir, FILTER_WHITELIST_FILENAME
-        )
-        filtered_bus_path = os.path.join(out_dir, f'output.{FILTERED_CODE}.bus')
-        results['filtered'] = filter_with_bustools(
-            sort2_result['bus'],
-            bus_result['ecmap'],
-            bus_result['txnames'],
-            t2g_path,
-            filtered_whitelist_path,
-            filtered_bus_path,
-            counts_prefix=filtered_counts_prefix,
-            tcc=tcc,
+        sort2_result = bustools_sort(
+            project_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(project_result['bus']), SORT_CODE
+                )
+            ),
             temp_dir=temp_dir,
             threads=threads,
-            memory=memory,
-            loom=loom,
-            h5ad=h5ad
+            memory=memory
         )
-
-    return results
-
-
-def count_kite(
-        index_path,
-        t2g_path,
-        technology,
-        out_dir,
-        fastqs,
-        whitelist_path=None,
-        tcc=False,
-        mm=False,
-        filter=None,
-        temp_dir='tmp',
-        threads=8,
-        memory='4G',
-        overwrite=False,
-        loom=False,
-        h5ad=False,
-):
-    """Generates count matrices for KITE workflow.
-
-    :param index_path: path to kallisto index
-    :type index_path: str
-    :param t2g_path: path to transcript-to-gene mapping
-    :type t2g_path: str
-    :param technology: single-cell technology used
-    :type technology: str
-    :param out_dir: path to output directory
-    :type out_dir: str
-    :param fastqs: list of FASTQ file paths
-    :type fastqs: list
-    :param whitelist_path: path to whitelist, defaults to `None`
-    :type whitelist_path: str, optional
-    :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
-                defaults to `False`
-    :type tcc: bool, optional
-    :param mm: whether to include BUS records that pseudoalign to multiple genes,
-               defaults to `False`
-    :type mm: bool, optional
-    :param filter: filter to use to generate a filtered count matrix,
-                   defaults to `None`
-    :type filter: str, optional
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-    :param threads: number of threads to use, defaults to `8`
-    :type threads: int, optional
-    :param memory: amount of memory to use, defaults to `4G`
-    :type memory: str, optional
-    :param overwrite: overwrite an existing index file, defaults to `False`
-    :type overwrite: bool, optional
-    :param loom: whether to convert the final count matrix into a loom file,
-                 defaults to `False`
-    :type loom: bool, optional
-    :param h5ad: whether to convert the final count matrix into a h5ad file,
-                 defaults to `False`
-    :type h5ad: bool, optional
-
-    :return: dictionary containing path to generated index
-    :rtype: dict
-    """
-    results = {}
-
-    make_directory(out_dir)
-    unfiltered_results = results.setdefault('unfiltered', {})
-
-    bus_result = {
-        'bus': os.path.join(out_dir, BUS_FILENAME),
-        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-    }
-    if any(not os.path.exists(path)
-           for name, path in bus_result.items()) or overwrite:
-        # Pipe any remote files.
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        bus_result = kallisto_bus(
-            fastqs, index_path, technology, out_dir, threads=threads
-        )
-    else:
-        logger.info(
-            'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
-        )
-    unfiltered_results.update(bus_result)
-
-    sort_result = bustools_sort(
-        bus_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(bus_result['bus']), SORT_CODE)
-        ),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory
-    )
-    if not whitelist_path:
-        logger.info('Whitelist not provided')
-        whitelist_path = copy_or_create_whitelist(
-            technology, sort_result['bus'], out_dir
-        )
-        unfiltered_results.update({'whitelist': whitelist_path})
-
-    logger.info(f'Copying {technology} feature-to-barcode map to {out_dir}')
-    map_path = copy_map(technology, out_dir)
-    project_result = bustools_project(
-        sort_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(sort_result['bus']), PROJECT_CODE)
-        ), map_path, bus_result['ecmap'], bus_result['txnames']
-    )
-
-    sort2_result = bustools_sort(
-        project_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(project_result['bus']), SORT_CODE)
-        ),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory
-    )
+        prev_result = sort2_result
 
     inspect_result = bustools_inspect(
-        sort2_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+        prev_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
         whitelist_path, bus_result['ecmap']
     )
     unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
-        sort2_result['bus'],
+        prev_result['bus'],
         os.path.join(
             temp_dir,
-            update_filename(
-                os.path.basename(sort2_result['bus']), CORRECT_CODE
-            )
+            update_filename(os.path.basename(prev_result['bus']), CORRECT_CODE)
         ), whitelist_path
     )
     sort3_result = bustools_sort(
@@ -929,7 +778,8 @@ def count_kite(
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     make_directory(counts_dir)
     counts_prefix = os.path.join(
-        counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
+        counts_dir,
+        TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
     )
     count_result = bustools_count(
         sort3_result['bus'],
@@ -952,15 +802,18 @@ def count_kite(
                 genes_path=count_result.get('genes'),
                 ec_path=count_result.get('ec'),
                 txnames_path=bus_result['txnames'],
+                name=FEATURE_ID_NAME if kite else GENE_ID_NAME,
                 loom=loom,
                 h5ad=h5ad,
                 tcc=tcc,
+                threads=threads
             )
         )
 
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
-            out_dir, FILTERED_COUNTS_DIR, TCC_PREFIX if tcc else COUNTS_PREFIX
+            out_dir, FILTERED_COUNTS_DIR,
+            TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
         )
         filtered_whitelist_path = os.path.join(
             out_dir, FILTER_WHITELIST_FILENAME
@@ -974,6 +827,7 @@ def count_kite(
             filtered_whitelist_path,
             filtered_bus_path,
             counts_prefix=filtered_counts_prefix,
+            kite=kite,
             tcc=tcc,
             temp_dir=temp_dir,
             threads=threads,

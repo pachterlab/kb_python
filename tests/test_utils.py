@@ -203,6 +203,16 @@ class TestUtils(TestMixin, TestCase):
         self.assertEqual('gene_id', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
 
+    def test_import_matrix_as_anndata_name(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path, self.barcodes_path, self.genes_path, name='test'
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.var))
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('test', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
     def test_overlay_anndatas(self):
         adata_spliced = utils.import_matrix_as_anndata(
             self.spliced_matrix_path, self.spliced_barcodes_path,

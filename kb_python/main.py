@@ -17,7 +17,7 @@ from .config import (
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
-from .count import count, count_kite, count_velocity
+from .count import count, count_velocity
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
@@ -148,6 +148,7 @@ def parse_count(parser, args):
             args.fastqs,
             args.w,
             tcc=args.tcc,
+            mm=args.mm,
             filter=args.filter,
             threads=args.t,
             memory=args.m,
@@ -156,28 +157,12 @@ def parse_count(parser, args):
             h5ad=args.h5ad,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
         )
-    elif args.workflow == 'kite':
-        if not TECHNOLOGIES_MAPPING[args.x.upper()].map_archive:
+    else:
+        if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
             parser.error(
-                f'kite workflow is not supported with technology {args.x}'
+                f'`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
-        count_kite(
-            args.i,
-            args.g,
-            args.x,
-            args.o,
-            args.fastqs,
-            args.w,
-            tcc=args.tcc,
-            filter=args.filter,
-            threads=args.t,
-            memory=args.m,
-            overwrite=args.overwrite,
-            loom=args.loom,
-            h5ad=args.h5ad,
-        )
-    else:
         count(
             args.i,
             args.g,
@@ -186,7 +171,10 @@ def parse_count(parser, args):
             args.fastqs,
             args.w,
             tcc=args.tcc,
+            mm=args.mm,
             filter=args.filter,
+            kite='kite' in args.workflow,
+            FB='10xFB' in args.workflow,
             threads=args.t,
             memory=args.m,
             overwrite=args.overwrite,
@@ -436,11 +424,13 @@ def setup_count_args(parser, parent):
             'Type of workflow. '
             'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
             'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
-            'Use `kite` for feature barcoding. (default: standard)'
+            'Use `kite` for feature barcoding. '
+            'Use `kite:10xFB` for 10x Genomics Feature Barcoding technology. '
+            '(default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite']
+        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB']
     )
 
     count_group = parser_count.add_mutually_exclusive_group()
