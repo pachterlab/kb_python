@@ -80,7 +80,7 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     }
 
 
-@validate_files(pre=False)
+@validate_files()
 def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     """Runs `bustools sort`.
 
