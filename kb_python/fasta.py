@@ -118,9 +118,11 @@ class FASTA:
 
             while line:
                 if line.startswith('>'):
-                    to_sort.append([
-                        FASTA.parse_header(line)['sequence_id'], position, None
-                    ])
+                    header = FASTA.parse_header(line)
+                    logger.debug(
+                        'Found FASTA entry {}'.format(header['sequence_id'])
+                    )
+                    to_sort.append([header['sequence_id'], position, None])
 
                 position = f.tell()
                 line = f.readline()
@@ -134,6 +136,7 @@ class FASTA:
         with open_as_text(self.fasta_path,
                           'r') as fasta, open_as_text(out_path, 'w') as f:
             for tup in to_sort:
+                logger.debug(f'Writing FASTA entry {tup[0]}')
                 start_position = tup[1]
                 end_position = tup[2]
                 fasta.seek(start_position)

@@ -243,7 +243,7 @@ def decompress_file(path, temp_dir='tmp'):
     """
     if path.endswith('.gz'):
         logger.info('Decompressing {} to {}'.format(path, temp_dir))
-        decompress_gzip(
+        return decompress_gzip(
             path,
             os.path.join(temp_dir,
                          os.path.splitext(os.path.basename(path))[0])

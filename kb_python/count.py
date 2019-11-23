@@ -114,7 +114,7 @@ def bustools_project(bus_path, out_path, map_path, ecmap_path, txnames_path):
     return {'bus': out_path}
 
 
-@validate_files(pre=False)
+@validate_files()
 def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     """Runs `bustools sort`.
 
