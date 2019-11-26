@@ -13,7 +13,6 @@ from .config import (
     REFERENCES_MAPPING,
     set_dry,
     TECHNOLOGIES,
-    TECHNOLOGIES_MAPPING,
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
@@ -134,9 +133,6 @@ def parse_count(parser, args):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    if args.x.upper() not in TECHNOLOGIES_MAPPING:
-        parser.error(f'technology {args.x} is not suppoerted')
-
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
         count_velocity(
             args.i,
