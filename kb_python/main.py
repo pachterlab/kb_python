@@ -23,6 +23,7 @@ from .utils import (
     get_kallisto_version,
     make_directory,
     remove_directory,
+    TqdmLoggingHandler,
 )
 
 
@@ -530,6 +531,7 @@ def main():
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
     logger = logging.getLogger(__name__)
+    logger.addHandler(TqdmLoggingHandler())
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.

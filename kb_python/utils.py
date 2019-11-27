@@ -4,6 +4,7 @@ import gzip
 import logging
 import os
 import re
+import requests
 import shutil
 import subprocess as sp
 import threading
@@ -13,8 +14,10 @@ from urllib.request import urlretrieve
 import anndata
 import pandas as pd
 import scipy.io
+from tqdm import tqdm
 
 from .config import (
+    CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
@@ -38,6 +41,24 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+
+class TqdmLoggingHandler(logging.Handler):
+    """Custom logging handler so that logging does not affect progress bars.
+    """
+
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.tqdm.write(msg)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            self.handleError(record)
 
 
 def dryable(dry_func):
@@ -394,6 +415,34 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
                         out.write(line.strip() + '\n')
 
     return out_path
+
+
+def download_file(url, path):
+    """Download a remote file to the provided path while displaying a progress bar.
+
+    :param url: remote url
+    :type url: str
+    :param path: local path to download the file to
+    :type path: str
+
+    :return: path to downloaded file
+    :rtype: str
+    """
+    r = requests.get(url, stream=True)
+    with open(path, 'wb') as f:
+        t = tqdm(
+            unit='B',
+            total=int(r.headers['Content-Length']),
+            unit_divisor=1024,
+            unit_scale=True,
+            ascii=True,
+        )
+        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+            if chunk:
+                t.update(len(chunk))
+                f.write(chunk)
+        t.close()
+    return path
 
 
 @dryable(dry_utils.stream_file)

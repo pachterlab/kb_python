@@ -9,7 +9,7 @@ from unittest.mock import call
 import anndata
 
 import kb_python.utils as utils
-from kb_python.config import UnsupportedOSException
+from kb_python.config import CHUNK_SIZE, UnsupportedOSException
 from tests.mixins import TestMixin
 
 
@@ -149,6 +149,33 @@ class TestUtils(TestMixin, TestCase):
     def test_whitelist_provided(self):
         self.assertTrue(utils.whitelist_provided('10xv2'))
         self.assertFalse(utils.whitelist_provided('UNSUPPORTED'))
+
+    def test_download_file(self):
+        with mock.patch('kb_python.utils.requests.get') as get,\
+            mock.patch('kb_python.utils.tqdm') as tqdm:
+            path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+            get.return_value.headers = {'Content-Length': str(1024 * 2)}
+            get.return_value.iter_content.return_value = [
+                b'1' * 1024, b'2' * 1024
+            ]
+            self.assertEqual(path, utils.download_file('remote/path', path))
+            get.assert_called_once_with('remote/path', stream=True)
+            tqdm.assert_called_once_with(
+                unit='B',
+                total=1024 * 2,
+                unit_divisor=1024,
+                unit_scale=True,
+                ascii=True
+            )
+            get.return_value.iter_content.assert_called_once_with(
+                chunk_size=CHUNK_SIZE
+            )
+            self.assertEqual(2, tqdm.return_value.update.call_count)
+            tqdm.return_value.update.assert_has_calls([call(1024), call(1024)])
+            tqdm.return_value.close.assert_called_once_with()
+
+            with open(path, 'r') as f:
+                self.assertEqual(('1' * 1024) + ('2' * 1024), f.read())
 
     def test_stream_file(self):
         with mock.patch('kb_python.utils.PLATFORM', 'linux'),\

@@ -1,7 +1,6 @@
 import logging
 import os
 import tarfile
-from urllib.request import urlretrieve
 
 from .config import get_kallisto_binary_path
 from .constants import (
@@ -19,6 +18,7 @@ from .gtf import GTF
 from .utils import (
     concatenate_files,
     decompress_gzip,
+    download_file,
     open_as_text,
     run_executable,
 )
@@ -192,6 +192,8 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     :param overwrite: overwrite an existing index file, defaults to `False`
     :type overwrite: bool, optional
 
+    :raises Exception: if the required options are not provided
+
     :return: dictionary containing paths to generated file(s)
     :rtype: dict
     """
@@ -212,7 +214,7 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
                 reference.name, url, path
             )
         )
-        local_path, headers = urlretrieve(url, path)
+        local_path = download_file(url, path)
 
         logging.info('Extracting files from {}'.format(local_path))
         with tarfile.open(local_path, 'r:gz') as f:
