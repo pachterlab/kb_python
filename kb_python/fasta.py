@@ -216,7 +216,7 @@ def generate_kite_fasta(feature_path, out_path):
             'Duplicate feature barcodes: {}'.format(' '.join(duplicates))
         )
     if len(lengths) > 1:
-        raise Exception(
+        logger.warning(
             'Detected barcodes of different lengths: {}'.format(
                 ','.join(str(l) for l in lengths)
             )
