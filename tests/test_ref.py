@@ -379,7 +379,7 @@ class TestRef(TestMixin, TestCase):
                 feature_path, temp_dir=temp_dir
             )
             generate_kite_fasta.assert_called_once_with(
-                feature_path, fasta_path
+                feature_path, fasta_path, no_mismatches=False
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)
@@ -417,7 +417,7 @@ class TestRef(TestMixin, TestCase):
                 feature_path, temp_dir=temp_dir
             )
             generate_kite_fasta.assert_called_once_with(
-                feature_path, fasta_path
+                feature_path, fasta_path, no_mismatches=False
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)
@@ -453,7 +453,7 @@ class TestRef(TestMixin, TestCase):
                 feature_path, temp_dir=temp_dir
             )
             generate_kite_fasta.assert_called_once_with(
-                feature_path, fasta_path
+                feature_path, fasta_path, no_mismatches=False
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_not_called()
@@ -492,7 +492,7 @@ class TestRef(TestMixin, TestCase):
                 feature_path, temp_dir=temp_dir
             )
             generate_kite_fasta.assert_called_once_with(
-                feature_path, fasta_path
+                feature_path, fasta_path, no_mismatches=False
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)

@@ -59,6 +59,20 @@ class TestFASTA(TestMixin, TestCase):
         with open(out_path, 'r') as f, open(self.kite_fasta_path, 'r') as fa:
             self.assertEqual(fa.read(), f.read())
 
+    def test_generate_kite_fasta_no_mismatches(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        self.assertEqual((out_path, 15),
+                         fasta.generate_kite_fasta(
+                             self.kite_feature_path,
+                             out_path,
+                             no_mismatches=True
+                         ))
+        with open(out_path, 'r') as f, open(self.kite_no_mismatches_fasta_path,
+                                            'r') as fa:
+            self.assertEqual(fa.read(), f.read())
+
     def test_generate_kite_fasta_different_length(self):
         with mock.patch('kb_python.fasta.logger.warning') as warning:
             out_path = os.path.join(

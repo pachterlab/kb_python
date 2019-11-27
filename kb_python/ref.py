@@ -311,6 +311,7 @@ def ref_kite(
         fasta_path,
         index_path,
         t2g_path,
+        no_mismatches=False,
         temp_dir='tmp',
         overwrite=False
 ):
@@ -324,6 +325,9 @@ def ref_kite(
     :type fasta_path: str
     :param t2g_path: path to output transcript-to-gene mapping
     :type t2g_path: str
+    :param no_mismatches: whether to generate hamming distance 1 variants,
+                          defaults to `False`
+    :type no_mismatches: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -335,7 +339,9 @@ def ref_kite(
     results = {}
     feature_path = decompress_file(feature_path, temp_dir=temp_dir)
     logger.info('Generating mismatch FASTA at {}'.format(fasta_path))
-    kite_path, length = generate_kite_fasta(feature_path, fasta_path)
+    kite_path, length = generate_kite_fasta(
+        feature_path, fasta_path, no_mismatches=no_mismatches
+    )
     results.update({'fasta': kite_path})
     t2g_result = create_t2g_from_fasta(fasta_path, t2g_path)
     results.update(t2g_result)

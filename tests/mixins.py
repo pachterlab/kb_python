@@ -122,5 +122,8 @@ class TestMixin(TestCase):
         cls.kite_different_fasta_path = os.path.join(
             cls.kite_dir, 'fasta_different.fa'
         )
+        cls.kite_no_mismatches_fasta_path = os.path.join(
+            cls.kite_dir, 'fasta_no_mismatches.fa'
+        )
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
         cls.kite_map_path = os.path.join(cls.kite_dir, 'map.txt')

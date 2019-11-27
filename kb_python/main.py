@@ -114,7 +114,12 @@ def parse_ref(parser, args):
         )
     elif args.workflow == 'kite':
         ref_kite(
-            args.feature, args.f1, args.i, args.g, overwrite=args.overwrite
+            args.feature,
+            args.f1,
+            args.i,
+            args.g,
+            no_mismatches=args.no_mismatches,
+            overwrite=args.overwrite
         )
     else:
         ref(
@@ -333,6 +338,12 @@ def setup_ref_args(parser, parent):
         type=str,
         nargs=None if '-d' not in sys.argv and workflow == 'kite' else '?'
     )
+
+    # Hidden options.
+    parser_ref.add_argument(
+        '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
+    )
+
     return parser_ref
 
 

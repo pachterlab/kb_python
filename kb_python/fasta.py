@@ -148,7 +148,7 @@ class FASTA:
                         f.write(line)
 
 
-def generate_kite_fasta(feature_path, out_path):
+def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     """Generate a FASTA file for feature barcoding with the KITE workflow.
 
     This FASTA contains all sequences that are 1 hamming distance from the
@@ -162,6 +162,9 @@ def generate_kite_fasta(feature_path, out_path):
     :type feature_path: str
     :param out_path: path to FASTA to generate
     :type out_path: str
+    :param no_mismatches: whether to generate hamming distance 1 variants,
+                          defaults to `False`
+    :type no_mismatches: bool, optional
 
     :raises Exception: if there are barcodes of different lengths
     :raises Exception: if there are duplicate barcodes
@@ -205,6 +208,7 @@ def generate_kite_fasta(feature_path, out_path):
         variants[row['name']] = {
             name: seq
             for name, seq in generate_mismatches(row['name'], row.sequence)
+            if not no_mismatches
         }
 
     # Check duplicate barcodes.
