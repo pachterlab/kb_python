@@ -90,6 +90,10 @@ def parse_ref(parser, args):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    if args.k is not None:
+        if args.k < 0 or not args.k % 2:
+            parser.error(f'K-mer length must be a positive odd integer.')
+
     if args.d is not None:
         # Options that are files.
         options = ['i', 'g', 'c1', 'c2']
@@ -110,6 +114,7 @@ def parse_ref(parser, args):
             args.g,
             args.c1,
             args.c2,
+            k=args.k,
             overwrite=args.overwrite
         )
     elif args.workflow == 'kite':
@@ -118,6 +123,7 @@ def parse_ref(parser, args):
             args.f1,
             args.i,
             args.g,
+            k=args.k,
             no_mismatches=args.no_mismatches,
             overwrite=args.overwrite
         )
@@ -128,6 +134,7 @@ def parse_ref(parser, args):
             args.f1,
             args.i,
             args.g,
+            k=args.k,
             overwrite=args.overwrite
         )
 
@@ -294,6 +301,18 @@ def setup_ref_args(parser, parent):
         ),
         type=str,
         choices=list(REFERENCES_MAPPING.keys()),
+        required=False
+    )
+    parser_ref.add_argument(
+        '-k',
+        metavar='K',
+        help=(
+            'Use this option to override the k-mer length of the index. '
+            'Usually, the k-mer length automatically calculated by `kb` provides '
+            'the best results.'
+        ),
+        type=int,
+        default=None,
         required=False
     )
     parser_ref.add_argument(

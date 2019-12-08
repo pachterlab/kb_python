@@ -258,6 +258,7 @@ def ref(
         cdna_path,
         index_path,
         t2g_path,
+        k=None,
         temp_dir='tmp',
         overwrite=False
 ):
@@ -271,6 +272,8 @@ def ref(
     :type cdna_path: str
     :param t2g_path: path to output transcript-to-gene mapping
     :type t2g_path: str
+    :param k: override default kmer length 31, defaults to `None`
+    :type k: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -296,7 +299,11 @@ def ref(
             sorted_fasta_path, sorted_gtf_path, cdna_path
         )
 
-        index_result = kallisto_index(cdna_fasta_path, index_path)
+        if k and k != 31:
+            logger.warning(
+                f'Using provided k-mer length {k} instead of optimal length 31'
+            )
+        index_result = kallisto_index(cdna_fasta_path, index_path, k=k or 31)
         results.update(index_result)
     else:
         logger.info(
@@ -311,6 +318,7 @@ def ref_kite(
         fasta_path,
         index_path,
         t2g_path,
+        k=None,
         no_mismatches=False,
         temp_dir='tmp',
         overwrite=False
@@ -325,6 +333,8 @@ def ref_kite(
     :type fasta_path: str
     :param t2g_path: path to output transcript-to-gene mapping
     :type t2g_path: str
+    :param k: override calculated optimal kmer length, defaults to `None`
+    :type k: int, optional
     :param no_mismatches: whether to generate hamming distance 1 variants,
                           defaults to `False`
     :type no_mismatches: bool, optional
@@ -347,9 +357,12 @@ def ref_kite(
     results.update(t2g_result)
 
     if not os.path.exists(index_path) or overwrite:
-        index_result = kallisto_index(
-            kite_path, index_path, k=length if length % 2 else length - 1
-        )
+        optimal_k = length if length % 2 else length - 1
+        if k != optimal_k:
+            logger.warning(
+                f'Using provided k-mer length {k} instead of calculated optimal length {optimal_k}'
+            )
+        index_result = kallisto_index(kite_path, index_path, k=k or optimal_k)
         results.update(index_result)
     else:
         logger.info(
@@ -368,6 +381,7 @@ def ref_lamanno(
         t2g_path,
         cdna_t2c_path,
         intron_t2c_path,
+        k=None,
         temp_dir='tmp',
         overwrite=False,
 ):
@@ -387,6 +401,8 @@ def ref_lamanno(
     :type cdna_t2c_path: str
     :param intron_t2c_path: path to generate the intron transcripts-to-capture file
     :type intron_t2c_path: str
+    :param k: override default kmer length (31), defaults to `None`
+    :type k: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -435,7 +451,11 @@ def ref_lamanno(
         )
         t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
         results.update(t2g_result)
-        index_result = kallisto_index(combined_path, index_path)
+        if k and k != 31:
+            logger.warning(
+                f'Using provided k-mer length {k} instead of optimal length 31'
+            )
+        index_result = kallisto_index(combined_path, index_path, k=k or 31)
         results.update(index_result)
     else:
         logger.info(
