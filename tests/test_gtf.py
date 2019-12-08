@@ -66,7 +66,7 @@ class TestGTF(TestMixin, TestCase):
             tempfile.gettempdir(), '{}.gtf'.format(uuid.uuid4())
         )
         gtf = GTF(self.unsorted_gtf_path)
-        gtf.sort(out_path)
+        self.assertEqual((out_path, {'1', '2'}), gtf.sort(out_path))
 
         with open(out_path, 'r') as f, open(self.sorted_gtf_path,
                                             'r') as sorted:

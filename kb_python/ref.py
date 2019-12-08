@@ -32,13 +32,12 @@ def sort_gtf(gtf_path, out_path):
     :param gtf_path: path to GTF file
     :type gtf_path: str
 
-    :return: path to sorted GTF file
-    :rtype: str
+    :return: path to sorted GTF file, set of chromosomes in GTF file
+    :rtype: tuple
     """
     logger.info('Sorting {}'.format(gtf_path))
     gtf = GTF(gtf_path)
-    gtf.sort(out_path)
-    return out_path
+    return gtf.sort(out_path)
 
 
 def sort_fasta(fasta_path, out_path):
@@ -47,13 +46,43 @@ def sort_fasta(fasta_path, out_path):
     :param fasta_path: path to FASTA file
     :type fasta_path: str
 
-    :return: path to sorted FASTA file
-    :rtype: str
+    :return: path to sorted FASTA file, set of chromosomes in FASTA file
+    :rtype: tuple
     """
     logger.info('Sorting {}'.format(fasta_path))
     fasta = FASTA(fasta_path)
-    fasta.sort(out_path)
-    return out_path
+    return fasta.sort(out_path)
+
+
+def check_chromosomes(fasta_chromosomes, gtf_chromosomes):
+    """Compares the two chromosome sets and outputs warnings if there are
+    unique chromosomes in either set.
+
+    :param fasta_chromosomes: set of chromosomes found in FASTA
+    :type fasta_chromosomes: set
+    :param gtf_chromosomes: set of chromosomes found in GTF
+    :type gtf_chromosomes: set
+
+    :return: intersection of the two sets
+    :rtype: set
+    """
+    fasta_unique = fasta_chromosomes - gtf_chromosomes
+    gtf_unique = gtf_chromosomes - fasta_chromosomes
+    if fasta_unique:
+        logger.warning((
+            'The following chromosomes were found in the FASTA but doens\'t have '
+            'any "transcript" features in the GTF: {}. '
+            'No sequences will be generated for these chromosomes.'
+        ).format(', '.join(fasta_unique)))
+    if gtf_unique:
+        logger.warning((
+            'The following chromosomes were found to have "transcript" features '
+            'in the GTF but doens\'t exist in the FASTA. '
+            'No sequences will be generated for these chromosomes.'
+        ).format(', '.join(fasta_unique)))
+    chromosomes = set.intersection(fasta_chromosomes, gtf_chromosomes)
+
+    return chromosomes
 
 
 def create_t2g_from_fasta(fasta_path, t2g_path):
@@ -287,15 +316,19 @@ def ref(
     results.update(t2g_result)
     if not os.path.exists(index_path) or overwrite:
         fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-        sorted_fasta_path = sort_fasta(
+        sorted_fasta_path, fasta_chromosomes = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
-        sorted_gtf_path = sort_gtf(
+        sorted_gtf_path, gtf_chromosomes = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
         logger.info('Splitting genome into cDNA at {}'.format(cdna_path))
+        chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
         cdna_fasta_path = generate_cdna_fasta(
-            sorted_fasta_path, sorted_gtf_path, cdna_path
+            sorted_fasta_path,
+            sorted_gtf_path,
+            cdna_path,
+            chromosomes=chromosomes
         )
 
         index_result = kallisto_index(cdna_fasta_path, index_path)
@@ -392,16 +425,20 @@ def ref_lamanno(
     results = {}
     if not os.path.exists(index_path) or overwrite:
         fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-        sorted_fasta_path = sort_fasta(
+        sorted_fasta_path, fasta_chromosomes = sort_fasta(
             fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
         )
         gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
-        sorted_gtf_path = sort_gtf(
+        sorted_gtf_path, gtf_chromosomes = sort_gtf(
             gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
         )
         logger.info('Splitting genome into cDNA at {}'.format(cdna_path))
+        chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
         cdna_fasta_path = generate_cdna_fasta(
-            sorted_fasta_path, sorted_gtf_path, cdna_path
+            sorted_fasta_path,
+            sorted_gtf_path,
+            cdna_path,
+            chromosomes=chromosomes
         )
         results.update({'cdna_fasta': cdna_fasta_path})
         logger.info(
@@ -411,7 +448,10 @@ def ref_lamanno(
         results.update({'cdna_t2c': cdna_t2c_result['t2c']})
         logger.info('Splitting genome into introns at {}'.format(intron_path))
         intron_fasta_path = generate_intron_fasta(
-            sorted_fasta_path, sorted_gtf_path, intron_path
+            sorted_fasta_path,
+            sorted_gtf_path,
+            intron_path,
+            chromosomes=chromosomes
         )
         results.update({'intron_fasta': intron_fasta_path})
         logger.info(
