@@ -43,6 +43,7 @@ class NotImplementedException(Exception):
 class UnmetDependencyException(Exception):
     pass
 
+
 class TqdmLoggingHandler(logging.Handler):
     """Custom logging handler so that logging does not affect progress bars.
     """
@@ -574,7 +575,7 @@ def import_tcc_matrix_as_anndata(
 
 
 def import_matrix_as_anndata(
-        matrix_path, barcodes_path, genes_path, name='gene_id'
+    matrix_path, barcodes_path, genes_path, name='gene_id'
 ):
     """Import a matrix as an Anndata object.
 

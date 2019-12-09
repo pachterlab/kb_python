@@ -284,14 +284,14 @@ def decompress_file(path, temp_dir='tmp'):
 
 
 def ref(
-        fasta_path,
-        gtf_path,
-        cdna_path,
-        index_path,
-        t2g_path,
-        k=None,
-        temp_dir='tmp',
-        overwrite=False
+    fasta_path,
+    gtf_path,
+    cdna_path,
+    index_path,
+    t2g_path,
+    k=None,
+    temp_dir='tmp',
+    overwrite=False
 ):
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
@@ -349,14 +349,14 @@ def ref(
 
 
 def ref_kite(
-        feature_path,
-        fasta_path,
-        index_path,
-        t2g_path,
-        k=None,
-        no_mismatches=False,
-        temp_dir='tmp',
-        overwrite=False
+    feature_path,
+    fasta_path,
+    index_path,
+    t2g_path,
+    k=None,
+    no_mismatches=False,
+    temp_dir='tmp',
+    overwrite=False
 ):
     """Generates files necessary for feature barcoding with the KITE workflow.
 
@@ -408,17 +408,17 @@ def ref_kite(
 
 
 def ref_lamanno(
-        fasta_path,
-        gtf_path,
-        cdna_path,
-        intron_path,
-        index_path,
-        t2g_path,
-        cdna_t2c_path,
-        intron_t2c_path,
-        k=None,
-        temp_dir='tmp',
-        overwrite=False,
+    fasta_path,
+    gtf_path,
+    cdna_path,
+    intron_path,
+    index_path,
+    t2g_path,
+    cdna_t2c_path,
+    intron_t2c_path,
+    k=None,
+    temp_dir='tmp',
+    overwrite=False,
 ):
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
