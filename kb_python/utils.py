@@ -53,7 +53,7 @@ class TqdmLoggingHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            tqdm.tqdm.write(msg)
+            tqdm.write(msg)
             self.flush()
         except (KeyboardInterrupt, SystemExit):
             raise
@@ -163,15 +163,15 @@ def remove_directory(path):
 
 @dryable(dry_utils.run_executable)
 def run_executable(
-        command,
-        stdin=None,
-        stdout=sp.PIPE,
-        stderr=sp.PIPE,
-        wait=True,
-        stream=True,
-        quiet=False,
-        returncode=0,
-        alias=True,
+    command,
+    stdin=None,
+    stdout=sp.PIPE,
+    stderr=sp.PIPE,
+    wait=True,
+    stream=True,
+    quiet=False,
+    returncode=0,
+    alias=True,
 ):
     """Execute a single shell command.
 
@@ -477,7 +477,7 @@ def stream_file(url, path):
 
 
 def import_tcc_matrix_as_anndata(
-        matrix_path, barcodes_path, ec_path, txnames_path, threads=8
+    matrix_path, barcodes_path, ec_path, txnames_path, threads=8
 ):
     """Import a TCC matrix as an Anndata object.
 

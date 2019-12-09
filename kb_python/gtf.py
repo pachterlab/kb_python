@@ -14,19 +14,18 @@ class GTF:
     """
     PARSER = re.compile(
         r'''
-        ^(?P<seqname>.+?)\t     # chromosome
+        ^(?P<seqname>.+?)\s+    # chromosome
         .*?\t                   # source
-        (?P<feature>.+?)\t      # feature: transcript, exon, etc.
-        (?P<start>[0-9]+?)\t    # start position (1-indexed)
-        (?P<end>[0-9]+?)\t      # end position (1-indexed, inclusive)
-        .*?\t                   # score
-        (?P<strand>\+|-|\.)\t   # +, -, . indicating strand
-        .*?\t                   # frame
+        (?P<feature>.+?)\s+     # feature: transcript, exon, etc.
+        (?P<start>[0-9]+?)\s+   # start position (1-indexed)
+        (?P<end>[0-9]+?)\s+     # end position (1-indexed, inclusive)
+        .*?\s+                  # score
+        (?P<strand>\+|-|\.)\s+  # +, -, . indicating strand
+        .*?\s+                  # frame
         (?P<group>.*)           # groups
     ''', re.VERBOSE
     )
-
-    GROUP_PARSER = re.compile(r'(?P<key>\S+?) "(?P<value>.+?)"')
+    GROUP_PARSER = re.compile(r'(?P<key>\S+?)\s*"(?P<value>.+?)"')
 
     def __init__(self, gtf_path):
         self.gtf_path = gtf_path
@@ -49,8 +48,13 @@ class GTF:
             groupdict['group'] = dict(
                 GTF.GROUP_PARSER.findall(groupdict.get('group', ''))
             )
+            if not groupdict['group']:
+                logger.warning(
+                    f'Failed to parse GTF attributes of entry: {line}'
+                )
 
             return groupdict
+        logger.warning(f'Failed to parse GTF entry: {line}')
         return None
 
     def entries(self):
@@ -71,7 +75,11 @@ class GTF:
 
         :param out_path: path to generate the sorted GTF
         :type out_path: str
+
+        :return: path to sorted GTF file, set of chromosomes in GTF file
+        :rtype: tuple
         """
+        chromosomes = set()
         to_sort = []
         with open_as_text(self.gtf_path, 'r') as f:
             position = 0
@@ -83,6 +91,7 @@ class GTF:
                         to_sort.append(
                             (entry['seqname'], entry['start'], position)
                         )
+                        chromosomes.add(entry['seqname'])
                 position = f.tell()
                 line = f.readline()
         logger.debug('Sorting {} GTF entries'.format(len(to_sort)))
@@ -95,3 +104,5 @@ class GTF:
                 position = tup[2]
                 gtf.seek(position)
                 f.write(gtf.readline())
+
+        return out_path, chromosomes

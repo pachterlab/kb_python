@@ -1,0 +1,4 @@
+>TRANSCRIPT_B gene_id:GENE_B.1 gene_name:GENE_B_NAME chr:2 start:1 end:10 strand:+
+TGATC
+>TRANSCRIPT_C gene_id:GENE_C gene_name:GENE_C_NAME chr:2 start:2 end:14 strand:-
+TAATCGA

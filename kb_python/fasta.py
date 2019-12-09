@@ -110,7 +110,11 @@ class FASTA:
 
         :param out_path: path to generate the sorted FASTA
         :type out_path: str
+
+        :return: path to sorted FASTA file, set of chromosomes in FASTA file
+        :rtype: tuple
         """
+        chromosomes = set()
         to_sort = []
         with open_as_text(self.fasta_path, 'r') as f:
             position = 0
@@ -123,6 +127,7 @@ class FASTA:
                         'Found FASTA entry {}'.format(header['sequence_id'])
                     )
                     to_sort.append([header['sequence_id'], position, None])
+                    chromosomes.add(header['sequence_id'])
 
                 position = f.tell()
                 line = f.readline()
@@ -146,6 +151,8 @@ class FASTA:
                 else:
                     for line in fasta:
                         f.write(line)
+
+        return out_path, chromosomes
 
 
 def generate_kite_fasta(feature_path, out_path):
@@ -243,7 +250,7 @@ def generate_kite_fasta(feature_path, out_path):
     return out_path, lengths
 
 
-def generate_cdna_fasta(fasta_path, gtf_path, out_path):
+def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
     """Generate a cDNA FASTA using the genome and GTF.
 
     This function assumes the order in which the chromosomes appear in the
@@ -256,6 +263,10 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     :type gtf_path: str
     :param out_path: path to cDNA FASTA to generate
     :type out_path: str
+    :param chromosomes: set of chromosomes to generate sequences for. If not
+                        provided, sequences for all chromosomes are generated
+                        by default, defaults to `None`
+    :type chromosomes: set, optional
 
     :return: path to generated cDNA FASTA
     :rtype: str
@@ -264,10 +275,14 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
     gtf = GTF(gtf_path)
     gtf_entries = gtf.entries()
 
+    count = 0
     with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
         for info, sequence in fasta.entries():
             sequence_id = info['sequence_id']
+            if chromosomes and sequence_id not in chromosomes:
+                continue
+
             logger.debug(
                 'Generating cDNA from chromosome {}'.format(sequence_id)
             )
@@ -276,13 +291,13 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
             transcript_infos = {}
             while True:
                 try:
-                    gtf_entry = previous_gtf_entry if previous_gtf_entry else next(
-                        gtf_entries
-                    )
+                    gtf_entry = previous_gtf_entry or next(gtf_entries)
                 except StopIteration:
                     break
                 previous_gtf_entry = None
                 chromosome = gtf_entry['seqname']
+                if chromosomes and chromosome not in chromosomes:
+                    continue
 
                 if sequence_id != chromosome:
                     previous_gtf_entry = gtf_entry
@@ -331,8 +346,28 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
                         transcript_infos[transcript] = attributes
 
             logger.debug(
-                'Writing {} cDNA transcripts'.format(len(transcript_sequences))
+                f'Writing {len(transcript_sequences)} cDNA transcripts for chromosome {chromosome}'
             )
+            # Validation.
+            info_unique = set(transcript_infos.keys()
+                              ) - set(transcript_sequences.keys())
+            sequences_unique = set(transcript_sequences.keys()
+                                   ) - set(transcript_infos.keys())
+            if info_unique:
+                raise Exception(
+                    'The following transcripts have "exon" feature(s) but no '
+                    'corresponding "transcript" feature: {}'.format(
+                        ', '.join(info_unique)
+                    )
+                )
+            if sequences_unique:
+                raise Exception(
+                    'The following transcripts have a "transcript" feature but no '
+                    'corresponding "exon" feature(s): {}'.format(
+                        ', '.join(sequences_unique)
+                    )
+                )
+
             for transcript in sorted(transcript_sequences.keys()):
                 exon = transcript_sequences[transcript]
                 attributes = transcript_infos[transcript]
@@ -345,11 +380,15 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path):
                         '+' else FASTA.reverse_complement(exon)
                     )
                 )
+                count += 1
+    logger.info(f'Wrote {count} cDNA transcripts')
 
     return out_path
 
 
-def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
+def generate_intron_fasta(
+    fasta_path, gtf_path, out_path, chromosomes=None, flank=30
+):
     """Generate an intron FASTA using the genome and GTF.
 
     This function assumes the order in which the chromosomes appear in the
@@ -368,6 +407,10 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
     :type gtf_path: str
     :param out_path: path to intron FASTA to generate
     :type out_path: str
+    :param chromosomes: set of chromosomes to generate sequences for. If not
+                        provided, sequences for all chromosomes are generated
+                        by default, defaults to `None`
+    :type chromosomes: set, optional
     :param flank: the size of intron flanks, in bases, defaults to `30`
     :type flank: int, optional
 
@@ -378,10 +421,13 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
     gtf = GTF(gtf_path)
     gtf_entries = gtf.entries()
 
+    count = 0
     with open_as_text(out_path, 'w') as f:
         previous_gtf_entry = None
         for info, sequence in fasta.entries():
             sequence_id = info['sequence_id']
+            if chromosomes and sequence_id not in chromosomes:
+                continue
             logger.debug(
                 'Generating introns from chromosome {}'.format(sequence_id)
             )
@@ -390,13 +436,13 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
             transcript_infos = {}
             while True:
                 try:
-                    gtf_entry = previous_gtf_entry if previous_gtf_entry else next(
-                        gtf_entries
-                    )
+                    gtf_entry = previous_gtf_entry or next(gtf_entries)
                 except StopIteration:
                     break
                 previous_gtf_entry = None
                 chromosome = gtf_entry['seqname']
+                if chromosomes and chromosome not in chromosomes:
+                    continue
 
                 if sequence_id != chromosome:
                     previous_gtf_entry = gtf_entry
@@ -443,6 +489,29 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
                         ]
                         transcript_infos[transcript] = attributes
 
+            logger.debug((
+                f'Found {len(transcript_exons)} transcripts with exons for chromosome {chromosome}.'
+                'Generating introns from these transcripts'
+            ))
+            # Validation.
+            info_unique = set(transcript_infos.keys()
+                              ) - set(transcript_exons.keys())
+            sequences_unique = set(transcript_exons.keys()
+                                   ) - set(transcript_infos.keys())
+            if info_unique:
+                raise Exception(
+                    'The following transcripts have "exon" feature(s) but no '
+                    'corresponding "transcript" feature: {}'.format(
+                        ', '.join(info_unique)
+                    )
+                )
+            if sequences_unique:
+                raise Exception(
+                    'The following transcripts have a "transcript" feature but no '
+                    'corresponding "exon" feature(s): {}'.format(
+                        ', '.join(sequences_unique)
+                    )
+                )
             for transcript in sorted(transcript_exons.keys()):
                 attributes = transcript_infos[transcript]
 
@@ -495,6 +564,7 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
                                 '+' else FASTA.reverse_complement(intron)
                             )
                         )
+                        count += 1
                         index += 1
                         flank_start = max(start - flank, transcript_interval[0])
                         flank_end = min(end + flank, transcript_interval[1])
@@ -513,7 +583,9 @@ def generate_intron_fasta(fasta_path, gtf_path, out_path, flank=30):
                             '+' else FASTA.reverse_complement(intron)
                         )
                     )
+                    count += 1
                     index += 1
+    logger.info(f'Wrote {count} intron sequences')
 
     return out_path
 

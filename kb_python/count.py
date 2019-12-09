@@ -164,7 +164,7 @@ def bustools_correct(bus_path, out_path, whitelist_path):
 
 @validate_files(pre=False)
 def bustools_count(
-        bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
+    bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
 ):
     """Runs `bustools count`.
 
@@ -212,12 +212,12 @@ def bustools_count(
 
 @validate_files(pre=False)
 def bustools_capture(
-        bus_path,
-        out_path,
-        capture_path,
-        ecmap_path,
-        txnames_path,
-        capture_type='transcripts'
+    bus_path,
+    out_path,
+    capture_path,
+    ecmap_path,
+    txnames_path,
+    capture_type='transcripts'
 ):
     """Runs `bustools capture`.
 
@@ -278,16 +278,16 @@ def bustools_whitelist(bus_path, out_path):
 
 
 def convert_matrix(
-        counts_dir,
-        matrix_path,
-        barcodes_path,
-        genes_path=None,
-        ec_path=None,
-        txnames_path=None,
-        loom=False,
-        h5ad=False,
-        tcc=False,
-        threads=8,
+    counts_dir,
+    matrix_path,
+    barcodes_path,
+    genes_path=None,
+    ec_path=None,
+    txnames_path=None,
+    loom=False,
+    h5ad=False,
+    tcc=False,
+    threads=8,
 ):
     """Convert a gene count or TCC matrix to loom or h5ad.
 
@@ -336,17 +336,17 @@ def convert_matrix(
 
 
 def convert_matrices(
-        counts_dir,
-        matrix_paths,
-        barcodes_paths,
-        genes_paths=None,
-        ec_paths=None,
-        txnames_path=None,
-        loom=False,
-        h5ad=False,
-        nucleus=False,
-        tcc=False,
-        threads=8,
+    counts_dir,
+    matrix_paths,
+    barcodes_paths,
+    genes_paths=None,
+    ec_paths=None,
+    txnames_path=None,
+    loom=False,
+    h5ad=False,
+    nucleus=False,
+    tcc=False,
+    threads=8,
 ):
     """Convert a gene count or TCC matrix to loom or h5ad.
 
@@ -412,20 +412,20 @@ def convert_matrices(
 
 
 def filter_with_bustools(
-        bus_path,
-        ecmap_path,
-        txnames_path,
-        t2g_path,
-        whitelist_path,
-        filtered_bus_path,
-        counts_prefix=None,
-        tcc=False,
-        temp_dir='tmp',
-        threads=8,
-        memory='4G',
-        count=True,
-        loom=False,
-        h5ad=False
+    bus_path,
+    ecmap_path,
+    txnames_path,
+    t2g_path,
+    whitelist_path,
+    filtered_bus_path,
+    counts_prefix=None,
+    tcc=False,
+    temp_dir='tmp',
+    threads=8,
+    memory='4G',
+    count=True,
+    loom=False,
+    h5ad=False
 ):
     """Generate filtered count matrices with bustools.
 
@@ -558,20 +558,20 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
 
 
 def count(
-        index_path,
-        t2g_path,
-        technology,
-        out_dir,
-        fastqs,
-        whitelist_path=None,
-        tcc=False,
-        filter=None,
-        temp_dir='tmp',
-        threads=8,
-        memory='4G',
-        overwrite=False,
-        loom=False,
-        h5ad=False,
+    index_path,
+    t2g_path,
+    technology,
+    out_dir,
+    fastqs,
+    whitelist_path=None,
+    tcc=False,
+    filter=None,
+    temp_dir='tmp',
+    threads=8,
+    memory='4G',
+    overwrite=False,
+    loom=False,
+    h5ad=False,
 ):
     """Generates count matrices for single-cell RNA seq.
 
@@ -725,23 +725,23 @@ def count(
 
 
 def count_velocity(
-        index_path,
-        t2g_path,
-        cdna_t2c_path,
-        intron_t2c_path,
-        technology,
-        out_dir,
-        fastqs,
-        whitelist_path=None,
-        tcc=False,
-        filter=None,
-        temp_dir='tmp',
-        threads=8,
-        memory='4G',
-        overwrite=False,
-        loom=False,
-        h5ad=False,
-        nucleus=False,
+    index_path,
+    t2g_path,
+    cdna_t2c_path,
+    intron_t2c_path,
+    technology,
+    out_dir,
+    fastqs,
+    whitelist_path=None,
+    tcc=False,
+    filter=None,
+    temp_dir='tmp',
+    threads=8,
+    memory='4G',
+    overwrite=False,
+    loom=False,
+    h5ad=False,
+    nucleus=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 

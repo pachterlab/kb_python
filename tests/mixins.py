@@ -86,6 +86,10 @@ class TestMixin(TestCase):
         cls.gtf_t2g_intron_path = os.path.join(
             cls.gtf_dir, 't2g_intron_gtf.txt'
         )
+        cls.gtf_no_exon = os.path.join(cls.gtf_dir, 'sorted_no_exon.gtf')
+        cls.gtf_no_transcript = os.path.join(
+            cls.gtf_dir, 'sorted_no_transcript.gtf'
+        )
 
         cls.fasta_dir = os.path.join(cls.fixtures_dir, 'fasta')
         cls.unsorted_fasta_path = os.path.join(cls.fasta_dir, 'not_sorted.fa')
@@ -94,6 +98,12 @@ class TestMixin(TestCase):
         cls.split_cdna_fasta_path = os.path.join(cls.fasta_dir, 'cdna_split.fa')
         cls.split_intron_fasta_path = os.path.join(
             cls.fasta_dir, 'intron_split.fa'
+        )
+        cls.partial_cdna_fasta_path = os.path.join(
+            cls.fasta_dir, 'cdna_partial_split.fa'
+        )
+        cls.partial_intron_fasta_path = os.path.join(
+            cls.fasta_dir, 'intron_partial_split.fa'
         )
 
         cls.tcc_dir = os.path.join(cls.fixtures_dir, 'tcc')
