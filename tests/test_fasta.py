@@ -42,7 +42,7 @@ class TestFASTA(TestMixin, TestCase):
             tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
         )
         fa = fasta.FASTA(self.unsorted_fasta_path)
-        fa.sort(out_path)
+        self.assertEqual((out_path, {'1', '2'}), fa.sort(out_path))
 
         with open(out_path, 'r') as f, open(self.sorted_fasta_path,
                                             'r') as sorted:
@@ -124,6 +124,41 @@ class TestFASTA(TestMixin, TestCase):
                                             'r') as split:
             self.assertEqual(f.read(), split.read())
 
+    def test_generate_cdna_fasta_no_exon(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_cdna_fasta(
+                self.sorted_fasta_path, self.gtf_no_exon, out_path
+            )
+
+    def test_generate_cdna_fasta_no_transcript(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_cdna_fasta(
+                self.sorted_fasta_path, self.gtf_no_transcript, out_path
+            )
+
+    def test_generate_cdna_fasta_with_chromosomes(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        self.assertEqual(
+            out_path,
+            fasta.generate_cdna_fasta(
+                self.sorted_fasta_path,
+                self.sorted_gtf_path,
+                out_path,
+                chromosomes={'2'}
+            )
+        )
+        with open(out_path, 'r') as f, open(self.partial_cdna_fasta_path,
+                                            'r') as split:
+            self.assertEqual(f.read(), split.read())
+
     def test_generate_intron_fasta(self):
         out_path = os.path.join(
             tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
@@ -137,6 +172,42 @@ class TestFASTA(TestMixin, TestCase):
         with open(out_path, 'r') as f, open(self.split_intron_fasta_path,
                                             'r') as split:
             self.assertEqual(f.read(), split.read())
+
+    def test_generate_intron_fasta_with_chromosomes(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        self.assertEqual(
+            out_path,
+            fasta.generate_intron_fasta(
+                self.sorted_fasta_path,
+                self.sorted_gtf_path,
+                out_path,
+                chromosomes={'1'},
+                flank=1
+            )
+        )
+        with open(out_path, 'r') as f, open(self.partial_intron_fasta_path,
+                                            'r') as split:
+            self.assertEqual(f.read(), split.read())
+
+    def test_generate_intron_fasta_no_exon(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_intron_fasta(
+                self.sorted_fasta_path, self.gtf_no_exon, out_path
+            )
+
+    def test_generate_intron_fasta_no_transcript(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_intron_fasta(
+                self.sorted_fasta_path, self.gtf_no_transcript, out_path
+            )
 
     def test_generate_spliced_fasta(self):
         out_path = os.path.join(

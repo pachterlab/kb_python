@@ -257,12 +257,12 @@ def bustools_count(
 
 @validate_files(pre=False)
 def bustools_capture(
-        bus_path,
-        out_path,
-        capture_path,
-        ecmap_path,
-        txnames_path,
-        capture_type='transcripts'
+    bus_path,
+    out_path,
+    capture_path,
+    ecmap_path,
+    txnames_path,
+    capture_type='transcripts'
 ):
     """Runs `bustools capture`.
 

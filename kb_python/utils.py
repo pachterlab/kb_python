@@ -4,6 +4,7 @@ import gzip
 import logging
 import os
 import re
+import requests
 import shutil
 import subprocess as sp
 import threading
@@ -13,8 +14,10 @@ from urllib.request import urlretrieve
 import anndata
 import pandas as pd
 import scipy.io
+from tqdm import tqdm
 
 from .config import (
+    CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
@@ -39,6 +42,23 @@ class NotImplementedException(Exception):
 
 class UnmetDependencyException(Exception):
     pass
+
+class TqdmLoggingHandler(logging.Handler):
+    """Custom logging handler so that logging does not affect progress bars.
+    """
+
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            self.handleError(record)
 
 
 def update_filename(filename, code):
@@ -161,15 +181,15 @@ def remove_directory(path):
 
 @dryable(dry_utils.run_executable)
 def run_executable(
-        command,
-        stdin=None,
-        stdout=sp.PIPE,
-        stderr=sp.PIPE,
-        wait=True,
-        stream=True,
-        quiet=False,
-        returncode=0,
-        alias=True,
+    command,
+    stdin=None,
+    stdout=sp.PIPE,
+    stderr=sp.PIPE,
+    wait=True,
+    stream=True,
+    quiet=False,
+    returncode=0,
+    alias=True,
 ):
     """Execute a single shell command.
 
@@ -438,6 +458,34 @@ def concatenate_files(*paths, out_path, temp_dir='tmp'):
     return out_path
 
 
+def download_file(url, path):
+    """Download a remote file to the provided path while displaying a progress bar.
+
+    :param url: remote url
+    :type url: str
+    :param path: local path to download the file to
+    :type path: str
+
+    :return: path to downloaded file
+    :rtype: str
+    """
+    r = requests.get(url, stream=True)
+    with open(path, 'wb') as f:
+        t = tqdm(
+            unit='B',
+            total=int(r.headers['Content-Length']),
+            unit_divisor=1024,
+            unit_scale=True,
+            ascii=True,
+        )
+        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+            if chunk:
+                t.update(len(chunk))
+                f.write(chunk)
+        t.close()
+    return path
+
+
 @dryable(dry_utils.stream_file)
 def stream_file(url, path):
     """Creates a FIFO file to use for piping remote files into processes.
@@ -470,7 +518,7 @@ def stream_file(url, path):
 
 
 def import_tcc_matrix_as_anndata(
-        matrix_path, barcodes_path, ec_path, txnames_path, threads=8
+    matrix_path, barcodes_path, ec_path, txnames_path, threads=8
 ):
     """Import a TCC matrix as an Anndata object.
 
