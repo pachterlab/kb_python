@@ -387,7 +387,7 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
 
 
 def generate_intron_fasta(
-        fasta_path, gtf_path, out_path, chromosomes=None, flank=30
+    fasta_path, gtf_path, out_path, chromosomes=None, flank=30
 ):
     """Generate an intron FASTA using the genome and GTF.
 
