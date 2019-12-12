@@ -125,6 +125,9 @@ class TestMixin(TestCase):
         cls.kite_different_feature_path = os.path.join(
             cls.kite_dir, 'features_different.tsv'
         )
+        cls.kite_order_feature_path = os.path.join(
+            cls.kite_dir, 'features_order.tsv'
+        )
         cls.kite_fasta_path = os.path.join(cls.kite_dir, 'fasta.fa')
         cls.kite_collision_fasta_path = os.path.join(
             cls.kite_dir, 'fasta_collision.fa'

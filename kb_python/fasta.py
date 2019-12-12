@@ -30,6 +30,7 @@ class FASTA:
         'n': 'N',
         'N': 'N',
     }
+    SEQUENCE_PARSER = re.compile(r'[^atcgATCG]')
 
     def __init__(self, fasta_path):
         self.fasta_path = fasta_path
@@ -210,6 +211,14 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     variants = {}
     # Generate all feature barcode variations before saving to check for collisions.
     for i, row in df_features.iterrows():
+        # Check that the first column contains the sequence
+        # and the second column the feature name.
+        if FASTA.SEQUENCE_PARSER.search(row.sequence.upper()):
+            raise Exception((
+                'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
+                'Does the first column contain the sequences and the second column the feature names?'
+            ))
+
         lengths.add(len(row.sequence))
         features[row['name']] = row.sequence
         variants[row['name']] = {
@@ -235,9 +244,10 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     for f1, f2 in itertools.combinations(variants.keys(), 2):
         v1 = variants[f1]
         v2 = variants[f2]
-        if len(set(v1.values()).intersection(set(v2.values()))) > 0:
+        print(set.intersection(set(v1.values()), set(v2.values())))
+        if len(set.intersection(set(v1.values()), set(v2.values()))) > 0:
             logger.warning((
-                f'Detected collision between variants of feature barcodes {f1} and {f2}. '
+                f'Detected features with barcodes that are not >2 hamming distance apart: {f1}, {f2}. '
                 f'Hamming distance 1 variants for these barcodes will not be generated.'
             ))
             variants[f1] = {}

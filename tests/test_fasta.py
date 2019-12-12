@@ -96,6 +96,13 @@ class TestFASTA(TestMixin, TestCase):
                 self.kite_duplicate_feature_path, out_path
             )
 
+    def test_generate_kite_fasta_wrong_order(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_kite_fasta(self.kite_order_feature_path, out_path)
+
     def test_generate_kite_fasta_collision(self):
         with mock.patch('kb_python.fasta.logger.warning') as warning:
             out_path = os.path.join(
