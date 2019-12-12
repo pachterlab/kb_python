@@ -244,7 +244,6 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     for f1, f2 in itertools.combinations(variants.keys(), 2):
         v1 = variants[f1]
         v2 = variants[f2]
-        print(set.intersection(set(v1.values()), set(v2.values())))
         if len(set.intersection(set(v1.values()), set(v2.values()))) > 0:
             logger.warning((
                 f'Detected features with barcodes that are not >2 hamming distance apart: {f1}, {f2}. '
