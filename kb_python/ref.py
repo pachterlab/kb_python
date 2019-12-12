@@ -393,7 +393,7 @@ def ref_kite(
 
     if not os.path.exists(index_path) or overwrite:
         optimal_k = length if length % 2 else length - 1
-        if k != optimal_k:
+        if k and k != optimal_k:
             logger.warning(
                 f'Using provided k-mer length {k} instead of calculated optimal length {optimal_k}'
             )
