@@ -209,6 +209,10 @@ class TestUtils(TestMixin, TestCase):
             threading.thread.assert_not_called()
             urlretrieve.assert_not_called()
 
+    def test_get_temporary_filename(self):
+        path = utils.get_temporary_filename()
+        self.assertTrue(os.path.exists(path))
+
     def test_import_tcc_matrix_as_anndata(self):
         adata = utils.import_tcc_matrix_as_anndata(
             self.tcc_matrix_path, self.tcc_barcodes_path, self.tcc_ec_path,

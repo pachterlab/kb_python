@@ -85,7 +85,7 @@ def display_technologies():
     sys.exit(1)
 
 
-def parse_ref(parser, args):
+def parse_ref(parser, args, temp_dir='tmp'):
     """Parser for the `ref` command.
 
     :param args: Command-line arguments dictionary, as parsed by argparse
@@ -94,6 +94,10 @@ def parse_ref(parser, args):
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error(f'K-mer length must be a positive odd integer.')
+    if args.fasta:
+        args.fasta = args.fasta.split(',')
+    if args.gtf:
+        args.gtf = args.gtf.split(',')
 
     if args.d is not None:
         # Options that are files.
@@ -104,7 +108,9 @@ def parse_ref(parser, args):
             if getattr(args, option) is not None
         }
         reference = REFERENCES_MAPPING[args.d]
-        download_reference(reference, files, overwrite=args.overwrite)
+        download_reference(
+            reference, files, overwrite=args.overwrite, temp_dir=temp_dir
+        )
     elif args.workflow in {'lamanno', 'nucleus'} or args.lamanno:
         ref_lamanno(
             args.fasta,
@@ -116,7 +122,8 @@ def parse_ref(parser, args):
             args.c1,
             args.c2,
             k=args.k,
-            overwrite=args.overwrite
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
         )
     elif args.workflow == 'kite':
         ref_kite(
@@ -126,7 +133,8 @@ def parse_ref(parser, args):
             args.g,
             k=args.k,
             no_mismatches=args.no_mismatches,
-            overwrite=args.overwrite
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
         )
     else:
         ref(
@@ -136,11 +144,12 @@ def parse_ref(parser, args):
             args.i,
             args.g,
             k=args.k,
-            overwrite=args.overwrite
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
         )
 
 
-def parse_count(parser, args):
+def parse_count(parser, args, temp_dir='tmp'):
     """Parser for the `count` command.
 
     :param args: Command-line arguments dictionary, as parsed by argparse
@@ -165,6 +174,7 @@ def parse_count(parser, args):
             loom=args.loom,
             h5ad=args.h5ad,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
+            temp_dir=temp_dir
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -189,6 +199,7 @@ def parse_count(parser, args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            temp_dir=temp_dir
         )
 
 
@@ -340,13 +351,13 @@ def setup_ref_args(parser, parent):
     )
     parser_ref.add_argument(
         'fasta',
-        help='Genomic FASTA file',
+        help='Genomic FASTA file(s), comma-delimited',
         type=str,
         nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
     )
     parser_ref.add_argument(
         'gtf',
-        help='Reference GTF file',
+        help='Reference GTF file(s), comma-delimited',
         type=str,
         nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
     )
@@ -619,11 +630,12 @@ def main():
     logger.debug(
         'bustools binary located at {}'.format(get_bustools_binary_path())
     )
-    logger.debug('Creating tmp directory')
-    make_directory(TEMP_DIR)
+    temp_dir = os.path.join(args.o, TEMP_DIR) if 'o' in args else TEMP_DIR
+    logger.debug(f'Creating {temp_dir} directory')
+    make_directory(temp_dir)
     try:
         logger.debug(args)
-        COMMAND_TO_FUNCTION[args.command](parser, args)
+        COMMAND_TO_FUNCTION[args.command](parser, args, temp_dir=temp_dir)
     except Exception:
         if is_dry():
             raise
@@ -631,5 +643,5 @@ def main():
     finally:
         # Always clean temp dir
         if not args.keep_tmp:
-            logger.debug('Removing tmp directory')
-            remove_directory(TEMP_DIR)
+            logger.debug(f'Removing {temp_dir} directory')
+            remove_directory(temp_dir)

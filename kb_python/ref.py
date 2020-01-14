@@ -3,11 +3,6 @@ import os
 import tarfile
 
 from .config import get_kallisto_binary_path
-from .constants import (
-    COMBINED_FILENAME,
-    SORTED_FASTA_FILENAME,
-    SORTED_GTF_FILENAME,
-)
 from .fasta import (
     FASTA,
     generate_cdna_fasta,
@@ -19,6 +14,7 @@ from .utils import (
     concatenate_files,
     decompress_gzip,
     download_file,
+    get_temporary_filename,
     open_as_text,
     run_executable,
 )
@@ -35,7 +31,7 @@ def sort_gtf(gtf_path, out_path):
     :return: path to sorted GTF file, set of chromosomes in GTF file
     :rtype: tuple
     """
-    logger.info('Sorting {}'.format(gtf_path))
+    logger.info(f'Sorting {gtf_path} to {out_path}')
     gtf = GTF(gtf_path)
     return gtf.sort(out_path)
 
@@ -49,7 +45,7 @@ def sort_fasta(fasta_path, out_path):
     :return: path to sorted FASTA file, set of chromosomes in FASTA file
     :rtype: tuple
     """
-    logger.info('Sorting {}'.format(fasta_path))
+    logger.info(f'Sorting {fasta_path} to {out_path}')
     fasta = FASTA(fasta_path)
     return fasta.sort(out_path)
 
@@ -284,8 +280,8 @@ def decompress_file(path, temp_dir='tmp'):
 
 
 def ref(
-    fasta_path,
-    gtf_path,
+    fasta_paths,
+    gtf_paths,
     cdna_path,
     index_path,
     t2g_path,
@@ -295,10 +291,10 @@ def ref(
 ):
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
-    :param fasta_path: path to genomic FASTA file
-    :type fasta_path: str
-    :param gtf_path: path to GTF file
-    :type gtf_path: str
+    :param fasta_paths: list of paths to genomic FASTA files
+    :type fasta_paths: list
+    :param gtf_paths: list of paths to GTF files
+    :type gtf_paths: list
     :param cdna_path: path to generate the cDNA FASTA file
     :type cdna_path: str
     :param t2g_path: path to output transcript-to-gene mapping
@@ -313,25 +309,56 @@ def ref(
     :return: dictionary containing paths to generated file(s)
     :rtype: dict
     """
+    if not isinstance(fasta_paths, list):
+        fasta_paths = [fasta_paths]
+    if not isinstance(gtf_paths, list):
+        gtf_paths = [gtf_paths]
+
     results = {}
-    gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
-    t2g_result = create_t2g_from_gtf(gtf_path, t2g_path)
-    results.update(t2g_result)
+    t2gs = []
+    cdnas = []
+    for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
+        logger.info(f'Preparing {fasta_path}, {gtf_path}')
+        gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
+        t2g_result = create_t2g_from_gtf(
+            gtf_path, get_temporary_filename(temp_dir)
+        )
+        t2gs.append(t2g_result['t2g'])
+
+        if not os.path.exists(index_path) or overwrite:
+            fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
+            sorted_fasta_path, fasta_chromosomes = sort_fasta(
+                fasta_path, get_temporary_filename(temp_dir)
+            )
+            sorted_gtf_path, gtf_chromosomes = sort_gtf(
+                gtf_path, get_temporary_filename(temp_dir)
+            )
+
+            cdna_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
+            )
+            chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
+            cdna_fasta_path = generate_cdna_fasta(
+                sorted_fasta_path,
+                sorted_gtf_path,
+                cdna_temp_path,
+                chromosomes=chromosomes
+            )
+            cdnas.append(cdna_fasta_path)
+
+    # Concatenate t2gs
+    logger.info(
+        f'Concatenating {len(t2gs)} transcript-to-gene mappings to {t2g_path}'
+    )
+    t2g_path = concatenate_files(*t2gs, out_path=t2g_path, temp_dir=temp_dir)
+    results.update({'t2g': t2g_path})
+
+    # Concatenate cdnas and index
     if not os.path.exists(index_path) or overwrite:
-        fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-        sorted_fasta_path, fasta_chromosomes = sort_fasta(
-            fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-        )
-        sorted_gtf_path, gtf_chromosomes = sort_gtf(
-            gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-        )
-        logger.info('Splitting genome into cDNA at {}'.format(cdna_path))
-        chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
-        cdna_fasta_path = generate_cdna_fasta(
-            sorted_fasta_path,
-            sorted_gtf_path,
-            cdna_path,
-            chromosomes=chromosomes
+        logger.info(f'Concatenating {len(cdnas)} cDNAs to {cdna_path}')
+        cdna_fasta_path = concatenate_files(
+            *cdnas, out_path=cdna_path, temp_dir=temp_dir
         )
 
         if k and k != 31:
@@ -345,6 +372,7 @@ def ref(
             'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
             .format(index_path)
         )
+
     return results
 
 
@@ -408,8 +436,8 @@ def ref_kite(
 
 
 def ref_lamanno(
-    fasta_path,
-    gtf_path,
+    fasta_paths,
+    gtf_paths,
     cdna_path,
     intron_path,
     index_path,
@@ -422,10 +450,10 @@ def ref_lamanno(
 ):
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
-    :param fasta_path: path to genomic FASTA file
-    :type fasta_path: str
-    :param gtf_path: path to GTF file
-    :type gtf_path: str
+    :param fasta_paths: list of paths to genomic FASTA files
+    :type fasta_paths: list
+    :param gtf_paths: list of paths to GTF files
+    :type gtf_paths: list
     :param cdna_path: path to generate the cDNA FASTA file
     :type cdna_path: str
     :param intron_path: path to generate the intron FASTA file
@@ -446,50 +474,99 @@ def ref_lamanno(
     :return: dictionary containing paths to generated file(s)
     :rtype: dict
     """
+    if not isinstance(fasta_paths, list):
+        fasta_paths = [fasta_paths]
+    if not isinstance(gtf_paths, list):
+        gtf_paths = [gtf_paths]
+
     results = {}
+    cdnas = []
+    introns = []
+    cdna_t2cs = []
+    intron_t2cs = []
     if not os.path.exists(index_path) or overwrite:
-        fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-        sorted_fasta_path, fasta_chromosomes = sort_fasta(
-            fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
+        for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
+            logger.info(f'Preparing {fasta_path}, {gtf_path}')
+
+            fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
+            sorted_fasta_path, fasta_chromosomes = sort_fasta(
+                fasta_path, get_temporary_filename(temp_dir)
+            )
+            gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
+            sorted_gtf_path, gtf_chromosomes = sort_gtf(
+                gtf_path, get_temporary_filename(temp_dir)
+            )
+            cdna_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
+            )
+            chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
+            cdna_fasta_path = generate_cdna_fasta(
+                sorted_fasta_path,
+                sorted_gtf_path,
+                cdna_temp_path,
+                chromosomes=chromosomes
+            )
+            cdnas.append(cdna_fasta_path)
+            cdna_t2c_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Creating cDNA transcripts-to-capture at {cdna_t2c_temp_path}'
+            )
+            cdna_t2c_result = create_t2c(cdna_fasta_path, cdna_t2c_temp_path)
+            cdna_t2cs.append(cdna_t2c_result['t2c'])
+            intron_temp_path = get_temporary_filename(temp_dir)
+            logger.info(f'Splitting genome into introns at {intron_temp_path}')
+            intron_fasta_path = generate_intron_fasta(
+                sorted_fasta_path,
+                sorted_gtf_path,
+                intron_temp_path,
+                chromosomes=chromosomes
+            )
+            introns.append(intron_fasta_path)
+            intron_t2c_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Creating intron transcripts-to-capture at {intron_t2c_temp_path}'
+            )
+            intron_t2c_result = create_t2c(
+                intron_fasta_path, intron_t2c_temp_path
+            )
+            intron_t2cs.append(intron_t2c_result['t2c'])
+
+        # Concatenate
+        logger.info(f'Concatenating {len(cdnas)} cDNA FASTAs to {cdna_path}')
+        cdna_path = concatenate_files(
+            *cdnas, out_path=cdna_path, temp_dir=temp_dir
         )
-        gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
-        sorted_gtf_path, gtf_chromosomes = sort_gtf(
-            gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-        )
-        logger.info('Splitting genome into cDNA at {}'.format(cdna_path))
-        chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
-        cdna_fasta_path = generate_cdna_fasta(
-            sorted_fasta_path,
-            sorted_gtf_path,
-            cdna_path,
-            chromosomes=chromosomes
-        )
-        results.update({'cdna_fasta': cdna_fasta_path})
         logger.info(
-            'Creating cDNA transcripts-to-capture at {}'.format(cdna_t2c_path)
+            f'Concatenating {len(cdna_t2cs)} cDNA transcripts-to-captures to {cdna_t2c_path}'
         )
-        cdna_t2c_result = create_t2c(cdna_fasta_path, cdna_t2c_path)
-        results.update({'cdna_t2c': cdna_t2c_result['t2c']})
-        logger.info('Splitting genome into introns at {}'.format(intron_path))
-        intron_fasta_path = generate_intron_fasta(
-            sorted_fasta_path,
-            sorted_gtf_path,
-            intron_path,
-            chromosomes=chromosomes
+        cdna_t2c_path = concatenate_files(
+            *cdna_t2cs, out_path=cdna_t2c_path, temp_dir=temp_dir
         )
-        results.update({'intron_fasta': intron_fasta_path})
         logger.info(
-            'Creating intron transcripts-to-capture at {}'.
-            format(cdna_t2c_path)
+            f'Concatenating {len(introns)} intron FASTAs to {intron_path}'
         )
-        intron_t2c_result = create_t2c(intron_fasta_path, intron_t2c_path)
-        results.update({'intron_t2c': intron_t2c_result['t2c']})
-        logger.info('Concatenating cDNA and intron FASTAs')
+        intron_path = concatenate_files(
+            *introns, out_path=intron_path, temp_dir=temp_dir
+        )
+        logger.info(
+            f'Concatenating {len(intron_t2cs)} intron transcripts-to-captures to {intron_t2c_path}'
+        )
+        intron_t2c_path = concatenate_files(
+            *intron_t2cs, out_path=intron_t2c_path, temp_dir=temp_dir
+        )
+        results.update({
+            'cdna_fasta': cdna_path,
+            'cdna_t2c': cdna_t2c_path,
+            'intron_fasta': intron_path,
+            'intron_t2c': intron_t2c_path
+        })
+
+        # Concatenate cDNA and intron fastas to generate T2G and build index
+        combined_path = get_temporary_filename(temp_dir)
+        logger.info(f'Concatenating cDNA and intron FASTAs to {combined_path}')
         combined_path = concatenate_files(
-            cdna_fasta_path,
-            intron_fasta_path,
-            out_path=os.path.join(temp_dir, COMBINED_FILENAME),
-            temp_dir=temp_dir
+            cdna_path, intron_path, out_path=combined_path, temp_dir=temp_dir
         )
         t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
         results.update(t2g_result)

@@ -7,6 +7,7 @@ import re
 import requests
 import shutil
 import subprocess as sp
+import tempfile
 import threading
 import time
 from urllib.request import urlretrieve
@@ -515,6 +516,23 @@ def stream_file(url, path):
         os.mkfifo(path)
         t = threading.Thread(target=urlretrieve, args=(url, path), daemon=True)
         t.start()
+    return path
+
+
+def get_temporary_filename(temp_dir=None):
+    """Create a temporary file in the provided temprorary directory.
+
+    The caller is responsible for deleting the file.
+
+    :param temp_dir: path to temporary directory, defaults to `None`
+    :type temp_dir: str, optional
+
+    :return: temporary filename
+    :rtype: str
+    """
+    fp, path = tempfile.mkstemp(dir=temp_dir)
+    os.close(fp)
+
     return path
 
 

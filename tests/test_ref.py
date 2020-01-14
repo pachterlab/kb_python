@@ -7,10 +7,6 @@ from unittest.mock import call
 
 import kb_python.ref as ref
 from kb_python.config import REFERENCES_MAPPING
-from kb_python.constants import (
-    SORTED_FASTA_FILENAME,
-    SORTED_GTF_FILENAME,
-)
 from tests.mixins import TestMixin
 
 
@@ -258,11 +254,13 @@ class TestRef(TestMixin, TestCase):
             )
 
     def test_ref(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.check_chromosomes') as check_chromosomes,\
+            mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
@@ -274,13 +272,15 @@ class TestRef(TestMixin, TestCase):
             sorted_gtf_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = ['t2g', 'fasta', 'gtf', 'cdna']
             decompress_file.side_effect = [self.gtf_path, self.fasta_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            concatenate_files.side_effect = [t2g_path, cdna_fasta_path]
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_gtf.return_value = {'t2g': 't2g'}
             self.assertEqual({
                 't2g': t2g_path,
                 'index': index_path,
@@ -298,30 +298,33 @@ class TestRef(TestMixin, TestCase):
                 call(self.gtf_path, temp_dir=temp_dir),
                 call(self.fasta_path, temp_dir=temp_dir)
             ])
-            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, 't2g')
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
+            self.assertEqual(2, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('t2g', out_path=t2g_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir)
+            ])
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=31
             )
 
     def test_ref_override_k(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.check_chromosomes') as check_chromosomes,\
+            mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
@@ -334,13 +337,15 @@ class TestRef(TestMixin, TestCase):
             sorted_gtf_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = ['t2g', 'fasta', 'gtf', 'cdna']
             decompress_file.side_effect = [self.gtf_path, self.fasta_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            concatenate_files.side_effect = [t2g_path, cdna_fasta_path]
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_gtf.return_value = {'t2g': 't2g'}
             self.assertEqual({
                 't2g': t2g_path,
                 'index': index_path,
@@ -359,30 +364,33 @@ class TestRef(TestMixin, TestCase):
                 call(self.gtf_path, temp_dir=temp_dir),
                 call(self.fasta_path, temp_dir=temp_dir)
             ])
-            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, 't2g')
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
+            self.assertEqual(2, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('t2g', out_path=t2g_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir)
+            ])
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=k
             )
 
     def test_ref_exists(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.check_chromosomes') as check_chromosomes,\
+            mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
@@ -391,9 +399,11 @@ class TestRef(TestMixin, TestCase):
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             temp_dir = mock.MagicMock()
+            get_temporary_filename.side_effect = ['t2g', 'fasta', 'gtf', 'cdna']
             decompress_file.return_value = self.gtf_path
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_gtf.return_value = {'t2g': 't2g'}
+            concatenate_files.return_value = t2g_path
             self.assertEqual({'t2g': t2g_path},
                              ref.ref(
                                  self.fasta_path,
@@ -406,7 +416,10 @@ class TestRef(TestMixin, TestCase):
             decompress_file.assert_called_once_with(
                 self.gtf_path, temp_dir=temp_dir
             )
-            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
+            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, 't2g')
+            concatenate_files.assert_called_once_with(
+                't2g', out_path=t2g_path, temp_dir=temp_dir
+            )
             sort_fasta.assert_not_called()
             sort_gtf.assert_not_called()
             check_chromosomes.assert_not_called()
@@ -414,11 +427,13 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
 
     def test_ref_overwrite(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_gtf') as create_t2g_from_gtf,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
             mock.patch('kb_python.ref.check_chromosomes') as check_chromosomes,\
+            mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
             mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
@@ -430,13 +445,15 @@ class TestRef(TestMixin, TestCase):
             sorted_gtf_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = ['t2g', 'fasta', 'gtf', 'cdna']
             decompress_file.side_effect = [self.gtf_path, self.fasta_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            concatenate_files.side_effect = [t2g_path, cdna_fasta_path]
             kallisto_index.return_value = {'index': index_path}
-            create_t2g_from_gtf.return_value = {'t2g': t2g_path}
+            create_t2g_from_gtf.return_value = {'t2g': 't2g'}
             self.assertEqual({
                 't2g': t2g_path,
                 'index': index_path,
@@ -455,20 +472,21 @@ class TestRef(TestMixin, TestCase):
                 call(self.gtf_path, temp_dir=temp_dir),
                 call(self.fasta_path, temp_dir=temp_dir)
             ])
-            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, t2g_path)
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            create_t2g_from_gtf.assert_called_once_with(self.gtf_path, 't2g')
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
+            self.assertEqual(2, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('t2g', out_path=t2g_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir)
+            ])
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=31
             )
@@ -665,7 +683,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)
 
     def test_ref_lamanno(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -688,20 +707,27 @@ class TestRef(TestMixin, TestCase):
             intron_t2c_path = mock.MagicMock()
             combined_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = [
+                'fasta', 'gtf', 'cdna', 'cdna_t2c', 'intron', 'intron_t2c',
+                'combined'
+            ]
             decompress_file.side_effect = [self.fasta_path, self.gtf_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
-            generate_intron_fasta.return_value = intron_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            generate_intron_fasta.return_value = 'intron'
             kallisto_index.return_value = {'index': index_path}
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': 'cdna_t2c'
             }, {
-                't2c': intron_t2c_path
+                't2c': 'intron_t2c'
             }]
-            concatenate_files.return_value = combined_path
+            concatenate_files.side_effect = [
+                cdna_fasta_path, cdna_t2c_path, intron_fasta_path,
+                intron_t2c_path, combined_path
+            ]
             self.assertEqual({
                 't2g': t2g_path,
                 'cdna_fasta': cdna_fasta_path,
@@ -729,36 +755,46 @@ class TestRef(TestMixin, TestCase):
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
             )
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
             generate_intron_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                intron_fasta_path,
+                'intron',
                 chromosomes=chromosomes
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
-                call(cdna_fasta_path, cdna_t2c_path),
-                call(intron_fasta_path, intron_t2c_path)
+                call('cdna', 'cdna_t2c'),
+                call('intron', 'intron_t2c')
+            ])
+            self.assertEqual(5, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
+                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
+                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
+                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call(
+                    cdna_fasta_path,
+                    intron_fasta_path,
+                    out_path='combined',
+                    temp_dir=temp_dir
+                )
             ])
             kallisto_index.assert_called_once_with(
                 combined_path, index_path, k=31
             )
 
     def test_ref_lamanno_override_k(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -782,20 +818,27 @@ class TestRef(TestMixin, TestCase):
             intron_t2c_path = mock.MagicMock()
             combined_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = [
+                'fasta', 'gtf', 'cdna', 'cdna_t2c', 'intron', 'intron_t2c',
+                'combined'
+            ]
             decompress_file.side_effect = [self.fasta_path, self.gtf_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
-            generate_intron_fasta.return_value = intron_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            generate_intron_fasta.return_value = 'intron'
             kallisto_index.return_value = {'index': index_path}
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': 'cdna_t2c'
             }, {
-                't2c': intron_t2c_path
+                't2c': 'intron_t2c'
             }]
-            concatenate_files.return_value = combined_path
+            concatenate_files.side_effect = [
+                cdna_fasta_path, cdna_t2c_path, intron_fasta_path,
+                intron_t2c_path, combined_path
+            ]
             self.assertEqual({
                 't2g': t2g_path,
                 'cdna_fasta': cdna_fasta_path,
@@ -824,36 +867,46 @@ class TestRef(TestMixin, TestCase):
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
             )
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
             generate_intron_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                intron_fasta_path,
+                'intron',
                 chromosomes=chromosomes
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
-                call(cdna_fasta_path, cdna_t2c_path),
-                call(intron_fasta_path, intron_t2c_path)
+                call('cdna', 'cdna_t2c'),
+                call('intron', 'intron_t2c')
+            ])
+            self.assertEqual(5, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
+                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
+                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
+                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call(
+                    cdna_fasta_path,
+                    intron_fasta_path,
+                    out_path='combined',
+                    temp_dir=temp_dir
+                )
             ])
             kallisto_index.assert_called_once_with(
                 combined_path, index_path, k=k
             )
 
     def test_ref_lamanno_exists(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename'),\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -898,7 +951,8 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
 
     def test_ref_lamanno_overwrite(self):
-        with mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
             mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
@@ -909,7 +963,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.os.path.exists') as exists:
-            exists.return_value = False
+            exists.return_value = True
             temp_dir = tempfile.mkdtemp()
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
@@ -921,20 +975,27 @@ class TestRef(TestMixin, TestCase):
             intron_t2c_path = mock.MagicMock()
             combined_path = mock.MagicMock()
             chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = [
+                'fasta', 'gtf', 'cdna', 'cdna_t2c', 'intron', 'intron_t2c',
+                'combined'
+            ]
             decompress_file.side_effect = [self.fasta_path, self.gtf_path]
             sort_fasta.return_value = sorted_fasta_path, chromosomes
             sort_gtf.return_value = sorted_gtf_path, chromosomes
             check_chromosomes.return_value = chromosomes
-            generate_cdna_fasta.return_value = cdna_fasta_path
-            generate_intron_fasta.return_value = intron_fasta_path
+            generate_cdna_fasta.return_value = 'cdna'
+            generate_intron_fasta.return_value = 'intron'
             kallisto_index.return_value = {'index': index_path}
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
-                't2c': cdna_t2c_path
+                't2c': 'cdna_t2c'
             }, {
-                't2c': intron_t2c_path
+                't2c': 'intron_t2c'
             }]
-            concatenate_files.return_value = combined_path
+            concatenate_files.side_effect = [
+                cdna_fasta_path, cdna_t2c_path, intron_fasta_path,
+                intron_t2c_path, combined_path
+            ]
             self.assertEqual({
                 't2g': t2g_path,
                 'cdna_fasta': cdna_fasta_path,
@@ -963,29 +1024,38 @@ class TestRef(TestMixin, TestCase):
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
             )
-            sort_fasta.assert_called_once_with(
-                self.fasta_path, os.path.join(temp_dir, SORTED_FASTA_FILENAME)
-            )
-            sort_gtf.assert_called_once_with(
-                self.gtf_path, os.path.join(temp_dir, SORTED_GTF_FILENAME)
-            )
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
             check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
             generate_cdna_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                cdna_fasta_path,
+                'cdna',
                 chromosomes=chromosomes
             )
             generate_intron_fasta.assert_called_once_with(
                 sorted_fasta_path,
                 sorted_gtf_path,
-                intron_fasta_path,
+                'intron',
                 chromosomes=chromosomes
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
-                call(cdna_fasta_path, cdna_t2c_path),
-                call(intron_fasta_path, intron_t2c_path)
+                call('cdna', 'cdna_t2c'),
+                call('intron', 'intron_t2c')
+            ])
+            self.assertEqual(5, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
+                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
+                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
+                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call(
+                    cdna_fasta_path,
+                    intron_fasta_path,
+                    out_path='combined',
+                    temp_dir=temp_dir
+                )
             ])
             kallisto_index.assert_called_once_with(
                 combined_path, index_path, k=31
