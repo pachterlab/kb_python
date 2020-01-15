@@ -140,3 +140,10 @@ class TestMixin(TestCase):
         )
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
         cls.kite_map_path = os.path.join(cls.kite_dir, 'map.txt')
+
+        cls.merge_dir = os.path.join(cls.fixtures_dir, 'merge')
+        cls.bus_split_paths = [
+            os.path.join(cls.merge_dir, 'part0'),
+            os.path.join(cls.merge_dir, 'part1'),
+            os.path.join(cls.merge_dir, 'part2'),
+        ]

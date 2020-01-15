@@ -98,6 +98,10 @@ def parse_ref(parser, args, temp_dir='tmp'):
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
+    if len(args.fasta) != len(args.gtf):
+        parser.error(
+            f'There must be the same number of FASTAs as there are GTFs.'
+        )
 
     if args.d is not None:
         # Options that are files.
@@ -121,6 +125,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
             args.g,
             args.c1,
             args.c2,
+            n=args.n,
             k=args.k,
             overwrite=args.overwrite,
             temp_dir=temp_dir
@@ -131,6 +136,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
             args.f1,
             args.i,
             args.g,
+            n=args.n,
             k=args.k,
             no_mismatches=args.no_mismatches,
             overwrite=args.overwrite,
@@ -143,6 +149,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
             args.f1,
             args.i,
             args.g,
+            n=args.n,
             k=args.k,
             overwrite=args.overwrite,
             temp_dir=temp_dir
@@ -155,6 +162,8 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    args.i = args.i.split(',')
+
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
         count_velocity(
             args.i,
@@ -256,7 +265,10 @@ def setup_ref_args(parser, parent):
     required_ref.add_argument(
         '-i',
         metavar='INDEX',
-        help='Path to the kallisto index to be constructed',
+        help=(
+            'Path to the kallisto index to be constructed. '
+            'If `-n` is also specified, this is the prefix for the n indices to construct.'
+        ),
         type=str,
         required=True
     )
@@ -305,6 +317,18 @@ def setup_ref_args(parser, parent):
         or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
 
+    parser_ref.add_argument(
+        '-n',
+        metavar='N',
+        help=(
+            'Number of files to split the index into. If this option is specified, '
+            'the FASTA that is normally used to create an index is split into '
+            '`N` approximately-equal parts. Each of these FASTAs are indexed separately.'
+        ),
+        type=int,
+        default=1,
+        required=False
+    )
     parser_ref.add_argument(
         '-d',
         help=(
@@ -406,7 +430,7 @@ def setup_count_args(parser, parent):
     required_count.add_argument(
         '-i',
         metavar='INDEX',
-        help='Path to kallisto index',
+        help='Path to kallisto index/indices, comma-delimited',
         type=str,
         required=True
     )
@@ -563,6 +587,12 @@ def main():
     # Add common options to this parent parser
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
+        '--tmp',
+        metavar='TMP',
+        help='Override default temporary directory',
+        type=str
+    )
+    parent.add_argument(
         '--keep-tmp',
         help='Do not delete the tmp directory',
         action='store_true'
@@ -618,7 +648,7 @@ def main():
 
     if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
         logger.warning((
-            'The `--lamanno` and `--nucleus` flags are deprecated. '
+            'The `--lamanno` and `-`-n`ucleus` flags are deprecated. '
             'These options will be removed in a future release. '
             'Please use `--workflow lamanno` or `--workflow nucleus` instead.'
         ))
@@ -630,7 +660,9 @@ def main():
     logger.debug(
         'bustools binary located at {}'.format(get_bustools_binary_path())
     )
-    temp_dir = os.path.join(args.o, TEMP_DIR) if 'o' in args else TEMP_DIR
+    temp_dir = args.tmp or os.path.join(
+        args.o, TEMP_DIR
+    ) if 'o' in args else TEMP_DIR
     logger.debug(f'Creating {temp_dir} directory')
     make_directory(temp_dir)
     try:

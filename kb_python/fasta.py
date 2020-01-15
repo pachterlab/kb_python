@@ -84,8 +84,12 @@ class FASTA:
         """
         return ''.join(FASTA.BASEPAIRS[b] for b in reversed(sequence))
 
-    def entries(self):
+    def entries(self, parse=True):
         """Generator that yields one FASTA entry (sequence ID + sequence) at a time.
+
+        :param parse: whether or not to parse the header into a dictionary,
+                      defaults to `True`
+        :type parse: bool, optional
 
         :return: a generator that yields a tuple of the FASTA entry
         :rtype: generator
@@ -99,7 +103,7 @@ class FASTA:
                         yield info, sequence
                         sequence = ''
 
-                    info = FASTA.parse_header(line)
+                    info = FASTA.parse_header(line) if parse else line.strip()
                 else:
                     sequence += line.strip()
 

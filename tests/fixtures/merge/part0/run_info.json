@@ -1,0 +1,13 @@
+{
+	"n_targets": 167753933,
+	"n_bootstraps": 0,
+	"n_processed": 2500,
+	"n_pseudoaligned": 11,
+	"n_unique": 8,
+	"p_pseudoaligned": 0.4,
+	"p_unique": 0.3,
+	"kallisto_version": "0.46.1",
+	"index_version": 2,
+	"start_time": "Tue Jan 14 16:36:49 2020",
+	"call": "kallisto bus -x 10xv2 -i ../kb_split/index.idx.0 -o part0 /Users/josephmin/Documents/GitHub/kb_python/tests/fixtures/R1.fastq /Users/josephmin/Documents/GitHub/kb_python/tests/fixtures/R2.fastq"
+}

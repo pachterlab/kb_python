@@ -65,15 +65,47 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    logger.info('Generating BUS file from')
+    logger.info(f'Generating BUS file to {out_dir} from')
     for fastq in fastqs:
         logger.info((' ' * 8) + fastq)
+    logger.info(f'Using index {index_path}')
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
     command += ['-x', technology]
     command += ['-t', threads]
     command += fastqs
+    run_executable(command)
+
+    bus_path = os.path.join(out_dir, BUS_FILENAME)
+    return {
+        'bus': bus_path,
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+    }
+
+
+@validate_files(pre=False)
+def bustools_merge(out_dirs, out_dir, threads=8):
+    """Runs `bustools merge`.
+
+    :param out_dirs: list of `kallisto bus` output directories
+    :type out_dirs: list
+    :param out_dir: path to output directory
+    :type out_dir: str
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+
+    :return: dictionary containing path to generated index
+    :rtype: dict
+    """
+    logger.info(f'Merging BUS records to {out_dir} from')
+    for out in out_dirs:
+        logger.info((' ' * 8) + out)
+    command = [get_bustools_binary_path(), 'merge']
+    command += ['-o', out_dir]
+    # command += ['-t', threads]
+    command += out_dirs
     run_executable(command)
 
     bus_path = os.path.join(out_dir, BUS_FILENAME)
@@ -622,7 +654,7 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
 
 
 def count(
-    index_path,
+    index_paths,
     t2g_path,
     technology,
     out_dir,
@@ -642,8 +674,8 @@ def count(
 ):
     """Generates count matrices for single-cell RNA seq.
 
-    :param index_path: path to kallisto index
-    :type index_path: str
+    :param index_paths: paths to kallisto indices
+    :type index_paths: list
     :param t2g_path: path to transcript-to-gene mapping
     :type t2g_path: str
     :param technology: single-cell technology used
@@ -686,6 +718,9 @@ def count(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
+    if not isinstance(index_paths, list):
+        index_paths = [index_paths]
+
     results = {}
 
     make_directory(out_dir)
@@ -698,11 +733,28 @@ def count(
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        # Pipe any remote files.
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        bus_result = kallisto_bus(
-            fastqs, index_path, technology, out_dir, threads=threads
-        )
+        if len(index_paths) > 1:
+            logger.info(f'Generating BUS file using {len(index_paths)} indices')
+            part_dirs = []
+            for i, index_path in enumerate(index_paths):
+                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
+                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+                kallisto_bus(
+                    fastqs,
+                    index_path,
+                    technology,
+                    bus_part_dir,
+                    threads=threads
+                )
+                part_dirs.append(bus_part_dir)
+
+            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+        else:
+            # Pipe any remote files.
+            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            bus_result = kallisto_bus(
+                fastqs, index_paths[0], technology, out_dir, threads=threads
+            )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
@@ -840,7 +892,7 @@ def count(
 
 
 def count_velocity(
-    index_path,
+    index_paths,
     t2g_path,
     cdna_t2c_path,
     intron_t2c_path,
@@ -861,8 +913,8 @@ def count_velocity(
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 
-    :param index_path: path to kallisto index
-    :type index_path: str
+    :param index_paths: paths to kallisto indices
+    :type index_paths: list
     :param t2g_path: path to transcript-to-gene mapping
     :type t2g_path: str
     :param cdna_t2c_path: path to cDNA transcripts-to-capture file
@@ -908,8 +960,10 @@ def count_velocity(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    results = {}
+    if not isinstance(index_paths, list):
+        index_paths = [index_paths]
 
+    results = {}
     make_directory(out_dir)
     unfiltered_results = results.setdefault('unfiltered', {})
 
@@ -920,10 +974,28 @@ def count_velocity(
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        bus_result = kallisto_bus(
-            fastqs, index_path, technology, out_dir, threads=threads
-        )
+        if len(index_paths) > 1:
+            logger.info(f'Generating BUS file using {len(index_paths)} indices')
+            part_dirs = []
+            for i, index_path in enumerate(index_paths):
+                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
+                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+                kallisto_bus(
+                    fastqs,
+                    index_path,
+                    technology,
+                    bus_part_dir,
+                    threads=threads
+                )
+                part_dirs.append(bus_part_dir)
+
+            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+        else:
+            # Pipe any remote files.
+            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            bus_result = kallisto_bus(
+                fastqs, index_paths[0], technology, out_dir, threads=threads
+            )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'

@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 import tarfile
@@ -192,13 +193,66 @@ def kallisto_index(fasta_path, index_path, k=31):
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    logger.info('Indexing to {}'.format(index_path))
+    logger.info(f'Indexing {fasta_path} to {index_path}')
     command = [
         get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
         fasta_path
     ]
     run_executable(command)
     return {'index': index_path}
+
+
+def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
+    """Split a FASTA file into `n` parts and index each one.
+
+    :param fasta_path: path to FASTA file
+    :type fasta_path: str
+    :param index_prefix: prefix of output kallisto indices
+    :type index_prefix: str
+    :param n: split the index into `n` files, defaults to `2`
+    :type n: int, optional
+    :param k: k-mer length, defaults to 31
+    :type k: int, optional
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+
+    :return: dictionary containing path to generated index
+    :rtype: dict
+    """
+    fastas = []
+    indices = []
+
+    logger.info(f'Splitting {fasta_path} into {n} parts')
+    size = int(os.path.getsize(fasta_path) / n) + 4
+
+    fasta = FASTA(fasta_path)
+    fasta_entries = fasta.entries(parse=False)
+    finished = False
+    for i in range(n):
+        fasta_part_path = get_temporary_filename(temp_dir)
+        index_part_path = f'{index_prefix}.{i}'
+        fastas.append(fasta_part_path)
+        indices.append(index_part_path)
+
+        with open(fasta_part_path, 'w') as f:
+            logger.debug(f'Writing {fasta_part_path}')
+            while f.tell() < size:
+                try:
+                    info, seq = next(fasta_entries)
+                except StopIteration:
+                    finished = True
+                    break
+                f.write(f'{info}\n{seq}\n')
+
+        if finished:
+            break
+
+    built = []
+    for fasta_part_path, index_part_path in zip(fastas, indices):
+        result = kallisto_index(fasta_part_path, index_part_path, k=k)
+        built.append(result['index'])
+
+    return {'indices': built}
 
 
 def download_reference(reference, files, temp_dir='tmp', overwrite=False):
@@ -285,6 +339,7 @@ def ref(
     cdna_path,
     index_path,
     t2g_path,
+    n=1,
     k=None,
     temp_dir='tmp',
     overwrite=False
@@ -299,6 +354,8 @@ def ref(
     :type cdna_path: str
     :param t2g_path: path to output transcript-to-gene mapping
     :type t2g_path: str
+    :param n: split the index into `n` files
+    :type n: int
     :param k: override default kmer length 31, defaults to `None`
     :type k: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
@@ -325,7 +382,7 @@ def ref(
         )
         t2gs.append(t2g_result['t2g'])
 
-        if not os.path.exists(index_path) or overwrite:
+        if not glob.glob(f'{index_path}*') or overwrite:
             fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
             sorted_fasta_path, fasta_chromosomes = sort_fasta(
                 fasta_path, get_temporary_filename(temp_dir)
@@ -355,7 +412,7 @@ def ref(
     results.update({'t2g': t2g_path})
 
     # Concatenate cdnas and index
-    if not os.path.exists(index_path) or overwrite:
+    if not glob.glob(f'{index_path}*') or overwrite:
         logger.info(f'Concatenating {len(cdnas)} cDNAs to {cdna_path}')
         cdna_fasta_path = concatenate_files(
             *cdnas, out_path=cdna_path, temp_dir=temp_dir
@@ -365,7 +422,11 @@ def ref(
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'
             )
-        index_result = kallisto_index(cdna_fasta_path, index_path, k=k or 31)
+        index_result = split_and_index(
+            cdna_fasta_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
+        ) if n > 1 else kallisto_index(
+            cdna_fasta_path, index_path, k=k or 31
+        )
         results.update(index_result)
     else:
         logger.info(
@@ -381,6 +442,7 @@ def ref_kite(
     fasta_path,
     index_path,
     t2g_path,
+    n=1,
     k=None,
     no_mismatches=False,
     temp_dir='tmp',
@@ -396,6 +458,8 @@ def ref_kite(
     :type fasta_path: str
     :param t2g_path: path to output transcript-to-gene mapping
     :type t2g_path: str
+    :param n: split the index into `n` files
+    :type n: int
     :param k: override calculated optimal kmer length, defaults to `None`
     :type k: int, optional
     :param no_mismatches: whether to generate hamming distance 1 variants,
@@ -419,13 +483,17 @@ def ref_kite(
     t2g_result = create_t2g_from_fasta(fasta_path, t2g_path)
     results.update(t2g_result)
 
-    if not os.path.exists(index_path) or overwrite:
+    if not glob.glob(f'{index_path}*') or overwrite:
         optimal_k = length if length % 2 else length - 1
         if k and k != optimal_k:
             logger.warning(
                 f'Using provided k-mer length {k} instead of calculated optimal length {optimal_k}'
             )
-        index_result = kallisto_index(kite_path, index_path, k=k or optimal_k)
+        index_result = split_and_index(
+            kite_path, index_path, n=n, k=k or optimal_k, temp_dir=temp_dir
+        ) if n > 1 else kallisto_index(
+            kite_path, index_path, k=k or optimal_k
+        )
         results.update(index_result)
     else:
         logger.info(
@@ -444,6 +512,7 @@ def ref_lamanno(
     t2g_path,
     cdna_t2c_path,
     intron_t2c_path,
+    n=1,
     k=None,
     temp_dir='tmp',
     overwrite=False,
@@ -464,6 +533,8 @@ def ref_lamanno(
     :type cdna_t2c_path: str
     :param intron_t2c_path: path to generate the intron transcripts-to-capture file
     :type intron_t2c_path: str
+    :param n: split the index into `n` files
+    :type n: int
     :param k: override default kmer length (31), defaults to `None`
     :type k: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
@@ -484,7 +555,7 @@ def ref_lamanno(
     introns = []
     cdna_t2cs = []
     intron_t2cs = []
-    if not os.path.exists(index_path) or overwrite:
+    if not glob.glob(f'{index_path}*') or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
 
@@ -574,7 +645,11 @@ def ref_lamanno(
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'
             )
-        index_result = kallisto_index(combined_path, index_path, k=k or 31)
+        index_result = split_and_index(
+            combined_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
+        ) if n > 1 else kallisto_index(
+            combined_path, index_path, k=k or 31
+        )
         results.update(index_result)
     else:
         logger.info(
