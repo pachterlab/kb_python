@@ -38,7 +38,7 @@ pre-processing of single-cell RNA-seq. BioRxiv, 673285.
 None. The kallisto and bustools binaries are included with the package.
 
 ## Getting Started
-Visit the [Getting Started](https://www.kallistobus.tools/kb_getting_started) page.
+Visit the [Getting Started](https://colab.research.google.com/github/pachterlab/kallistobustools/blob/master/notebooks/kb_standard.ipynb) tutorial on Google Colab.
 
 ## Documentation
 - User documentation and tutorials are available [here](https://www.kallistobus.tools/tutorials).
