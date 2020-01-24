@@ -98,7 +98,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
-    if len(args.fasta) != len(args.gtf):
+    if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         parser.error(
             f'There must be the same number of FASTAs as there are GTFs.'
         )
