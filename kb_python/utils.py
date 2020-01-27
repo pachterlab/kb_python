@@ -30,6 +30,7 @@ from .config import (
     UnsupportedOSException,
 )
 from .dry import utils as dry_utils
+from .stats import STATS
 
 logger = logging.getLogger(__name__)
 
@@ -224,10 +225,11 @@ def run_executable(
     :rtype: subprocess.Process
     """
     command = [str(c) for c in command]
+    c = command.copy()
+    if alias:
+        c[0] = os.path.basename(c[0])
+    STATS.command(c)
     if not quiet:
-        c = command.copy()
-        if alias:
-            c[0] = os.path.basename(c[0])
         logger.debug(' '.join(c))
     p = sp.Popen(
         command,

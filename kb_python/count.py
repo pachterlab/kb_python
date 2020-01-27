@@ -18,8 +18,10 @@ from .constants import (
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
     GENE_ID_NAME,
+    INFO_FILENAME,
     INSPECT_FILENAME,
     PROJECT_CODE,
+    REPORT_FILENAME,
     SORT_CODE,
     TCC_PREFIX,
     TXNAMES_FILENAME,
@@ -27,6 +29,7 @@ from .constants import (
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
+from .report import render_report
 from .utils import (
     copy_map,
     copy_whitelist,
@@ -40,6 +43,7 @@ from .utils import (
     update_filename,
     whitelist_provided,
 )
+from .stats import STATS
 from .validate import validate_files
 
 logger = logging.getLogger(__name__)
@@ -82,6 +86,7 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
         'bus': bus_path,
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, INFO_FILENAME)
     }
 
 
@@ -718,6 +723,7 @@ def count(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
+    STATS.start()
     if not isinstance(index_paths, list):
         index_paths = [index_paths]
 
@@ -730,6 +736,7 @@ def count(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
@@ -888,6 +895,22 @@ def count(
             h5ad=h5ad
         )
 
+    # Generate report.
+    STATS.end()
+    report_path = os.path.join(out_dir, REPORT_FILENAME)
+    logger.info(f'Generating HTML report at {report_path}')
+    report_result = render_report(
+        None if tcc else import_matrix_as_anndata(
+            count_result['mtx'], count_result['barcodes'], count_result['genes']
+        ),
+        STATS.to_dict(),
+        bus_result['info'],
+        inspect_result['inspect'],
+        report_path,
+        tcc=tcc
+    )
+    results.update(report_result)
+
     return results
 
 
@@ -960,6 +983,7 @@ def count_velocity(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
+    STATS.start()
     if not isinstance(index_paths, list):
         index_paths = [index_paths]
 
@@ -971,6 +995,7 @@ def count_velocity(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
@@ -1172,5 +1197,22 @@ def count_velocity(
                     nucleus=nucleus,
                 )
             )
+
+    STATS.end()
+    report_path = os.path.join(out_dir, REPORT_FILENAME)
+    logger.info(f'Generating HTML report at {report_path}')
+    report_result = render_report(
+        None if tcc else import_matrix_as_anndata(
+            unfiltered_results[BUS_CDNA_PREFIX]['mtx'],
+            unfiltered_results[BUS_CDNA_PREFIX]['barcodes'],
+            unfiltered_results[BUS_CDNA_PREFIX]['genes']
+        ),
+        STATS.to_dict(),
+        bus_result['info'],
+        inspect_result['inspect'],
+        report_path,
+        tcc=tcc
+    )
+    results.update(report_result)
 
     return results

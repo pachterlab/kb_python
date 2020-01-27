@@ -20,7 +20,9 @@ from kb_python.constants import (
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
     FILTERED_COUNTS_DIR,
+    INFO_FILENAME,
     INSPECT_FILENAME,
+    REPORT_FILENAME,
     TXNAMES_FILENAME,
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
@@ -44,6 +46,7 @@ class TestCount(TestMixin, TestCase):
             'bus': os.path.join(out_dir, BUS_FILENAME),
             'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
             'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+            'info': os.path.join(out_dir, INFO_FILENAME)
         }, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
@@ -706,7 +709,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -717,7 +723,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -726,6 +734,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -739,12 +748,15 @@ class TestCount(TestMixin, TestCase):
                 'genes': '{}.genes.txt'.format(counts_prefix),
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -763,6 +775,7 @@ class TestCount(TestMixin, TestCase):
                                  threads=threads,
                                  memory=memory
                              ))
+
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
@@ -810,6 +823,23 @@ class TestCount(TestMixin, TestCase):
             filter_with_bustools.assert_not_called()
             bustools_merge.assert_not_called()
 
+            STATS.start.assert_called_once()
+            STATS.end.assert_called_once()
+            STATS.to_dict.assert_called_once()
+            import_matrix_as_anndata.assert_called_once_with(
+                '{}.mtx'.format(counts_prefix),
+                '{}.barcodes.txt'.format(counts_prefix),
+                '{}.genes.txt'.format(counts_prefix),
+            )
+            render_report.assert_called_once_with(
+                import_matrix_as_anndata(),
+                STATS.to_dict(),
+                info_path,
+                inspect_path,
+                report_path,
+                tcc=False
+            )
+
     def test_count_split(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
@@ -820,7 +850,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -831,7 +864,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -840,6 +875,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -853,12 +889,15 @@ class TestCount(TestMixin, TestCase):
                 'genes': '{}.genes.txt'.format(counts_prefix),
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -948,7 +987,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -959,6 +1001,8 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
@@ -969,6 +1013,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -983,12 +1028,15 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
             convert_matrix.return_value = {'loom': loom_path}
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1078,7 +1126,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -1089,7 +1140,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1108,6 +1161,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_whitelist.return_value = {
                 'whitelist': filter_whitelist_path
@@ -1140,12 +1194,15 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(filtered_counts_prefix),
             }
             filter_with_bustools.return_value = filter_result
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1239,7 +1296,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -1251,6 +1311,8 @@ class TestCount(TestMixin, TestCase):
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1259,6 +1321,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -1273,12 +1336,15 @@ class TestCount(TestMixin, TestCase):
                 'genes': '{}.genes.txt'.format(counts_prefix),
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'whitelist': self.whitelist_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
@@ -1354,7 +1420,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -1365,7 +1434,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1375,6 +1446,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -1389,12 +1461,15 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
             convert_matrix.return_value = {'loom': loom_path}
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1485,7 +1560,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist,\
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -1496,7 +1574,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1515,6 +1595,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_whitelist.return_value = {
                 'whitelist': filter_whitelist_path
@@ -1547,12 +1628,15 @@ class TestCount(TestMixin, TestCase):
                 'barcodes': '{}.barcodes.txt'.format(filtered_counts_prefix),
             }
             filter_with_bustools.return_value = filter_result
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1649,7 +1733,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
             mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
             mock.patch('kb_python.count.bustools_project') as bustools_project,\
-            mock.patch('kb_python.count.copy_map') as copy_map:
+            mock.patch('kb_python.count.copy_map') as copy_map,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_prefix = os.path.join(
@@ -1660,7 +1747,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             map_path = os.path.join(out_dir, '10xv3_feature_barcode_map.txt')
             bus_s_path = os.path.join(temp_dir, 'output.s.bus')
             bus_sp_path = os.path.join(temp_dir, 'output.s.p.bus')
@@ -1672,6 +1761,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -1689,12 +1779,15 @@ class TestCount(TestMixin, TestCase):
                 'genes': '{}.genes.txt'.format(counts_prefix),
                 'barcodes': '{}.barcodes.txt'.format(counts_prefix),
             }
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_spscs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1783,7 +1876,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata:
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -1792,7 +1888,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1816,6 +1914,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -1858,12 +1957,15 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {
@@ -1986,6 +2088,27 @@ class TestCount(TestMixin, TestCase):
             convert_matrices.assert_not_called()
             bustools_merge.assert_not_called()
 
+            STATS.start.assert_called_once()
+            STATS.end.assert_called_once()
+            STATS.to_dict.assert_called_once()
+            import_matrix_as_anndata.assert_called_once_with(
+                '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                '{}.barcodes.txt'.format(
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                ),
+                '{}.genes.txt'.format(
+                    os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                ),
+            )
+            render_report.assert_called_once_with(
+                import_matrix_as_anndata(),
+                STATS.to_dict(),
+                info_path,
+                inspect_path,
+                report_path,
+                tcc=False
+            )
+
     def test_count_velocity_split(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
@@ -1997,7 +2120,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -2006,7 +2132,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2030,6 +2158,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -2072,13 +2201,16 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual(
                 {
+                    'report': report_path,
                     'unfiltered': {
                         'bus': bus_path,
                         'ecmap': ecmap_path,
                         'txnames': txnames_path,
+                        'info': info_path,
                         'inspect': inspect_path,
                         'bus_scs': bus_scs_path,
                         BUS_CDNA_PREFIX: {
@@ -2227,7 +2359,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -2236,7 +2371,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2263,6 +2400,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -2306,12 +2444,15 @@ class TestCount(TestMixin, TestCase):
                     ),
             }]
             convert_matrices.return_value = {'loom': loom_path}
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'loom': loom_path,
@@ -2473,7 +2614,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -2482,7 +2626,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2506,6 +2652,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
@@ -2549,12 +2696,15 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
+            render_report.return_value = {'report': report_path}
 
             self.assertEqual({
+                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'whitelist': self.whitelist_path,
@@ -2688,7 +2838,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -2697,7 +2850,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2721,6 +2876,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             cdna_filtered_path = mock.MagicMock()
             intron_filtered_path = mock.MagicMock()
@@ -2823,7 +2979,10 @@ class TestCount(TestMixin, TestCase):
                 'bus_scs': filtered_bus_path,
             }
             filter_with_bustools.return_value = filter_result
+            render_report.return_value = {'report': report_path}
+
             self.assertEqual({
+                'report': report_path,
                 'filtered': {
                     'whitelist': filtered_whitelist_path,
                     'bus_scs': filtered_bus_path,
@@ -2882,6 +3041,7 @@ class TestCount(TestMixin, TestCase):
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {
@@ -3062,7 +3222,10 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
             mock.patch('kb_python.count.bustools_count') as bustools_count,\
             mock.patch('kb_python.count.convert_matrices') as convert_matrices,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools:
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.render_report') as render_report,\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
             out_dir = tempfile.mkdtemp()
             temp_dir = tempfile.mkdtemp()
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
@@ -3071,7 +3234,9 @@ class TestCount(TestMixin, TestCase):
             bus_path = os.path.join(out_dir, BUS_FILENAME)
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            report_path = os.path.join(out_dir, REPORT_FILENAME)
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -3095,6 +3260,7 @@ class TestCount(TestMixin, TestCase):
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
+                'info': info_path
             }
             cdna_filtered_path = mock.MagicMock()
             intron_filtered_path = mock.MagicMock()
@@ -3197,7 +3363,10 @@ class TestCount(TestMixin, TestCase):
                 'bus_scs': filtered_bus_path,
             }
             filter_with_bustools.return_value = filter_result
+            render_report.return_value = {'report': report_path}
+
             self.assertEqual({
+                'report': report_path,
                 'filtered': {
                     'whitelist': filtered_whitelist_path,
                     'bus_scs': filtered_bus_path,
@@ -3256,6 +3425,7 @@ class TestCount(TestMixin, TestCase):
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {

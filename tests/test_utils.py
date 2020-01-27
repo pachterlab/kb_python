@@ -92,8 +92,10 @@ class TestUtils(TestMixin, TestCase):
             rmtree.assert_called_once_with('path', ignore_errors=True)
 
     def test_run_executable(self):
-        p = utils.run_executable(['echo', 'TEST'], stream=False)
-        self.assertEqual(p.stdout.read(), 'TEST\n')
+        with mock.patch('kb_python.utils.STATS') as STATS:
+            p = utils.run_executable(['echo', 'TEST'], stream=False)
+            self.assertEqual(p.stdout.read(), 'TEST\n')
+            STATS.command.assert_called_once_with(['echo', 'TEST'])
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):
