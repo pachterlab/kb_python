@@ -751,13 +751,13 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
@@ -892,13 +892,13 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
@@ -1031,11 +1031,11 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
+                    'report': report_path,
                     'info': info_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
@@ -1197,12 +1197,12 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
+                    'report': report_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
@@ -1339,12 +1339,12 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
+                    'report': report_path,
                     'whitelist': self.whitelist_path,
                     'inspect': inspect_path,
                     'bus_scs': bus_scs_path,
@@ -1464,13 +1464,13 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
@@ -1631,13 +1631,13 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
@@ -1782,13 +1782,13 @@ class TestCount(TestMixin, TestCase):
             render_report.return_value = {'report': report_path}
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_spscs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
@@ -1890,7 +1890,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -1925,7 +1937,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': intron_s_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             bustools_capture.side_effect = [{
                 'bus': cdna_capture_path
             }, {
@@ -1957,16 +1975,22 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {
                         'bus':
@@ -1983,6 +2007,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_CDNA_PREFIX)
                             ),
+                        'report':
+                            report_cdna_path,
+                        'inspect':
+                            inspect_cdna_path
                     },
                     BUS_INTRON_PREFIX: {
                         'bus':
@@ -1999,6 +2027,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_INTRON_PREFIX)
                             ),
+                        'report':
+                            report_intron_path,
+                        'inspect':
+                            inspect_intron_path
                     }
                 }
             },
@@ -2056,9 +2088,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
@@ -2090,24 +2131,51 @@ class TestCount(TestMixin, TestCase):
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
-            STATS.to_dict.assert_called_once()
-            import_matrix_as_anndata.assert_called_once_with(
-                '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
-                '{}.barcodes.txt'.format(
-                    os.path.join(counts_dir, BUS_CDNA_PREFIX)
+            self.assertEqual(3, STATS.to_dict.call_count)
+            self.assertEqual(2, import_matrix_as_anndata.call_count)
+            import_matrix_as_anndata.assert_has_calls([
+                call(
+                    '{}.mtx'.format(os.path.join(counts_dir, BUS_CDNA_PREFIX)),
+                    '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                    )
                 ),
-                '{}.genes.txt'.format(
-                    os.path.join(counts_dir, BUS_CDNA_PREFIX)
+                call(
+                    '{}.mtx'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.barcodes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    ), '{}.genes.txt'.format(
+                        os.path.join(counts_dir, BUS_INTRON_PREFIX)
+                    )
+                )
+            ])
+            self.assertEqual(3, render_report.call_count)
+            render_report.assert_has_calls([
+                call(
+                    STATS.to_dict(),
+                    info_path,
+                    inspect_path,
+                    report_path,
+                    adata=None
                 ),
-            )
-            render_report.assert_called_once_with(
-                import_matrix_as_anndata(),
-                STATS.to_dict(),
-                info_path,
-                inspect_path,
-                report_path,
-                tcc=False
-            )
+                call(
+                    STATS.to_dict(),
+                    info_path,
+                    inspect_cdna_path,
+                    report_cdna_path,
+                    adata=import_matrix_as_anndata()
+                ),
+                call(
+                    STATS.to_dict(),
+                    info_path,
+                    inspect_intron_path,
+                    report_intron_path,
+                    adata=import_matrix_as_anndata()
+                )
+            ])
 
     def test_count_velocity_split(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
@@ -2134,7 +2202,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2169,7 +2249,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': intron_s_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             bustools_capture.side_effect = [{
                 'bus': cdna_capture_path
             }, {
@@ -2201,17 +2287,23 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual(
                 {
-                    'report': report_path,
                     'unfiltered': {
                         'bus': bus_path,
                         'ecmap': ecmap_path,
                         'txnames': txnames_path,
                         'info': info_path,
                         'inspect': inspect_path,
+                        'report': report_path,
                         'bus_scs': bus_scs_path,
                         BUS_CDNA_PREFIX: {
                             'bus':
@@ -2228,6 +2320,10 @@ class TestCount(TestMixin, TestCase):
                                 '{}.barcodes.txt'.format(
                                     os.path.join(counts_dir, BUS_CDNA_PREFIX)
                                 ),
+                            'report':
+                                report_cdna_path,
+                            'inspect':
+                                inspect_cdna_path
                         },
                         BUS_INTRON_PREFIX: {
                             'bus':
@@ -2244,6 +2340,10 @@ class TestCount(TestMixin, TestCase):
                                 '{}.barcodes.txt'.format(
                                     os.path.join(counts_dir, BUS_INTRON_PREFIX)
                                 ),
+                            'report':
+                                report_intron_path,
+                            'inspect':
+                                inspect_intron_path
                         }
                     }
                 },
@@ -2318,9 +2418,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
@@ -2373,7 +2482,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2411,7 +2532,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': intron_s_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             bustools_capture.side_effect = [{
                 'bus': cdna_capture_path
             }, {
@@ -2444,16 +2571,22 @@ class TestCount(TestMixin, TestCase):
                     ),
             }]
             convert_matrices.return_value = {'loom': loom_path}
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'loom': loom_path,
                     BUS_CDNA_PREFIX: {
@@ -2471,6 +2604,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_CDNA_PREFIX)
                             ),
+                        'report':
+                            report_cdna_path,
+                        'inspect':
+                            inspect_cdna_path
                     },
                     BUS_INTRON_PREFIX: {
                         'bus':
@@ -2487,6 +2624,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_INTRON_PREFIX)
                             ),
+                        'report':
+                            report_intron_path,
+                        'inspect':
+                            inspect_intron_path
                     }
                 }
             },
@@ -2545,9 +2686,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
@@ -2628,7 +2778,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2664,7 +2826,13 @@ class TestCount(TestMixin, TestCase):
                 'bus': intron_s_path
             }]
             copy_or_create_whitelist.return_value = self.whitelist_path
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             bustools_capture.side_effect = [{
                 'bus': cdna_capture_path
             }, {
@@ -2696,16 +2864,22 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     ),
             }]
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual({
-                'report': report_path,
                 'unfiltered': {
                     'bus': bus_path,
                     'ecmap': ecmap_path,
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     'whitelist': self.whitelist_path,
                     BUS_CDNA_PREFIX: {
@@ -2723,6 +2897,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_CDNA_PREFIX)
                             ),
+                        'report':
+                            report_cdna_path,
+                        'inspect':
+                            inspect_cdna_path
                     },
                     BUS_INTRON_PREFIX: {
                         'bus':
@@ -2739,6 +2917,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_INTRON_PREFIX)
                             ),
+                        'report':
+                            report_intron_path,
+                        'inspect':
+                            inspect_intron_path
                     }
                 }
             },
@@ -2795,9 +2977,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_called_once_with(
                 self.technology, bus_s_path, out_dir
             )
@@ -2852,7 +3043,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -2893,7 +3096,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': intron_filtered_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             cdna_filtered_capture_path = mock.MagicMock()
             intron_filtered_capture_path = mock.MagicMock()
             bustools_capture.side_effect = [{
@@ -2979,10 +3188,15 @@ class TestCount(TestMixin, TestCase):
                 'bus_scs': filtered_bus_path,
             }
             filter_with_bustools.return_value = filter_result
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual({
-                'report': report_path,
                 'filtered': {
                     'whitelist': filtered_whitelist_path,
                     'bus_scs': filtered_bus_path,
@@ -3043,6 +3257,7 @@ class TestCount(TestMixin, TestCase):
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {
                         'bus':
@@ -3059,6 +3274,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_CDNA_PREFIX)
                             ),
+                        'report':
+                            report_cdna_path,
+                        'inspect':
+                            inspect_cdna_path
                     },
                     BUS_INTRON_PREFIX: {
                         'bus':
@@ -3075,6 +3294,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_INTRON_PREFIX)
                             ),
+                        'report':
+                            report_intron_path,
+                        'inspect':
+                            inspect_intron_path
                     }
                 }
             },
@@ -3153,9 +3376,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path
@@ -3236,7 +3468,19 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_cdna_path = os.path.join(
+                out_dir, f'inspect.{BUS_CDNA_PREFIX}.json'
+            )
+            inspect_intron_path = os.path.join(
+                out_dir, f'inspect.{BUS_INTRON_PREFIX}.json'
+            )
             report_path = os.path.join(out_dir, REPORT_FILENAME)
+            report_cdna_path = os.path.join(
+                out_dir, f'report.{BUS_CDNA_PREFIX}.html'
+            )
+            report_intron_path = os.path.join(
+                out_dir, f'report.{BUS_INTRON_PREFIX}.html'
+            )
             bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
@@ -3277,7 +3521,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': intron_filtered_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_cdna_path
+            }, {
+                'inspect': inspect_intron_path
+            }]
             cdna_filtered_capture_path = mock.MagicMock()
             intron_filtered_capture_path = mock.MagicMock()
             bustools_capture.side_effect = [{
@@ -3363,10 +3613,15 @@ class TestCount(TestMixin, TestCase):
                 'bus_scs': filtered_bus_path,
             }
             filter_with_bustools.return_value = filter_result
-            render_report.return_value = {'report': report_path}
+            render_report.side_effect = [{
+                'report': report_path
+            }, {
+                'report': report_cdna_path
+            }, {
+                'report': report_intron_path
+            }]
 
             self.assertEqual({
-                'report': report_path,
                 'filtered': {
                     'whitelist': filtered_whitelist_path,
                     'bus_scs': filtered_bus_path,
@@ -3427,6 +3682,7 @@ class TestCount(TestMixin, TestCase):
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
+                    'report': report_path,
                     'bus_scs': bus_scs_path,
                     BUS_CDNA_PREFIX: {
                         'bus':
@@ -3443,6 +3699,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_CDNA_PREFIX)
                             ),
+                        'report':
+                            report_cdna_path,
+                        'inspect':
+                            inspect_cdna_path
                     },
                     BUS_INTRON_PREFIX: {
                         'bus':
@@ -3459,6 +3719,10 @@ class TestCount(TestMixin, TestCase):
                             '{}.barcodes.txt'.format(
                                 os.path.join(counts_dir, BUS_INTRON_PREFIX)
                             ),
+                        'report':
+                            report_intron_path,
+                        'inspect':
+                            inspect_intron_path
                     }
                 }
             },
@@ -3538,9 +3802,18 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path, inspect_path, self.whitelist_path, ecmap_path
-            )
+            self.assertEqual(3, bustools_inspect.call_count)
+            bustools_inspect.assert_has_calls([
+                call(bus_s_path, inspect_path, self.whitelist_path, ecmap_path),
+                call(
+                    cdna_s_path, inspect_cdna_path, self.whitelist_path,
+                    ecmap_path
+                ),
+                call(
+                    intron_s_path, inspect_intron_path, self.whitelist_path,
+                    ecmap_path
+                )
+            ])
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
                 bus_s_path, bus_sc_path, self.whitelist_path

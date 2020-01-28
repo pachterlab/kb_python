@@ -158,7 +158,11 @@ class TestReport(TestMixin, TestCase):
 
             self.assertEqual({'report': out_path},
                              report.render_report(
-                                 adata, stats, info_path, inspect_path, out_path
+                                 stats,
+                                 info_path,
+                                 inspect_path,
+                                 out_path,
+                                 adata=adata
                              ))
             kb_info.assert_called_once_with(stats)
             kallisto_info.assert_called_once_with(json.load())
@@ -182,5 +186,49 @@ class TestReport(TestMixin, TestCase):
             )
             elbow_plot.assert_called_once_with(PCA().explained_variance_ratio_)
             pca_plot.assert_called_once_with(PCA().fit_transform())
+            Template.assert_called_once()
+            Template().render.assert_called_once()
+
+    def test_render_report_no_adata(self):
+        with mock.patch('kb_python.report.kb_info') as kb_info,\
+            mock.patch('kb_python.report.kallisto_info') as kallisto_info,\
+            mock.patch('kb_python.report.bus_info') as bus_info,\
+            mock.patch('kb_python.report.gene_info') as gene_info,\
+            mock.patch('kb_python.report.knee_plot') as knee_plot,\
+            mock.patch('kb_python.report.genes_detected_plot') as genes_detected_plot,\
+            mock.patch('kb_python.report.elbow_plot') as elbow_plot,\
+            mock.patch('kb_python.report.pca_plot') as pca_plot,\
+            mock.patch('kb_python.report.sc') as sc,\
+            mock.patch('kb_python.report.Template') as Template,\
+            mock.patch('kb_python.report.open'),\
+            mock.patch('kb_python.report.json') as json,\
+            mock.patch('kb_python.report.PCA') as PCA:
+            stats = mock.MagicMock()
+            info_path = mock.MagicMock()
+            inspect_path = mock.MagicMock()
+            out_path = mock.MagicMock()
+
+            self.assertEqual({'report': out_path},
+                             report.render_report(
+                                 stats,
+                                 info_path,
+                                 inspect_path,
+                                 out_path,
+                                 adata=None
+                             ))
+            kb_info.assert_called_once_with(stats)
+            kallisto_info.assert_called_once_with(json.load())
+            bus_info.assert_called_once_with(json.load())
+
+            sc.pp.filter_cells.assert_not_called()
+            sc.pp.normalize_total.assert_not_called()
+            sc.pp.log1p.assert_not_called()
+            PCA.assert_not_called()
+            PCA().fit_transform.assert_not_called()
+            gene_info.assert_not_called()
+            knee_plot.assert_not_called()
+            genes_detected_plot.assert_not_called()
+            elbow_plot.assert_not_called()
+            pca_plot.assert_not_called()
             Template.assert_called_once()
             Template().render.assert_called_once()

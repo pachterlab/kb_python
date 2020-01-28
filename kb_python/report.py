@@ -269,11 +269,9 @@ def pca_plot(pc):
     )
 
 
-def render_report(adata, stats, info_path, inspect_path, out_path, tcc=False):
+def render_report(stats, info_path, inspect_path, out_path, adata=None):
     """Render the HTML report with Jinja2.
 
-    :param adata: anndata to generate report for
-    :type adata: anndata
     :param stats: overall run stats
     :type stats: dict
     :param info_path: path to run_info.json
@@ -282,8 +280,8 @@ def render_report(adata, stats, info_path, inspect_path, out_path, tcc=False):
     :type inspect_path: str
     :param out_path: path to report to generate
     :type out_path: str
-    :param tcc: whether the anndatas are TCC matrices, defaults to `False`
-    :type tcc: bool, optional
+    :param adata: anndata to generate report for, defaults to `None`
+    :type adata: anndata, optional
 
     :return: dictionary containing path to generated report
     :rtype: dict
@@ -297,7 +295,7 @@ def render_report(adata, stats, info_path, inspect_path, out_path, tcc=False):
         inspect = json.load(ins)
     cards.append([kallisto_info(info), bus_info(inspect)])
 
-    if not tcc:
+    if adata is not None:
         sc.pp.filter_cells(adata, min_genes=0)
         sc.pp.filter_cells(adata, min_counts=0)
         n_counts = adata.obs['n_counts']
@@ -313,11 +311,6 @@ def render_report(adata, stats, info_path, inspect_path, out_path, tcc=False):
             genes_detected_plot(n_counts, n_genes)
         ])
         cards.append([elbow_plot(pca.explained_variance_ratio_), pca_plot(pc)])
-    else:
-        logger.warning((
-            'Plots for TCC matrices are not yet supported. '
-            'The HTML report will not contain any plots.'
-        ))
 
     # Load Jinja template and render.
     with open(REPORT_TEMPLATE_PATH, 'r') as f, open(out_path, 'w') as out:

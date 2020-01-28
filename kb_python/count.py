@@ -909,7 +909,7 @@ def count(
         report_path,
         tcc=tcc
     )
-    results.update(report_result)
+    unfiltered_results.update(report_result)
 
     return results
 
@@ -1092,6 +1092,13 @@ def count_velocity(
             unfiltered_results[prefix] = {}
         unfiltered_results[prefix].update(sort_result)
 
+        inspect_result = bustools_inspect(
+            sort_result['bus'],
+            os.path.join(out_dir, update_filename(INSPECT_FILENAME, prefix)),
+            whitelist_path, bus_result['ecmap']
+        )
+        unfiltered_results[prefix].update(inspect_result)
+
         counts_prefix = os.path.join(counts_dir, prefix)
         count_result = bustools_count(
             sort_result['bus'],
@@ -1199,20 +1206,39 @@ def count_velocity(
             )
 
     STATS.end()
+
+    # Reports
     report_path = os.path.join(out_dir, REPORT_FILENAME)
     logger.info(f'Generating HTML report at {report_path}')
     report_result = render_report(
-        None if tcc else import_matrix_as_anndata(
-            unfiltered_results[BUS_CDNA_PREFIX]['mtx'],
-            unfiltered_results[BUS_CDNA_PREFIX]['barcodes'],
-            unfiltered_results[BUS_CDNA_PREFIX]['genes']
-        ),
         STATS.to_dict(),
         bus_result['info'],
-        inspect_result['inspect'],
+        unfiltered_results['inspect'],
         report_path,
-        tcc=tcc
+        adata=None
     )
-    results.update(report_result)
+    unfiltered_results.update(report_result)
+
+    for prefix in prefix_to_t2c:
+        report_path = os.path.join(
+            out_dir, update_filename(REPORT_FILENAME, prefix)
+        )
+        logger.info(f'Generating HTML report at {report_path}')
+        report_result = render_report(
+            STATS.to_dict(),
+            bus_result['info'],
+            unfiltered_results[prefix]['inspect'],
+            report_path,
+            adata=None if tcc else import_matrix_as_anndata(
+                unfiltered_results[prefix]['mtx'],
+                unfiltered_results[prefix]['barcodes'],
+                unfiltered_results[prefix]['genes']
+            ),
+        )
+        unfiltered_results[prefix].update(report_result)
+    if tcc:
+        logger.warning(
+            'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
+        )
 
     return results
