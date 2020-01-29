@@ -676,6 +676,7 @@ def count(
     overwrite=False,
     loom=False,
     h5ad=False,
+    report=False,
 ):
     """Generates count matrices for single-cell RNA seq.
 
@@ -719,6 +720,8 @@ def count(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param report: generate an HTMl report, defaults to `False`
+    :type report: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -897,19 +900,20 @@ def count(
 
     # Generate report.
     STATS.end()
-    report_path = os.path.join(out_dir, REPORT_FILENAME)
-    logger.info(f'Generating HTML report at {report_path}')
-    report_result = render_report(
-        None if tcc else import_matrix_as_anndata(
-            count_result['mtx'], count_result['barcodes'], count_result['genes']
-        ),
-        STATS.to_dict(),
-        bus_result['info'],
-        inspect_result['inspect'],
-        report_path,
-        tcc=tcc
-    )
-    unfiltered_results.update(report_result)
+    if report:
+        report_path = os.path.join(out_dir, REPORT_FILENAME)
+        logger.info(f'Generating HTML report at {report_path}')
+        report_result = render_report(
+            STATS.to_dict(),
+            bus_result['info'],
+            inspect_result['inspect'],
+            report_path,
+            adata=None if tcc else import_matrix_as_anndata(
+                count_result['mtx'], count_result['barcodes'],
+                count_result['genes']
+            )
+        )
+        unfiltered_results.update(report_result)
 
     return results
 
@@ -932,6 +936,7 @@ def count_velocity(
     overwrite=False,
     loom=False,
     h5ad=False,
+    report=False,
     nucleus=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
@@ -975,6 +980,8 @@ def count_velocity(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param report: generate HTMl reports, defaults to `False`
+    :type report: bool, optional
     :param nucleus: whether this is a single-nucleus experiment. if `True`, the
                     spliced and unspliced count matrices will be summed,
                     defaults to `False`
@@ -1209,36 +1216,37 @@ def count_velocity(
 
     # Reports
     report_path = os.path.join(out_dir, REPORT_FILENAME)
-    logger.info(f'Generating HTML report at {report_path}')
-    report_result = render_report(
-        STATS.to_dict(),
-        bus_result['info'],
-        unfiltered_results['inspect'],
-        report_path,
-        adata=None
-    )
-    unfiltered_results.update(report_result)
-
-    for prefix in prefix_to_t2c:
-        report_path = os.path.join(
-            out_dir, update_filename(REPORT_FILENAME, prefix)
-        )
+    if report:
         logger.info(f'Generating HTML report at {report_path}')
         report_result = render_report(
             STATS.to_dict(),
             bus_result['info'],
-            unfiltered_results[prefix]['inspect'],
+            unfiltered_results['inspect'],
             report_path,
-            adata=None if tcc else import_matrix_as_anndata(
-                unfiltered_results[prefix]['mtx'],
-                unfiltered_results[prefix]['barcodes'],
-                unfiltered_results[prefix]['genes']
-            ),
+            adata=None
         )
-        unfiltered_results[prefix].update(report_result)
-    if tcc:
-        logger.warning(
-            'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
-        )
+        unfiltered_results.update(report_result)
+
+        for prefix in prefix_to_t2c:
+            report_path = os.path.join(
+                out_dir, update_filename(REPORT_FILENAME, prefix)
+            )
+            logger.info(f'Generating HTML report at {report_path}')
+            report_result = render_report(
+                STATS.to_dict(),
+                bus_result['info'],
+                unfiltered_results[prefix]['inspect'],
+                report_path,
+                adata=None if tcc else import_matrix_as_anndata(
+                    unfiltered_results[prefix]['mtx'],
+                    unfiltered_results[prefix]['barcodes'],
+                    unfiltered_results[prefix]['genes']
+                ),
+            )
+            unfiltered_results[prefix].update(report_result)
+        if tcc:
+            logger.warning(
+                'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
+            )
 
     return results

@@ -17,6 +17,17 @@ REPORT_DIR = os.path.join(PACKAGE_PATH, 'report')
 REPORT_TEMPLATE_PATH = os.path.join(REPORT_DIR, 'base.html')
 REPORT_CSS_DIR = os.path.join(REPORT_DIR, 'css')
 REPORT_JS_DIR = os.path.join(REPORT_DIR, 'js')
+REPORT_JS_FILENAMES = [
+    'jquery-3.4.1.slim.min.js', 'popper.min.js', 'bootstrap.min.js',
+    'plotly-latest.min.js'
+]
+REPORT_CSS_FILENAMES = ['bootstrap.min.css']
+REPORT_JS_PATHS = [
+    os.path.join(REPORT_JS_DIR, js) for js in REPORT_JS_FILENAMES
+]
+REPORT_CSS_PATHS = [
+    os.path.join(REPORT_CSS_DIR, css) for css in REPORT_CSS_FILENAMES
+]
 MARGIN = go.layout.Margin(t=5, r=5, b=5, l=5)  # noqa: E741
 
 
@@ -296,8 +307,8 @@ def render_report(stats, info_path, inspect_path, out_path, adata=None):
     cards.append([kallisto_info(info), bus_info(inspect)])
 
     if adata is not None:
-        sc.pp.filter_cells(adata, min_genes=0)
-        sc.pp.filter_cells(adata, min_counts=0)
+        sc.pp.filter_cells(adata, min_genes=1e-3)
+        sc.pp.filter_cells(adata, min_counts=1e-3)
         n_counts = adata.obs['n_counts']
         n_genes = adata.obs['n_genes']
         sc.pp.normalize_total(adata, target_sum=1e4)
@@ -312,9 +323,19 @@ def render_report(stats, info_path, inspect_path, out_path, adata=None):
         ])
         cards.append([elbow_plot(pca.explained_variance_ratio_), pca_plot(pc)])
 
+    js = []
+    css = []
+    # Load JS and CSS
+    for js_path in REPORT_JS_PATHS:
+        with open(js_path, 'r') as f:
+            js.append(f.read())
+    for css_path in REPORT_CSS_PATHS:
+        with open(css_path, 'r') as f:
+            css.append(f.read())
+
     # Load Jinja template and render.
     with open(REPORT_TEMPLATE_PATH, 'r') as f, open(out_path, 'w') as out:
         template = Template(f.read())
-        out.write(template.render(cards=cards))
+        out.write(template.render(cards=cards, js=js, css=css))
 
     return {'report': out_path}

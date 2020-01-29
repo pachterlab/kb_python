@@ -162,6 +162,12 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    if args.report:
+        logging.getLogger(__name__).warning((
+            'Using `--report` may cause `kb` to exceed maximum memory specified '
+            'and crash for large count matrices.'
+        ))
+
     args.i = args.i.split(',')
 
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
@@ -182,6 +188,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            report=args.report,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
             temp_dir=temp_dir
         )
@@ -208,6 +215,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            report=args.report,
             temp_dir=temp_dir
         )
 
@@ -560,6 +568,15 @@ def setup_count_args(parser, parent):
     conversion_group.add_argument(
         '--h5ad',
         help='Generate h5ad file from count matrix',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--report',
+        help=(
+            'Generate a HTML report containing run statistics and basic plots. '
+            'Using this option may cause kb to use more memory than specified '
+            'with the `-m` option. It may also cause it to crash due to memory.'
+        ),
         action='store_true'
     )
     parser_count.add_argument('fastqs', help='FASTQ files', nargs='+')

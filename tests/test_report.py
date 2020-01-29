@@ -170,8 +170,8 @@ class TestReport(TestMixin, TestCase):
 
             self.assertEqual(2, sc.pp.filter_cells.call_count)
             sc.pp.filter_cells.assert_has_calls([
-                call(adata, min_genes=0),
-                call(adata, min_counts=0)
+                call(adata, min_genes=1e-3),
+                call(adata, min_counts=1e-3)
             ])
             sc.pp.normalize_total.assert_called_once_with(adata, target_sum=1e4)
             sc.pp.log1p.assert_called_once_with(adata)
