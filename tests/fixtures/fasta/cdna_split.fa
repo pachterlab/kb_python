@@ -1,6 +1,6 @@
->TRANSCRIPT_A.1 gene_id:GENE_A.1 gene_name:GENE_A_NAME chr:1 start:1 end:2 strand:+
+>TRANSCRIPT_A.1 gene_id:GENE_A.1 gene_name:GENE_A_NAME transcript_name:4933401J01Rik-201 chr:1 start:1 end:2 strand:+
 CA
->TRANSCRIPT_B gene_id:GENE_B.1 gene_name:GENE_B_NAME chr:2 start:1 end:10 strand:+
+>TRANSCRIPT_B gene_id:GENE_B.1 gene_name:GENE_B_NAME transcript_name:4933401J01Rik-201 chr:2 start:1 end:10 strand:+
 TGATC
->TRANSCRIPT_C gene_id:GENE_C gene_name:GENE_C_NAME chr:2 start:2 end:14 strand:-
+>TRANSCRIPT_C gene_id:GENE_C gene_name:GENE_C_NAME transcript_name:4933401J01Rik-201 chr:2 start:2 end:14 strand:-
 TAATCGA

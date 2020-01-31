@@ -353,11 +353,15 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
                         gene_id, gene_version
                     ) if gene_version else gene_id
                     gene_name = gtf_entry['group'].get('gene_name', '')
+                    transcript_name = gtf_entry['group'].get(
+                        'transcript_name', ''
+                    )
 
                     if transcript not in transcript_infos:
                         attributes = [
                             ('gene_id', gene),
                             ('gene_name', gene_name),
+                            ('transcript_name', transcript_name),
                             ('chr', chromosome),
                             ('start', start),
                             ('end', end),
@@ -497,11 +501,15 @@ def generate_intron_fasta(
                         gene_id, gene_version
                     ) if gene_version else gene_id
                     gene_name = gtf_entry['group'].get('gene_name', '')
+                    transcript_name = gtf_entry['group'].get(
+                        'transcript_name', ''
+                    )
 
                     if transcript not in transcript_infos:
                         attributes = [
                             ('gene_id', gene),
                             ('gene_name', gene_name),
+                            ('transcript_name', transcript_name),
                             ('chr', chromosome),
                             ('start', start),
                             ('end', end),

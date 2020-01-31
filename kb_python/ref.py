@@ -106,9 +106,10 @@ def create_t2g_from_fasta(fasta_path, t2g_path):
                 )
             else:
                 f.write(
-                    '{}\t{}\t{}\n'.format(
+                    '{}\t{}\t{}\t{}\n'.format(
                         info['sequence_id'], info['group']['gene_id'],
-                        info['group'].get('gene_name', '')
+                        info['group'].get('gene_name', ''),
+                        info['group'].get('transcript_name', '')
                     )
                 )
     return {'t2g': t2g_path}
@@ -149,12 +150,17 @@ def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
                     gene_id, gene_version
                 ) if gene_version else gene_id
                 gene_name = entry['group'].get('gene_name', '')
-                f.write('{}\t{}\t{}\n'.format(transcript, gene, gene_name))
+                transcript_name = entry['group'].get('transcript_name', '')
+                f.write(
+                    '{}\t{}\t{}\t{}\n'.format(
+                        transcript, gene, gene_name, transcript_name
+                    )
+                )
 
                 if intron:
                     f.write(
-                        '{}\t{}\t{}\n'.format(
-                            transcript + '-I', gene, gene_name
+                        '{}\t{}\t{}\t{}\n'.format(
+                            transcript + '-I', gene, gene_name, transcript_name
                         )
                     )
 
