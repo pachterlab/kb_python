@@ -12,12 +12,12 @@ from .constants import (
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
-    FEATURE_ID_NAME,
+    FEATURE_NAME,
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
-    GENE_ID_NAME,
+    GENE_NAME,
     INFO_FILENAME,
     INSPECT_FILENAME,
     PROJECT_CODE,
@@ -365,8 +365,9 @@ def convert_matrix(
     barcodes_path,
     genes_path=None,
     ec_path=None,
+    t2g_path=None,
     txnames_path=None,
-    name='gene_id',
+    name='gene',
     loom=False,
     h5ad=False,
     tcc=False,
@@ -384,9 +385,13 @@ def convert_matrix(
     :type genes_path: str, optional
     :param ec_path: path to ec.txt, defaults to `None`
     :type ec_path: str, optional
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
     :param txnames_path: path to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
-    :param name: name of header that contains ids, defaults to "gene_id"
+    :param name: name of the columns, defaults to "gene"
     :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
@@ -405,7 +410,7 @@ def convert_matrix(
     adata = import_tcc_matrix_as_anndata(
         matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
     ) if tcc else import_matrix_as_anndata(
-        matrix_path, barcodes_path, genes_path, name=name
+        matrix_path, barcodes_path, genes_path, t2g_path=t2g_path, name=name
     )
     if loom:
         loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
@@ -426,8 +431,9 @@ def convert_matrices(
     barcodes_paths,
     genes_paths=None,
     ec_paths=None,
+    t2g_path=None,
     txnames_path=None,
-    name='gene_id',
+    name='gene',
     loom=False,
     h5ad=False,
     nucleus=False,
@@ -439,16 +445,20 @@ def convert_matrices(
     :param counts_dir: path to counts directory
     :type counts_dir: str
     :param matrix_paths: list of paths to matrices
-    :type matrix_paths: str
+    :type matrix_paths: list
     :param barcodes_paths: list of paths to barcodes.txt
-    :type barcodes_paths: str
+    :type barcodes_paths: list
     :param genes_paths: list of paths to genes.txt, defaults to `None`
-    :type genes_paths: str, optional
+    :type genes_paths: list, optional
     :param ec_paths: list of path to ec.txt, defaults to `None`
-    :type ec_paths: str, optional
+    :type ec_paths: list, optional
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
     :param txnames_path: list of paths to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
-    :param name: name of header that contains ids, defaults to "gene_id"
+    :param name: name of the columns, defaults to "gene"
     :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
@@ -482,7 +492,11 @@ def convert_matrices(
                 txnames_path,
                 threads=threads
             ) if tcc else import_matrix_as_anndata(
-                matrix_path, barcodes_path, genes_ec_path, name=name
+                matrix_path,
+                barcodes_path,
+                genes_ec_path,
+                t2g_path=t2g_path,
+                name=name
             )
         )
     logger.info('Combining matrices')
@@ -599,9 +613,10 @@ def filter_with_bustools(
                     count_result['mtx'],
                     count_result['barcodes'],
                     genes_path=count_result.get('genes'),
+                    t2g_path=t2g_path,
                     ec_path=count_result.get('ec'),
                     txnames_path=txnames_path,
-                    name=FEATURE_ID_NAME if kite else GENE_ID_NAME,
+                    name=FEATURE_NAME if kite else GENE_NAME,
                     loom=loom,
                     h5ad=h5ad,
                     tcc=tcc,
@@ -862,9 +877,10 @@ def count(
                 count_result['mtx'],
                 count_result['barcodes'],
                 genes_path=count_result.get('genes'),
+                t2g_path=t2g_path,
                 ec_path=count_result.get('ec'),
                 txnames_path=bus_result['txnames'],
-                name=FEATURE_ID_NAME if kite else GENE_ID_NAME,
+                name=FEATURE_NAME if kite else GENE_NAME,
                 loom=loom,
                 h5ad=h5ad,
                 tcc=tcc,
@@ -1128,6 +1144,7 @@ def count_velocity(
                     unfiltered_results[prefix].get('genes')
                     for prefix in prefixes
                 ],
+                t2g_path=t2g_path,
                 ec_paths=[
                     unfiltered_results[prefix].get('ec') for prefix in prefixes
                 ],
@@ -1200,6 +1217,7 @@ def count_velocity(
                         filtered_results[prefix].get('genes')
                         for prefix in prefixes
                     ],
+                    t2g_path=t2g_path,
                     ec_paths=[
                         filtered_results[prefix].get('ec')
                         for prefix in prefixes

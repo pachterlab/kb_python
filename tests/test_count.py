@@ -144,17 +144,23 @@ class TestCount(TestMixin, TestCase):
             matrix_path = mock.MagicMock()
             barcodes_path = mock.MagicMock()
             genes_path = mock.MagicMock()
+            t2g_path = mock.MagicMock()
             loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
             self.assertEqual({'loom': loom_path},
                              count.convert_matrix(
                                  counts_dir,
                                  matrix_path,
                                  barcodes_path,
+                                 t2g_path=t2g_path,
                                  genes_path=genes_path,
                                  loom=True
                              ))
             import_matrix_as_anndata.assert_called_once_with(
-                matrix_path, barcodes_path, genes_path, name='gene_id'
+                matrix_path,
+                barcodes_path,
+                genes_path,
+                t2g_path=t2g_path,
+                name='gene'
             )
             import_matrix_as_anndata.return_value.write_loom.assert_called_once_with(
                 loom_path
@@ -168,17 +174,23 @@ class TestCount(TestMixin, TestCase):
             matrix_path = mock.MagicMock()
             barcodes_path = mock.MagicMock()
             genes_path = mock.MagicMock()
+            t2g_path = mock.MagicMock()
             h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
             self.assertEqual({'h5ad': h5ad_path},
                              count.convert_matrix(
                                  counts_dir,
                                  matrix_path,
                                  barcodes_path,
+                                 t2g_path=t2g_path,
                                  genes_path=genes_path,
                                  h5ad=True
                              ))
             import_matrix_as_anndata.assert_called_once_with(
-                matrix_path, barcodes_path, genes_path, name='gene_id'
+                matrix_path,
+                barcodes_path,
+                genes_path,
+                t2g_path=t2g_path,
+                name='gene'
             )
             import_matrix_as_anndata.return_value.write.assert_called_once_with(
                 h5ad_path
@@ -221,6 +233,7 @@ class TestCount(TestMixin, TestCase):
             matrix_paths = [mock.MagicMock(), mock.MagicMock()]
             barcodes_paths = [mock.MagicMock(), mock.MagicMock()]
             genes_paths = [mock.MagicMock(), mock.MagicMock()]
+            t2g_path = mock.MagicMock()
             ec_paths = [None, None]
             loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
             adatas = [mock.MagicMock(), mock.MagicMock()]
@@ -230,14 +243,20 @@ class TestCount(TestMixin, TestCase):
                                  counts_dir,
                                  matrix_paths,
                                  barcodes_paths,
+                                 t2g_path=t2g_path,
                                  genes_paths=genes_paths,
                                  ec_paths=ec_paths,
                                  loom=True
                              ))
             self.assertEqual(2, import_matrix_as_anndata.call_count)
             import_matrix_as_anndata.assert_has_calls([
-                call(matrix_path, barcode_path, genes_path, name='gene_id')
-                for matrix_path, barcode_path, genes_path in
+                call(
+                    matrix_path,
+                    barcode_path,
+                    genes_path,
+                    t2g_path=t2g_path,
+                    name='gene'
+                ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
             import_tcc_matrix_as_anndata.assert_not_called()
@@ -256,6 +275,7 @@ class TestCount(TestMixin, TestCase):
             matrix_paths = [mock.MagicMock(), mock.MagicMock()]
             barcodes_paths = [mock.MagicMock(), mock.MagicMock()]
             genes_paths = [mock.MagicMock(), mock.MagicMock()]
+            t2g_path = mock.MagicMock()
             h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
             adatas = [mock.MagicMock(), mock.MagicMock()]
             import_matrix_as_anndata.side_effect = adatas
@@ -264,13 +284,19 @@ class TestCount(TestMixin, TestCase):
                                  counts_dir,
                                  matrix_paths,
                                  barcodes_paths,
+                                 t2g_path=t2g_path,
                                  genes_paths=genes_paths,
                                  h5ad=True
                              ))
             self.assertEqual(2, import_matrix_as_anndata.call_count)
             import_matrix_as_anndata.assert_has_calls([
-                call(matrix_path, barcode_path, genes_path, name='gene_id')
-                for matrix_path, barcode_path, genes_path in
+                call(
+                    matrix_path,
+                    barcode_path,
+                    genes_path,
+                    t2g_path=t2g_path,
+                    name='gene'
+                ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
             import_tcc_matrix_as_anndata.assert_not_called()
@@ -326,6 +352,7 @@ class TestCount(TestMixin, TestCase):
             matrix_paths = [mock.MagicMock(), mock.MagicMock()]
             barcodes_paths = [mock.MagicMock(), mock.MagicMock()]
             genes_paths = [mock.MagicMock(), mock.MagicMock()]
+            t2g_path = mock.MagicMock()
             loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
             adatas = [mock.MagicMock(), mock.MagicMock()]
             import_matrix_as_anndata.side_effect = adatas
@@ -334,14 +361,20 @@ class TestCount(TestMixin, TestCase):
                                  counts_dir,
                                  matrix_paths,
                                  barcodes_paths,
+                                 t2g_path=t2g_path,
                                  genes_paths=genes_paths,
                                  loom=True,
                                  nucleus=True
                              ))
             self.assertEqual(2, import_matrix_as_anndata.call_count)
             import_matrix_as_anndata.assert_has_calls([
-                call(matrix_path, barcode_path, genes_path, name='gene_id')
-                for matrix_path, barcode_path, genes_path in
+                call(
+                    matrix_path,
+                    barcode_path,
+                    genes_path,
+                    t2g_path=t2g_path,
+                    name='gene'
+                ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
             import_tcc_matrix_as_anndata.assert_not_called()
@@ -504,9 +537,10 @@ class TestCount(TestMixin, TestCase):
                 '{}.mtx'.format(counts_prefix),
                 '{}.barcodes.txt'.format(counts_prefix),
                 genes_path='{}.genes.txt'.format(counts_prefix),
+                t2g_path=t2g_path,
                 ec_path=None,
                 txnames_path=txnames_path,
-                name='gene_id',
+                name='gene',
                 loom=True,
                 h5ad=False,
                 tcc=False,
@@ -1226,9 +1260,10 @@ class TestCount(TestMixin, TestCase):
                 '{}.mtx'.format(counts_prefix),
                 '{}.barcodes.txt'.format(counts_prefix),
                 genes_path='{}.genes.txt'.format(counts_prefix),
+                t2g_path=self.t2g_path,
                 ec_path=None,
                 txnames_path=txnames_path,
-                name='gene_id',
+                name='gene',
                 loom=True,
                 h5ad=False,
                 tcc=False,
@@ -1651,9 +1686,10 @@ class TestCount(TestMixin, TestCase):
                 '{}.mtx'.format(counts_prefix),
                 '{}.barcodes.txt'.format(counts_prefix),
                 genes_path='{}.genes.txt'.format(counts_prefix),
+                t2g_path=self.t2g_path,
                 ec_path=None,
                 txnames_path=txnames_path,
-                name='feature_id',
+                name='feature',
                 loom=True,
                 h5ad=False,
                 tcc=False,
@@ -3066,6 +3102,7 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_dir, BUS_INTRON_PREFIX)
                     )
                 ],
+                t2g_path=self.t2g_path,
                 ec_paths=[None, None],
                 txnames_path=txnames_path,
                 loom=True,
@@ -4155,6 +4192,7 @@ class TestCount(TestMixin, TestCase):
                         )
                     ],
                     ec_paths=[None, None],
+                    t2g_path=self.t2g_path,
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,
@@ -4195,6 +4233,7 @@ class TestCount(TestMixin, TestCase):
                         )
                     ],
                     ec_paths=[None, None],
+                    t2g_path=self.t2g_path,
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,

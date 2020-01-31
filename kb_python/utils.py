@@ -595,7 +595,7 @@ def import_tcc_matrix_as_anndata(
 
 
 def import_matrix_as_anndata(
-    matrix_path, barcodes_path, genes_path, name='gene_id'
+    matrix_path, barcodes_path, genes_path, t2g_path=None, name='gene'
 ):
     """Import a matrix as an Anndata object.
 
@@ -605,7 +605,11 @@ def import_matrix_as_anndata(
     :type barcodes_path: str
     :param genes_path: path to the genes txt file
     :type genes_path: str
-    :param name: name of header that contains ids, defaults to "gene_id"
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
+    :param name: name of the columns, defaults to "gene"
     :type name: str, optional
 
     :return: a new Anndata object
@@ -615,8 +619,22 @@ def import_matrix_as_anndata(
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
     df_genes = pd.read_csv(
-        genes_path, header=None, index_col=0, names=[name], sep='\t'
+        genes_path, header=None, index_col=0, names=[f'{name}_id'], sep='\t'
     )
+    id_to_name = {}
+    if t2g_path:
+        with open(t2g_path, 'r') as f:
+            for line in f:
+                if line.isspace():
+                    continue
+
+                split = line.strip().split('\t')
+                if len(split) > 2:
+                    id_to_name[split[1]] = split[2]
+        gene_names = [id_to_name.get(i, None) for i in df_genes.index]
+        if any(bool(g) for g in gene_names):
+            df_genes[f'{name}_name'] = gene_names
+
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )
