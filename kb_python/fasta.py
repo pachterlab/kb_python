@@ -379,15 +379,15 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
                                    ) - set(transcript_infos.keys())
             if info_unique:
                 raise Exception(
-                    'The following transcripts have "exon" feature(s) but no '
-                    'corresponding "transcript" feature: {}'.format(
+                    'The following transcripts have "transcript" feature(s) but no '
+                    'corresponding "exon" feature: {}'.format(
                         ', '.join(info_unique)
                     )
                 )
             if sequences_unique:
                 raise Exception(
-                    'The following transcripts have a "transcript" feature but no '
-                    'corresponding "exon" feature(s): {}'.format(
+                    'The following transcripts have a "exon" feature but no '
+                    'corresponding "transcript" feature(s): {}'.format(
                         ', '.join(sequences_unique)
                     )
                 )

@@ -98,20 +98,22 @@ def create_t2g_from_fasta(fasta_path, t2g_path):
         fasta = FASTA(fasta_path)
         for info, _ in fasta.entries():
             if 'feature_id' in info['group']:
-                f.write(
-                    '{}\t{}\t{}\n'.format(
-                        info['sequence_id'], info['group']['feature_id'],
-                        info['group']['feature_id']
-                    )
-                )
+                row = [
+                    info['sequence_id'],
+                    info['group']['feature_id'],
+                    info['group']['feature_id'],
+                ]
             else:
-                f.write(
-                    '{}\t{}\t{}\t{}\n'.format(
-                        info['sequence_id'], info['group']['gene_id'],
-                        info['group'].get('gene_name', ''),
-                        info['group'].get('transcript_name', '')
-                    )
-                )
+                row = [
+                    info['sequence_id'], info['group']['gene_id'],
+                    info['group'].get('gene_name', ''),
+                    info['group'].get('transcript_name',
+                                      ''), info['group'].get('chr', ''),
+                    info['group'].get('start',
+                                      ''), info['group'].get('end', ''),
+                    info['group'].get('strand', '')
+                ]
+            f.write('\t'.join(str(item) for item in row) + '\n')
     return {'t2g': t2g_path}
 
 
@@ -149,20 +151,23 @@ def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
                 gene = '{}.{}'.format(
                     gene_id, gene_version
                 ) if gene_version else gene_id
-                gene_name = entry['group'].get('gene_name', '')
-                transcript_name = entry['group'].get('transcript_name', '')
-                f.write(
-                    '{}\t{}\t{}\t{}\n'.format(
-                        transcript, gene, gene_name, transcript_name
-                    )
-                )
+
+                row = [
+                    transcript,
+                    gene,
+                    entry['group'].get('gene_name', ''),
+                    entry['group'].get('transcript_name', ''),
+                    entry.get('seqname', ''),
+                    entry.get('start', ''),
+                    entry.get('end', ''),
+                    entry.get('strand', ''),
+                ]
+                f.write('\t'.join(str(item) for item in row) + '\n')
 
                 if intron:
-                    f.write(
-                        '{}\t{}\t{}\t{}\n'.format(
-                            transcript + '-I', gene, gene_name, transcript_name
-                        )
-                    )
+                    intron_row = row.copy()
+                    intron_row[0] = intron_row[0] + '-I'
+                    f.write('\t'.join(str(item) for item in intron_row) + '\n')
 
     return {'t2g': t2g_path}
 
