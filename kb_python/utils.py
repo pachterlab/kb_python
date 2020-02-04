@@ -631,7 +631,7 @@ def import_matrix_as_anndata(
                 split = line.strip().split('\t')
                 if len(split) > 2:
                     id_to_name[split[1]] = split[2]
-        gene_names = [id_to_name.get(i, None) for i in df_genes.index]
+        gene_names = [id_to_name.get(i, '') for i in df_genes.index]
         if any(bool(g) for g in gene_names):
             df_genes[f'{name}_name'] = gene_names
 
