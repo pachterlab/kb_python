@@ -188,6 +188,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            cellranger=args.cellranger,
             report=args.report,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
             temp_dir=temp_dir
@@ -215,6 +216,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+            cellranger=args.cellranger,
             report=args.report,
             temp_dir=temp_dir
         )
@@ -571,6 +573,11 @@ def setup_count_args(parser, parent):
         action='store_true'
     )
     parser_count.add_argument(
+        '--cellranger',
+        help='Convert count matrices to cellranger-compatible format',
+        action='store_true'
+    )
+    parser_count.add_argument(
         '--report',
         help=(
             'Generate a HTML report containing run statistics and basic plots. '
@@ -662,6 +669,9 @@ def main():
         if args.dry_run:
             logging.disable(level=logging.CRITICAL)
             set_dry()
+
+    # Turn off logging from other packages.
+    logging.getLogger('anndata').disable(level=logging.CRITICAL)
 
     if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
         logger.warning((

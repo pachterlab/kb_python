@@ -1,6 +1,8 @@
+import json
 import logging
 import os
 import re
+import shutil
 from urllib.parse import urlparse
 
 from .config import get_bustools_binary_path, get_kallisto_binary_path
@@ -9,6 +11,10 @@ from .constants import (
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
+    CELLRANGER_BARCODES,
+    CELLRANGER_DIR,
+    CELLRANGER_GENES,
+    CELLRANGER_MATRIX,
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
@@ -18,10 +24,12 @@ from .constants import (
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
     GENE_NAME,
-    INFO_FILENAME,
     INSPECT_FILENAME,
+    KALLISTO_INFO_FILENAME,
+    KB_INFO_FILENAME,
     PROJECT_CODE,
-    REPORT_FILENAME,
+    REPORT_HTML_FILENAME,
+    REPORT_NOTEBOOK_FILENAME,
     SORT_CODE,
     TCC_PREFIX,
     TXNAMES_FILENAME,
@@ -69,10 +77,11 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    logger.info(f'Generating BUS file to {out_dir} from')
+    logger.info(
+        f'Using index {index_path} to generate BUS file to {out_dir} from'
+    )
     for fastq in fastqs:
         logger.info((' ' * 8) + fastq)
-    logger.info(f'Using index {index_path}')
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
@@ -81,18 +90,18 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     command += fastqs
     run_executable(command)
 
-    bus_path = os.path.join(out_dir, BUS_FILENAME)
     return {
-        'bus': bus_path,
+        'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, INFO_FILENAME)
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
 
 
 @validate_files(pre=False)
 def bustools_merge(out_dirs, out_dir, threads=8):
-    """Runs `bustools merge`.
+    """Runs `bustools merge`. Additionally, combines the `run_info.json`s into
+    one.
 
     :param out_dirs: list of `kallisto bus` output directories
     :type out_dirs: list
@@ -113,11 +122,24 @@ def bustools_merge(out_dirs, out_dir, threads=8):
     command += out_dirs
     run_executable(command)
 
-    bus_path = os.path.join(out_dir, BUS_FILENAME)
+    # Combine run_info.jsons
+    run_info = {}
+    for o_dir in out_dirs:
+        info_path = os.path.join(o_dir, KALLISTO_INFO_FILENAME)
+        with open(info_path, 'r') as f:
+            info = json.load(f)
+
+        for key, value in info.items():
+            run_info.setdefault(key, []).append(value)
+    info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+    with open(info_path, 'w') as f:
+        json.dump(run_info, f, indent=4)
+
     return {
-        'bus': bus_path,
+        'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': info_path
     }
 
 
@@ -359,6 +381,64 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
+def matrix_to_cellranger(
+    matrix_path, barcodes_path, genes_path, t2g_path, out_dir
+):
+    """Convert bustools count matrix to cellranger-format matrix.
+
+    :param matrix_path: path to matrix
+    :type matrix_path: str
+    :param barcodes_path: list of paths to barcodes.txt
+    :type barcodes_path: str
+    :param genes_path: path to genes.txt
+    :type genes_path: str
+    :param t2g_path: path to transcript-to-gene mapping
+    :type t2g_path: str
+    :param out_dir: path to output matrix
+    :type out_dir: str
+
+    :return: dictionary of matrix files
+    :rtype: dict
+    """
+    make_directory(out_dir)
+    logger.info(f'Writing matrix in cellranger format to {out_dir}')
+
+    cr_matrix_path = os.path.join(out_dir, CELLRANGER_MATRIX)
+    cr_barcodes_path = os.path.join(out_dir, CELLRANGER_BARCODES)
+    cr_genes_path = os.path.join(out_dir, CELLRANGER_GENES)
+
+    shutil.copyfile(matrix_path, cr_matrix_path)
+    with open(barcodes_path, 'r') as f, open(cr_barcodes_path, 'w') as out:
+        for line in f:
+            if line.isspace():
+                continue
+            out.write(f'{line.strip()}-1\n')
+
+    # Get all (available) gene names
+    gene_to_name = {}
+    with open(t2g_path, 'r') as f:
+        for line in f:
+            if line.isspace():
+                continue
+            split = line.strip().split('\t')
+            if len(split) > 2:
+                gene_to_name[split[1]] = split[2]
+
+    with open(genes_path, 'r') as f, open(cr_genes_path, 'w') as out:
+        for line in f:
+            if line.isspace():
+                continue
+            gene = line.strip()
+            gene_name = gene_to_name.get(gene, gene)
+            out.write(f'{gene}\t{gene_name}\n')
+
+    return {
+        'mtx': cr_matrix_path,
+        'barcodes': cr_barcodes_path,
+        'genes': cr_genes_path
+    }
+
+
 def convert_matrix(
     counts_dir,
     matrix_path,
@@ -422,6 +502,7 @@ def convert_matrix(
         logger.info('Writing matrix to h5ad {}'.format(h5ad_path))
         adata.write(h5ad_path)
         results.update({'h5ad': h5ad_path})
+
     return results
 
 
@@ -530,7 +611,8 @@ def filter_with_bustools(
     memory='4G',
     count=True,
     loom=False,
-    h5ad=False
+    h5ad=False,
+    cellranger=False
 ):
     """Generate filtered count matrices with bustools.
 
@@ -568,6 +650,9 @@ def filter_with_bustools(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
 
     :return: dictionary of generated files
     :rtype: dict
@@ -623,6 +708,18 @@ def filter_with_bustools(
                     threads=threads
                 )
             )
+        if cellranger:
+            if not tcc:
+                cr_result = matrix_to_cellranger(
+                    count_result['mtx'], count_result['barcodes'],
+                    count_result['genes'], t2g_path,
+                    os.path.join(counts_dir, CELLRANGER_DIR)
+                )
+                results.update({'cellranger': cr_result})
+            else:
+                logger.warning(
+                    'TCC matrices can not be converted to cellranger-compatible format.'
+                )
 
     return results
 
@@ -691,6 +788,7 @@ def count(
     overwrite=False,
     loom=False,
     h5ad=False,
+    cellranger=False,
     report=False,
 ):
     """Generates count matrices for single-cell RNA seq.
@@ -735,6 +833,9 @@ def count(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
     :param report: generate an HTMl report, defaults to `False`
     :type report: bool, optional
 
@@ -754,7 +855,7 @@ def count(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, INFO_FILENAME)
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
@@ -887,6 +988,18 @@ def count(
                 threads=threads
             )
         )
+    if cellranger:
+        if not tcc:
+            cr_result = matrix_to_cellranger(
+                count_result['mtx'], count_result['barcodes'],
+                count_result['genes'], t2g_path,
+                os.path.join(counts_dir, CELLRANGER_DIR)
+            )
+            unfiltered_results.update({'cellranger': cr_result})
+        else:
+            logger.warning(
+                'TCC matrices can not be converted to cellranger-compatible format.'
+            )
 
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
@@ -916,20 +1029,32 @@ def count(
 
     # Generate report.
     STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
     if report:
-        report_path = os.path.join(out_dir, REPORT_FILENAME)
-        logger.info(f'Generating HTML report at {report_path}')
+        nb_path = os.path.join(out_dir, REPORT_NOTEBOOK_FILENAME)
+        html_path = os.path.join(out_dir, REPORT_HTML_FILENAME)
+        logger.info(
+            f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+        )
         report_result = render_report(
-            STATS.to_dict(),
+            stats_path,
             bus_result['info'],
             inspect_result['inspect'],
-            report_path,
-            adata=None if tcc else import_matrix_as_anndata(
-                count_result['mtx'], count_result['barcodes'],
-                count_result['genes']
-            )
+            nb_path,
+            html_path,
+            count_result['mtx'],
+            count_result.get('barcodes'),
+            count_result.get('genes'),
+            t2g_path,
+            temp_dir=temp_dir
         )
         unfiltered_results.update(report_result)
+
+        if tcc:
+            logger.warning(
+                'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
+            )
 
     return results
 
@@ -952,6 +1077,7 @@ def count_velocity(
     overwrite=False,
     loom=False,
     h5ad=False,
+    cellranger=False,
     report=False,
     nucleus=False,
 ):
@@ -996,7 +1122,10 @@ def count_velocity(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
-    :param report: generate HTMl reports, defaults to `False`
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
+    :param report: generate HTML reports, defaults to `False`
     :type report: bool, optional
     :param nucleus: whether this is a single-nucleus experiment. if `True`, the
                     spliced and unspliced count matrices will be summed,
@@ -1018,7 +1147,7 @@ def count_velocity(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, INFO_FILENAME)
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
@@ -1134,6 +1263,19 @@ def count_velocity(
         )
         unfiltered_results[prefix].update(count_result)
 
+        if cellranger:
+            if not tcc:
+                cr_result = matrix_to_cellranger(
+                    count_result['mtx'], count_result['barcodes'],
+                    count_result['genes'], t2g_path,
+                    os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                )
+                unfiltered_results[prefix].update({'cellranger': cr_result})
+            else:
+                logger.warning(
+                    'TCC matrices can not be converted to cellranger-compatible format.'
+                )
+
     if loom or h5ad:
         unfiltered_results.update(
             convert_matrices(
@@ -1204,6 +1346,24 @@ def count_velocity(
                 )
                 filtered_results[prefix].update(count_result)
 
+                if cellranger:
+                    if not tcc:
+                        cr_result = matrix_to_cellranger(
+                            count_result['mtx'], count_result['barcodes'],
+                            count_result['genes'], t2g_path,
+                            os.path.join(
+                                filtered_counts_dir,
+                                f'{CELLRANGER_DIR}_{prefix}'
+                            )
+                        )
+                        unfiltered_results[prefix].update({
+                            'cellranger': cr_result
+                        })
+                    else:
+                        logger.warning(
+                            'TCC matrices can not be converted to cellranger-compatible format.'
+                        )
+
         if loom or h5ad:
             filtered_results.update(
                 convert_matrices(
@@ -1231,35 +1391,48 @@ def count_velocity(
             )
 
     STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
 
     # Reports
-    report_path = os.path.join(out_dir, REPORT_FILENAME)
+    nb_path = os.path.join(out_dir, REPORT_NOTEBOOK_FILENAME)
+    html_path = os.path.join(out_dir, REPORT_HTML_FILENAME)
     if report:
-        logger.info(f'Generating HTML report at {report_path}')
+        logger.info(
+            f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+        )
         report_result = render_report(
-            STATS.to_dict(),
+            stats_path,
             bus_result['info'],
             unfiltered_results['inspect'],
-            report_path,
-            adata=None
+            nb_path,
+            html_path,
+            temp_dir=temp_dir
         )
+
         unfiltered_results.update(report_result)
 
         for prefix in prefix_to_t2c:
-            report_path = os.path.join(
-                out_dir, update_filename(REPORT_FILENAME, prefix)
+            nb_path = os.path.join(
+                out_dir, update_filename(REPORT_NOTEBOOK_FILENAME, prefix)
             )
-            logger.info(f'Generating HTML report at {report_path}')
+            html_path = os.path.join(
+                out_dir, update_filename(REPORT_HTML_FILENAME, prefix)
+            )
+            logger.info(
+                f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+            )
             report_result = render_report(
-                STATS.to_dict(),
+                stats_path,
                 bus_result['info'],
                 unfiltered_results[prefix]['inspect'],
-                report_path,
-                adata=None if tcc else import_matrix_as_anndata(
-                    unfiltered_results[prefix]['mtx'],
-                    unfiltered_results[prefix]['barcodes'],
-                    unfiltered_results[prefix]['genes']
-                ),
+                nb_path,
+                html_path,
+                unfiltered_results[prefix]['mtx'],
+                unfiltered_results[prefix].get('barcodes'),
+                unfiltered_results[prefix].get('genes'),
+                t2g_path,
+                temp_dir=temp_dir
             )
             unfiltered_results[prefix].update(report_result)
         if tcc:

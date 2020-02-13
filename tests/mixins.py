@@ -147,3 +147,8 @@ class TestMixin(TestCase):
             os.path.join(cls.merge_dir, 'part1'),
             os.path.join(cls.merge_dir, 'part2'),
         ]
+
+        cls.cellranger_dir = os.path.join(cls.fixtures_dir, 'cellranger')
+        cls.cr_matrix_path = os.path.join(cls.cellranger_dir, 'matrix.mtx')
+        cls.cr_barcodes_path = os.path.join(cls.cellranger_dir, 'barcodes.tsv')
+        cls.cr_genes_path = os.path.join(cls.cellranger_dir, 'genes.tsv')

@@ -1,3 +1,6 @@
+import os
+import tempfile
+import uuid
 from unittest import TestCase
 from unittest.mock import ANY
 
@@ -29,6 +32,15 @@ class TestStats(TestMixin, TestCase):
         self.assertIsNotNone(s.end_time)
         self.assertTrue(s.elapsed > 0)
 
+    def test_save(self):
+        s = stats.Stats()
+        s.start()
+        s.end()
+
+        path = os.path.join(tempfile.mkdtemp(), str(uuid.uuid4()))
+        self.assertEqual(path, s.save(path))
+        self.assertTrue(os.path.exists(path))
+
     def test_to_dict(self):
         s = stats.Stats()
         s.start()
@@ -36,6 +48,7 @@ class TestStats(TestMixin, TestCase):
         s.end()
 
         self.assertEqual({
+            'version': ANY,
             'start_time': ANY,
             'end_time': ANY,
             'elapsed': ANY,
