@@ -671,7 +671,10 @@ def main():
             set_dry()
 
     # Turn off logging from other packages.
-    # logging.getLogger('anndata').disable(level=logging.CRITICAL)
+    try:
+        logging.getLogger('anndata').disable(level=logging.CRITICAL)
+    except Exception:
+        pass
 
     if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
         logger.warning((
