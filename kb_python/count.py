@@ -2,8 +2,9 @@ import json
 import logging
 import os
 import re
-import shutil
 from urllib.parse import urlparse
+
+import scipy.io
 
 from .config import get_bustools_binary_path, get_kallisto_binary_path
 from .constants import (
@@ -407,7 +408,10 @@ def matrix_to_cellranger(
     cr_barcodes_path = os.path.join(out_dir, CELLRANGER_BARCODES)
     cr_genes_path = os.path.join(out_dir, CELLRANGER_GENES)
 
-    shutil.copyfile(matrix_path, cr_matrix_path)
+    # Cellranger outputs genes x cells matrix
+    mtx = scipy.io.mmread(matrix_path)
+    scipy.io.mmwrite(cr_matrix_path, mtx.T, field='integer')
+
     with open(barcodes_path, 'r') as f, open(cr_barcodes_path, 'w') as out:
         for line in f:
             if line.isspace():
