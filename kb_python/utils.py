@@ -656,10 +656,17 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
-    spliced_unspliced = spliced_intersection.copy()
-    spliced_unspliced.layers['spliced'] = spliced_intersection.X
-    spliced_unspliced.layers['unspliced'] = unspliced_intersection.X
-    return spliced_unspliced
+
+    df_obs = unspliced_intersection.obs
+    df_var = unspliced_intersection.var
+    return anndata.AnnData(
+        layers={
+            'spliced': spliced_intersection.X,
+            'unspliced': unspliced_intersection.X
+        },
+        obs=df_obs,
+        var=df_var
+    )
 
 
 def sum_anndatas(adata_spliced, adata_unspliced):
@@ -678,6 +685,11 @@ def sum_anndatas(adata_spliced, adata_unspliced):
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
-    spliced_unspliced = spliced_intersection.copy()
-    spliced_unspliced.X = spliced_intersection.X + unspliced_intersection.X
-    return spliced_unspliced
+
+    df_obs = unspliced_intersection.obs
+    df_var = unspliced_intersection.var
+    return anndata.AnnData(
+        X=spliced_intersection.X + unspliced_intersection.X,
+        obs=df_obs,
+        var=df_var
+    )
