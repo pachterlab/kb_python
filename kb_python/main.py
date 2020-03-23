@@ -170,6 +170,9 @@ def parse_count(parser, args, temp_dir='tmp'):
 
     args.i = args.i.split(',')
 
+    if args.w and args.w.lower() == 'none':
+        args.w = None
+
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
         count_velocity(
             args.i,
