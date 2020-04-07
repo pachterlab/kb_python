@@ -662,6 +662,15 @@ def main():
     logger = logging.getLogger(__name__)
     logger.addHandler(TqdmLoggingHandler())
 
+    logger.warning((
+        'This version of `kb` was installed from the `count-kite` branch '
+        'of the Github repository. All development has been moved to the '
+        '`dev` branch as of April 6th, 2020. To install the latest development '
+        'release, please run '
+        '`pip install git+https://github.com/pachterlab/kb_python@dev`. '
+        'The `count-kite` branch will be removed on May 1st, 2020.'
+    ))
+
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
         if args.dry_run and (args.loom or args.h5ad):
