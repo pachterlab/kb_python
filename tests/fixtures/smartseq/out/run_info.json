@@ -1,0 +1,13 @@
+{
+	"n_targets": 865,
+	"n_bootstraps": 0,
+	"n_processed": 250,
+	"n_pseudoaligned": 7,
+	"n_unique": 7,
+	"p_pseudoaligned": 2.8,
+	"p_unique": 2.8,
+	"kallisto_version": "0.46.2",
+	"index_version": 10,
+	"start_time": "Wed Apr  8 11:15:17 2020",
+	"call": "kallisto pseudo --quant -i mouse_truncated.idx -o out -b batch.txt"
+}

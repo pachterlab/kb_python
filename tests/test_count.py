@@ -1,11 +1,14 @@
 import os
 import tempfile
+import uuid
 from unittest import mock, TestCase
 from unittest.mock import ANY, call
 
 import kb_python.count as count
 from kb_python.constants import (
+    ABUNDANCE_FILENAME,
     ADATA_PREFIX,
+    BATCH_FILENAME,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_FILTERED_FILENAME,
@@ -19,6 +22,7 @@ from kb_python.constants import (
     CELLRANGER_BARCODES,
     CELLRANGER_GENES,
     CELLRANGER_MATRIX,
+    CELLS_FILENAME,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
     FEATURE_PREFIX,
@@ -29,6 +33,7 @@ from kb_python.constants import (
     KB_INFO_FILENAME,
     REPORT_HTML_FILENAME,
     REPORT_NOTEBOOK_FILENAME,
+    TRANSCRIPT_NAME,
     TXNAMES_FILENAME,
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
@@ -42,6 +47,29 @@ class TestCount(TestMixin, TestCase):
         makedirs_mock = mock.patch('kb_python.count.make_directory')
         makedirs_mock.start()
         self.addCleanup(makedirs_mock.stop)
+
+    def test_kallisto_pseudo(self):
+        out_dir = tempfile.mkdtemp()
+
+        # Write temporary batch file.
+        batch_path = os.path.join(out_dir, 'batch.txt')
+        with open(batch_path, 'w') as f:
+            f.write(
+                f'0\t{self.smartseq_fastqs[0]}\t{self.smartseq_fastqs[1]}\n'
+            )
+        result = count.kallisto_pseudo(
+            batch_path, self.index_path, out_dir, threads=1
+        )
+
+        self.assertEquals({
+            'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+            'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+            'cells': os.path.join(out_dir, CELLS_FILENAME),
+            'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+            'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+        }, result)
+        for key, path in result.items():
+            self.assertTrue(os.path.exists(path))
 
     def test_kallisto_bus(self):
         out_dir = tempfile.mkdtemp()
@@ -143,6 +171,15 @@ class TestCount(TestMixin, TestCase):
         self.assertEqual({'whitelist': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
+
+    def test_write_smartseq_batch(self):
+        out_path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+        pairs_1 = ['r1_1', 'r2_1']
+        pairs_2 = ['r1_2', 'r2_2']
+        self.assertEqual({'batch': out_path},
+                         count.write_smartseq_batch(pairs_1, pairs_2, out_path))
+        with open(out_path, 'r') as f:
+            self.assertEqual('0\tr1_1\tr1_2\n1\tr2_1\tr2_2\n', f.read())
 
     def test_convert_matrix_loom(self):
         with mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
@@ -2303,6 +2340,153 @@ class TestCount(TestMixin, TestCase):
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
+
+    def test_count_smartseq(self):
+        with mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
+            mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix:
+            out_dir = 'out'
+            temp_dir = 'temp'
+            threads = 99999
+            memory = 'mem'
+            t2g_path = 't2g'
+            technology = 'tech'
+            fastqs = ['r1', 'r2', 'r3', 'r4']
+            index_paths = ['index']
+            STATS.save.return_value = 'stats'
+            write_smartseq_batch.return_value = {'batch': 'batch.txt'}
+            self.assertEqual({
+                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+                'cells': os.path.join(out_dir, CELLS_FILENAME),
+                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
+                'stats': 'stats',
+                'batch': 'batch.txt'
+            },
+                             count.count_smartseq(
+                                 index_paths,
+                                 t2g_path,
+                                 technology,
+                                 out_dir,
+                                 fastqs,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory
+                             ))
+
+            write_smartseq_batch.assert_called_once_with(['r1', 'r3'], [
+                'r2', 'r4'
+            ], os.path.join(out_dir, BATCH_FILENAME))
+            kallisto_pseudo.assert_called_once_with(
+                'batch.txt', 'index', out_dir, threads=threads
+            )
+            convert_matrix.assert_not_called()
+
+    def test_count_smartseq_convert(self):
+        with mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
+            mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix:
+            out_dir = 'out'
+            temp_dir = 'temp'
+            threads = 99999
+            memory = 'mem'
+            t2g_path = 't2g'
+            technology = 'tech'
+            fastqs = ['r1', 'r2', 'r3', 'r4']
+            index_paths = ['index']
+            STATS.save.return_value = 'stats'
+            write_smartseq_batch.return_value = {'batch': 'batch.txt'}
+            self.assertEqual({
+                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+                'cells': os.path.join(out_dir, CELLS_FILENAME),
+                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
+                'stats': 'stats',
+                'batch': 'batch.txt'
+            },
+                             count.count_smartseq(
+                                 index_paths,
+                                 t2g_path,
+                                 technology,
+                                 out_dir,
+                                 fastqs,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 h5ad=True
+                             ))
+
+            write_smartseq_batch.assert_called_once_with(['r1', 'r3'], [
+                'r2', 'r4'
+            ], os.path.join(out_dir, BATCH_FILENAME))
+            kallisto_pseudo.assert_called_once_with(
+                'batch.txt', 'index', out_dir, threads=threads
+            )
+            convert_matrix.assert_called_once_with(
+                out_dir,
+                os.path.join(out_dir, ABUNDANCE_FILENAME),
+                os.path.join(out_dir, CELLS_FILENAME),
+                os.path.join(out_dir, TXNAMES_FILENAME),
+                t2g_path=t2g_path,
+                name=TRANSCRIPT_NAME,
+                loom=False,
+                h5ad=True,
+                threads=threads
+            )
+
+    def test_count_smartseq_no_multiple_indices(self):
+        with mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.write_smartseq_batch'),\
+            mock.patch('kb_python.count.kallisto_pseudo'),\
+            mock.patch('kb_python.count.convert_matrix'):
+            out_dir = 'out'
+            temp_dir = 'temp'
+            threads = 99999
+            memory = 'mem'
+            t2g_path = 't2g'
+            technology = 'tech'
+            fastqs = ['r1', 'r2', 'r3', 'r4']
+            index_paths = ['index', 'index2']
+            with self.assertRaises(Exception):
+                count.count_smartseq(
+                    index_paths,
+                    t2g_path,
+                    technology,
+                    out_dir,
+                    fastqs,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+
+    def test_count_smartseq_no_streaming(self):
+        with mock.patch('kb_python.count.STATS'),\
+            mock.patch('kb_python.count.write_smartseq_batch'),\
+            mock.patch('kb_python.count.kallisto_pseudo'),\
+            mock.patch('kb_python.count.convert_matrix'):
+            out_dir = 'out'
+            temp_dir = 'temp'
+            threads = 99999
+            memory = 'mem'
+            t2g_path = 't2g'
+            technology = 'tech'
+            fastqs = ['http://r1', 'r2', 'r3', 'r4']
+            index_paths = ['index']
+            with self.assertRaises(Exception):
+                count.count_smartseq(
+                    index_paths,
+                    t2g_path,
+                    technology,
+                    out_dir,
+                    fastqs,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
 
     def test_count_velocity_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\

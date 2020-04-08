@@ -152,3 +152,11 @@ class TestMixin(TestCase):
         cls.cr_matrix_path = os.path.join(cls.cellranger_dir, 'matrix.mtx')
         cls.cr_barcodes_path = os.path.join(cls.cellranger_dir, 'barcodes.tsv')
         cls.cr_genes_path = os.path.join(cls.cellranger_dir, 'genes.tsv')
+
+        # Smartseq
+        cls.smartseq_dir = os.path.join(cls.fixtures_dir, 'smartseq')
+        cls.smartseq_fastqs = [
+            os.path.join(cls.smartseq_dir, 'R1.fastq.gz'),
+            os.path.join(cls.smartseq_dir, 'R2.fastq.gz')
+        ]
+        cls.smartseq_out_dir = os.path.join(cls.smartseq_dir, 'out')

@@ -1,4 +1,5 @@
 import argparse
+import glob
 import logging
 import os
 import sys
@@ -16,15 +17,16 @@ from .config import (
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
-from .count import count, count_velocity
+from .count import count, count_smartseq, count_velocity
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
     get_kallisto_version,
     make_directory,
     remove_directory,
-    TqdmLoggingHandler,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def display_info():
@@ -174,6 +176,12 @@ def parse_count(parser, args, temp_dir='tmp'):
         args.w = None
 
     if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
+        # Smartseq can not be used with lamanno or nucleus.
+        if args.x.upper() == 'SMARTSEQ':
+            parser.error(
+                f'Technology {args.x} can not be used with workflow {args.workflow}.'
+            )
+
         count_velocity(
             args.i,
             args.g,
@@ -202,27 +210,65 @@ def parse_count(parser, args, temp_dir='tmp'):
                 f'`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
-        count(
-            args.i,
-            args.g,
-            args.x,
-            args.o,
-            args.fastqs,
-            args.w,
-            tcc=args.tcc,
-            mm=args.mm,
-            filter=args.filter,
-            kite='kite' in args.workflow,
-            FB='10xFB' in args.workflow,
-            threads=args.t,
-            memory=args.m,
-            overwrite=args.overwrite,
-            loom=args.loom,
-            h5ad=args.h5ad,
-            cellranger=args.cellranger,
-            report=args.report,
-            temp_dir=temp_dir
-        )
+        # Smart-seq
+        if args.x.upper() == 'SMARTSEQ':
+            if args.dry_run:
+                parser.error(f'Technology {args.x} does not support dry run.')
+
+            # Check for ignored arguments. (i.e. arguments either not supported or
+            # not yet implemented)
+            ignored = [
+                'w', 'tcc', 'mm', 'filter', 'cellranger', 'report', 'nucleus'
+            ]
+            for arg in ignored:
+                if getattr(args, arg):
+                    logger.warning(
+                        f'Argument `{arg}` is not supported for technology {args.x}. This argument will be ignored.'
+                    )
+
+            # Allow glob notation for fastqs.
+            fastqs = []
+            for expr in args.fastqs:
+                fastqs.extend(glob.glob(expr))
+            args.fastqs = sorted(list(set(fastqs)))
+            logger.info(f'Found the following FASTQs:')
+            for fastq in args.fastqs:
+                logger.info(' ' * 8 + fastq)
+            count_smartseq(
+                args.i,
+                args.g,
+                args.x,
+                args.o,
+                args.fastqs,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                temp_dir=temp_dir
+            )
+        else:
+            count(
+                args.i,
+                args.g,
+                args.x,
+                args.o,
+                args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                filter=args.filter,
+                kite='kite' in args.workflow,
+                FB='10xFB' in args.workflow,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                cellranger=args.cellranger,
+                report=args.report,
+                temp_dir=temp_dir
+            )
 
 
 COMMAND_TO_FUNCTION = {
@@ -589,7 +635,13 @@ def setup_count_args(parser, parent):
         ),
         action='store_true'
     )
-    parser_count.add_argument('fastqs', help='FASTQ files', nargs='+')
+    parser_count.add_argument(
+        'fastqs',
+        help=(
+            'FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.'
+        ),
+        nargs='+'
+    )
     return parser_count
 
 
@@ -659,8 +711,6 @@ def main():
         format='[%(asctime)s] %(levelname)7s %(message)s',
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
-    logger = logging.getLogger(__name__)
-    logger.addHandler(TqdmLoggingHandler())
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.

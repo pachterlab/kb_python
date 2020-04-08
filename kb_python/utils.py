@@ -473,6 +473,7 @@ def download_file(url, path):
     :return: path to downloaded file
     :rtype: str
     """
+    logger.addHandler(TqdmLoggingHandler())
     r = requests.get(url, stream=True)
     with open(path, 'wb') as f:
         t = tqdm(
@@ -621,6 +622,9 @@ def import_matrix_as_anndata(
     df_genes = pd.read_csv(
         genes_path, header=None, index_col=0, names=[f'{name}_id'], sep='\t'
     )
+    df_genes.index = df_genes.index.astype(
+        str
+    )  # To prevent logging from anndata
     id_to_name = {}
     if t2g_path:
         with open(t2g_path, 'r') as f:
