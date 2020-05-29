@@ -793,6 +793,7 @@ def count(
     loom=False,
     h5ad=False,
     cellranger=False,
+    inspect=True,
     report=False,
 ):
     """Generates count matrices for single-cell RNA seq.
@@ -840,6 +841,9 @@ def count(
     :param cellranger: whether to convert the final count matrix into a
                        cellranger-compatible matrix, defaults to `False`
     :type cellranger: bool, optional
+    :param inspect: whether or not to inspect the output BUS file and generate
+                    the inspect.json
+    :type inspect: bool, optional
     :param report: generate an HTMl report, defaults to `False`
     :type report: bool, optional
 
@@ -936,11 +940,12 @@ def count(
         )
         prev_result = sort2_result
 
-    inspect_result = bustools_inspect(
-        prev_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-        whitelist_path, bus_result['ecmap']
-    )
-    unfiltered_results.update(inspect_result)
+    if inspect:
+        inspect_result = bustools_inspect(
+            prev_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path, bus_result['ecmap']
+        )
+        unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
         prev_result['bus'],
         os.path.join(
@@ -1083,6 +1088,7 @@ def count_velocity(
     h5ad=False,
     cellranger=False,
     report=False,
+    inspect=True,
     nucleus=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
@@ -1131,6 +1137,9 @@ def count_velocity(
     :type cellranger: bool, optional
     :param report: generate HTML reports, defaults to `False`
     :type report: bool, optional
+    :param inspect: whether or not to inspect the output BUS file and generate
+                    the inspect.json
+    :type inspect: bool, optional
     :param nucleus: whether this is a single-nucleus experiment. if `True`, the
                     spliced and unspliced count matrices will be summed,
                     defaults to `False`
@@ -1200,11 +1209,12 @@ def count_velocity(
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
-    inspect_result = bustools_inspect(
-        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-        whitelist_path, bus_result['ecmap']
-    )
-    unfiltered_results.update(inspect_result)
+    if inspect:
+        inspect_result = bustools_inspect(
+            sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path, bus_result['ecmap']
+        )
+        unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
         sort_result['bus'],
         os.path.join(
@@ -1248,12 +1258,14 @@ def count_velocity(
             unfiltered_results[prefix] = {}
         unfiltered_results[prefix].update(sort_result)
 
-        inspect_result = bustools_inspect(
-            sort_result['bus'],
-            os.path.join(out_dir, update_filename(INSPECT_FILENAME, prefix)),
-            whitelist_path, bus_result['ecmap']
-        )
-        unfiltered_results[prefix].update(inspect_result)
+        if inspect:
+            inspect_result = bustools_inspect(
+                sort_result['bus'],
+                os.path.join(
+                    out_dir, update_filename(INSPECT_FILENAME, prefix)
+                ), whitelist_path, bus_result['ecmap']
+            )
+            unfiltered_results[prefix].update(inspect_result)
 
         counts_prefix = os.path.join(counts_dir, prefix)
         count_result = bustools_count(

@@ -77,7 +77,7 @@ def display_technologies():
         for row in rows[1:]:
             max_lens[i] = max(max_lens[i], len(row[i]))
 
-    rows.insert(1, ['-' * l for l in max_lens])
+    rows.insert(1, ['-' * l for l in max_lens])  # noqa
     for row in rows:
         for col, l in zip(row, max_lens):
             print(col.ljust(l + 4), end='')
@@ -93,14 +93,14 @@ def parse_ref(parser, args, temp_dir='tmp'):
     """
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
-            parser.error(f'K-mer length must be a positive odd integer.')
+            parser.error('K-mer length must be a positive odd integer.')
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         parser.error(
-            f'There must be the same number of FASTAs as there are GTFs.'
+            'There must be the same number of FASTAs as there are GTFs.'
         )
 
     if args.d is not None:
@@ -193,13 +193,14 @@ def parse_count(parser, args, temp_dir='tmp'):
             h5ad=args.h5ad,
             cellranger=args.cellranger,
             report=args.report,
+            inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
             temp_dir=temp_dir
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
             parser.error(
-                f'`kite:10xFB` workflow is only supported with technology `10XV3`'
+                '`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
         count(
@@ -221,6 +222,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             h5ad=args.h5ad,
             cellranger=args.cellranger,
             report=args.report,
+            inspect=not args.no_inspect,
             temp_dir=temp_dir
         )
 
@@ -580,7 +582,8 @@ def setup_count_args(parser, parent):
         help='Convert count matrices to cellranger-compatible format',
         action='store_true'
     )
-    parser_count.add_argument(
+    report_group = parser_count.add_mutually_exclusive_group()
+    report_group.add_argument(
         '--report',
         help=(
             'Generate a HTML report containing run statistics and basic plots. '
@@ -588,6 +591,9 @@ def setup_count_args(parser, parent):
             'with the `-m` option. It may also cause it to crash due to memory.'
         ),
         action='store_true'
+    )
+    report_group.add_argument(
+        '--no-inspect', help=argparse.SUPPRESS, action='store_true'
     )
     parser_count.add_argument('fastqs', help='FASTQ files', nargs='+')
     return parser_count

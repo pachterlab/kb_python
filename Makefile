@@ -19,6 +19,7 @@ clean:
 	rm -rf kb_python.egg-info
 	rm -rf docs/_build
 	rm -rf docs/api
+	rm -rf .coverage
 
 bump_patch:
 	bumpversion patch
