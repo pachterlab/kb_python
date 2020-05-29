@@ -15,6 +15,9 @@ def dummy_function(i):
 
 class TestDry(TestMixin, TestCase):
 
+    def test_dummy_function(self):
+        dry.dummy_function()
+
     def test_dryable_not_dry(self):
         with mock.patch('kb_python.dry.is_dry') as is_dry:
             is_dry.return_value = False
