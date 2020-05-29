@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import scipy.io
 
-from .config import get_bustools_binary_path, get_kallisto_binary_path
+from .config import get_bustools_binary_path, get_kallisto_binary_path, is_dry
 from .constants import (
     ADATA_PREFIX,
     BUS_CDNA_PREFIX,
@@ -130,18 +130,20 @@ def bustools_merge(out_dirs, out_dir, threads=8):
     command += out_dirs
     run_executable(command)
 
-    # Combine run_info.jsons
-    run_info = {}
-    for o_dir in out_dirs:
-        info_path = os.path.join(o_dir, KALLISTO_INFO_FILENAME)
-        with open(info_path, 'r') as f:
-            info = json.load(f)
+    # Combine run_info.jsons (don't run this if dry)
+    info_path = None
+    if not is_dry():
+        run_info = {}
+        for o_dir in out_dirs:
+            info_path = os.path.join(o_dir, KALLISTO_INFO_FILENAME)
+            with open(info_path, 'r') as f:
+                info = json.load(f)
 
-        for key, value in info.items():
-            run_info.setdefault(key, []).append(value)
-    info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-    with open(info_path, 'w') as f:
-        json.dump(run_info, f, indent=4)
+            for key, value in info.items():
+                run_info.setdefault(key, []).append(value)
+        info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+        with open(info_path, 'w') as f:
+            json.dump(run_info, f, indent=4)
 
     return {
         'bus': os.path.join(out_dir, BUS_FILENAME),

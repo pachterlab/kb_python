@@ -510,6 +510,7 @@ def stream_file(url, path):
     return path
 
 
+@dryable(dry_utils.get_temporary_filename)
 def get_temporary_filename(temp_dir=None):
     """Create a temporary file in the provided temprorary directory.
 

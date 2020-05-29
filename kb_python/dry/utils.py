@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 from ..config import (
     MAP_DIR,
@@ -87,3 +88,11 @@ def copy_map(technology, out_dir):
     )
     print('gzip -dc {} > {}'.format(archive_path, map_path))
     return map_path
+
+
+def get_temporary_filename(temp_dir):
+    """Dry version of `utils.get_temporary_filename`.
+    """
+    return os.path.join(
+        temp_dir, f'{tempfile.gettempprefix()}{tempfile._get_candidate_names()}'
+    )
