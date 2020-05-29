@@ -10,7 +10,8 @@ from jinja2 import Template
 
 from . import __version__
 from .config import PACKAGE_PATH
-from .utils import dryable, get_temporary_filename
+from .dry import dryable
+from .utils import get_temporary_filename
 
 logger = logging.getLogger(__name__)
 

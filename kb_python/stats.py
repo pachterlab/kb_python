@@ -3,6 +3,8 @@ import json
 import sys
 
 from . import __version__
+from .dry import dummy_function
+from .dry import dryable
 
 
 class Stats:
@@ -43,6 +45,7 @@ class Stats:
         self.end_time = dt.datetime.now()
         self.elapsed = (self.end_time - self.start_time).total_seconds()
 
+    @dryable(dummy_function)
     def save(self, path):
         """Save statistics as JSON to path.
 
