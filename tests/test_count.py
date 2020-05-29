@@ -1135,6 +1135,8 @@ class TestCount(TestMixin, TestCase):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
+            mock.patch('kb_python.count.move_file') as move_file,\
+            mock.patch('kb_python.count.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -1168,6 +1170,10 @@ class TestCount(TestMixin, TestCase):
                 'info': info_path
             }
             bustools_sort.side_effect = [{
+                'bus': 'temp1'
+            }, {
+                'bus': 'temp2'
+            }, {
                 'bus': bus_s_path
             }, {
                 'bus': bus_scs_path
@@ -1216,14 +1222,25 @@ class TestCount(TestMixin, TestCase):
                     'index.0',
                     self.technology,
                     os.path.join(temp_dir, 'bus_part0'),
-                    threads=threads
+                    threads=threads,
+                    n=True
                 ),
                 call(
                     self.fastqs,
                     'index.1',
                     self.technology,
                     os.path.join(temp_dir, 'bus_part1'),
-                    threads=threads
+                    threads=threads,
+                    n=True
+                )
+            ])
+            self.assertEqual(2, move_file.call_count)
+            move_file.assert_has_calls([
+                call(
+                    'temp1', os.path.join(temp_dir, 'bus_part0', 'output.bus')
+                ),
+                call(
+                    'temp2', os.path.join(temp_dir, 'bus_part1', 'output.bus')
                 )
             ])
             bustools_merge.assert_called_once_with([
@@ -1232,8 +1249,24 @@ class TestCount(TestMixin, TestCase):
             ],
                                                    out_dir,
                                                    threads=threads)
-            self.assertEqual(bustools_sort.call_count, 2)
+            self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
+                call(
+                    os.path.join(temp_dir, 'bus_part0', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                ),
+                call(
+                    os.path.join(temp_dir, 'bus_part1', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                ),
                 call(
                     bus_path,
                     bus_s_path,
@@ -3200,6 +3233,8 @@ class TestCount(TestMixin, TestCase):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
             mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
+            mock.patch('kb_python.count.move_file') as move_file,\
+            mock.patch('kb_python.count.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -3253,6 +3288,10 @@ class TestCount(TestMixin, TestCase):
                 'info': info_path
             }
             bustools_sort.side_effect = [{
+                'bus': 'temp1'
+            }, {
+                'bus': 'temp2'
+            }, {
                 'bus': bus_s_path
             }, {
                 'bus': bus_scs_path
@@ -3373,14 +3412,25 @@ class TestCount(TestMixin, TestCase):
                     'index.0',
                     self.technology,
                     os.path.join(temp_dir, 'bus_part0'),
-                    threads=threads
+                    threads=threads,
+                    n=True
                 ),
                 call(
                     self.fastqs,
                     'index.1',
                     self.technology,
                     os.path.join(temp_dir, 'bus_part1'),
-                    threads=threads
+                    threads=threads,
+                    n=True
+                )
+            ])
+            self.assertEqual(2, move_file.call_count)
+            move_file.assert_has_calls([
+                call(
+                    'temp1', os.path.join(temp_dir, 'bus_part0', 'output.bus')
+                ),
+                call(
+                    'temp2', os.path.join(temp_dir, 'bus_part1', 'output.bus')
                 )
             ])
             bustools_merge.assert_called_once_with([
@@ -3389,8 +3439,24 @@ class TestCount(TestMixin, TestCase):
             ],
                                                    out_dir,
                                                    threads=threads)
-            self.assertEqual(bustools_sort.call_count, 4)
+            self.assertEqual(bustools_sort.call_count, 6)
             bustools_sort.assert_has_calls([
+                call(
+                    os.path.join(temp_dir, 'bus_part0', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                ),
+                call(
+                    os.path.join(temp_dir, 'bus_part1', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                ),
                 call(
                     bus_path,
                     bus_s_path,

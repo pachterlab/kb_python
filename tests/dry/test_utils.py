@@ -39,6 +39,17 @@ class TestUtils(TestCase):
                 utils.stream_file('url', 'path')
             p.assert_not_called()
 
+    def test_move_file(self):
+        with mock.patch('kb_python.dry.utils.print') as p,\
+            mock.patch('kb_python.dry.utils.PLATFORM', 'windows'):
+            utils.move_file('source', 'destination')
+            p.assert_called()
+
+    def test_move_file_windows(self):
+        with mock.patch('kb_python.dry.utils.print') as p:
+            utils.move_file('source', 'destination')
+            p.assert_called()
+
     def test_copy_whitelist(self):
         with mock.patch('kb_python.dry.utils.print') as p:
             self.assertEquals(

@@ -52,6 +52,15 @@ def stream_file(url, path):
         print('wget -bq {} -O {}'.format(url, path))
 
 
+def move_file(source, destination):
+    """Dry version of `utils.move_file`.
+    """
+    if PLATFORM == 'windows':
+        print(f'move {source} {destination}')
+    else:
+        print(f'mv {source} {destination}')
+
+
 def copy_whitelist(technology, out_dir):
     """Dry version of `utils.copy_whitelist`.
     """

@@ -42,9 +42,11 @@ from .report import render_report
 from .utils import (
     copy_map,
     copy_whitelist,
+    get_temporary_filename,
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
     make_directory,
+    move_file,
     overlay_anndatas,
     run_executable,
     stream_file,
@@ -61,7 +63,7 @@ INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
 @validate_files()
-def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
+def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
     """Runs `kallisto bus`.
 
     :param fastqs: list of FASTQ file paths
@@ -74,6 +76,9 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     :type out_dir: str
     :param threads: number of threads to use, defaults to `8`
     :type threads: int, optional
+    :param n: include number of read in flag column (used when splitting indices),
+              defaults to `False`
+    :type n: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -88,6 +93,8 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     command += ['-o', out_dir]
     command += ['-x', technology]
     command += ['-t', threads]
+    if n:
+        command += ['--num']
     command += fastqs
     run_executable(command)
 
@@ -175,7 +182,9 @@ def bustools_project(bus_path, out_path, map_path, ecmap_path, txnames_path):
 
 
 @validate_files()
-def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
+def bustools_sort(
+    bus_path, out_path, temp_dir='tmp', threads=8, memory='4G', flags=False
+):
     """Runs `bustools sort`.
 
     :param bus_path: path to BUS file to sort
@@ -188,6 +197,9 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     :type threads: int, optional
     :param memory: amount of memory to use, defaults to `4G`
     :type memory: str, optional
+    :param flags: whether to supply the `--flags` argument to sort, defaults to
+                  `False`
+    :type flags: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -198,6 +210,8 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     command += ['-T', temp_dir]
     command += ['-t', threads]
     command += ['-m', memory]
+    if flags:
+        command += ['--flags']
     command += [bus_path]
     run_executable(command)
     return {'bus': out_path}
@@ -878,9 +892,23 @@ def count(
                     index_path,
                     technology,
                     bus_part_dir,
-                    threads=threads
+                    threads=threads,
+                    n=True
                 )
                 part_dirs.append(bus_part_dir)
+
+                # Sort each part to temp, and then overwrite the original
+                # output.bus
+                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
+                sort_part = bustools_sort(
+                    bus_part,
+                    get_temporary_filename(temp_dir),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                )
+                move_file(sort_part['bus'], bus_part)
 
             bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
         else:
@@ -1175,9 +1203,23 @@ def count_velocity(
                     index_path,
                     technology,
                     bus_part_dir,
-                    threads=threads
+                    threads=threads,
+                    n=True
                 )
                 part_dirs.append(bus_part_dir)
+
+                # Sort each part to temp, and then overwrite the original
+                # output.bus
+                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
+                sort_part = bustools_sort(
+                    bus_part,
+                    get_temporary_filename(temp_dir),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                )
+                move_file(sort_part['bus'], bus_part)
 
             bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
         else:

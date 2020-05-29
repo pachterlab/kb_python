@@ -389,6 +389,23 @@ def whitelist_provided(technology):
         upper].whitelist_archive
 
 
+@dryable(dry_utils.move_file)
+def move_file(source, destination):
+    """Move a file from source to destination, overwriting the file if the
+    destination exists.
+
+    :param source: path to source file
+    :type source: str
+    :param destination: path to destination
+    :type destination: str
+
+    :return: path to moved file
+    :rtype: str
+    """
+    shutil.move(source, destination)
+    return destination
+
+
 @dryable(dry_utils.copy_whitelist)
 def copy_whitelist(technology, out_dir):
     """Copies provided whitelist for specified technology.

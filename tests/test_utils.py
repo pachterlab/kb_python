@@ -289,6 +289,11 @@ class TestUtils(TestMixin, TestCase):
         adata = utils.sum_anndatas(adata_spliced, adata_unspliced)
         self.assertEqual(2.0, adata.X[5, 15])
 
+    def test_move_file(self):
+        with mock.patch('kb_python.utils.shutil.move') as move:
+            utils.move_file('source', 'destination')
+            move.assert_called_once_with('source', 'destination')
+
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
         self.assertTrue(os.path.exists(whitelist_path))
