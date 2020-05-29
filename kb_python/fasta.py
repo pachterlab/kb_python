@@ -242,7 +242,7 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     if len(lengths) > 1:
         logger.warning(
             'Detected barcodes of different lengths: {}'.format(
-                ','.join(str(l) for l in lengths)
+                ','.join(str(l) for l in lengths)  # noqa
             )
         )
     for f1, f2 in itertools.combinations(variants.keys(), 2):

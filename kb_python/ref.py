@@ -76,7 +76,7 @@ def check_chromosomes(fasta_chromosomes, gtf_chromosomes):
             'The following chromosomes were found to have "transcript" features '
             'in the GTF but doens\'t exist in the FASTA. '
             'No sequences will be generated for these chromosomes.'
-        ).format(', '.join(fasta_unique)))
+        ))
     chromosomes = set.intersection(fasta_chromosomes, gtf_chromosomes)
 
     return chromosomes
