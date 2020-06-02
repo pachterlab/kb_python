@@ -1369,6 +1369,7 @@ def count_velocity(
                     t2g_path,
                     os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
                     os.path.join(out_dir, f'output.{FILTERED_CODE}.bus'),
+                    temp_dir=temp_dir,
                     count=False
                 )
             )
