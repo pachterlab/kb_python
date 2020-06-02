@@ -122,8 +122,33 @@ class TestMixin(TestCase):
         cls.kite_duplicate_feature_path = os.path.join(
             cls.kite_dir, 'features_duplicate.tsv'
         )
+        cls.kite_different_feature_path = os.path.join(
+            cls.kite_dir, 'features_different.tsv'
+        )
+        cls.kite_order_feature_path = os.path.join(
+            cls.kite_dir, 'features_order.tsv'
+        )
         cls.kite_fasta_path = os.path.join(cls.kite_dir, 'fasta.fa')
         cls.kite_collision_fasta_path = os.path.join(
             cls.kite_dir, 'fasta_collision.fa'
         )
+        cls.kite_different_fasta_path = os.path.join(
+            cls.kite_dir, 'fasta_different.fa'
+        )
+        cls.kite_no_mismatches_fasta_path = os.path.join(
+            cls.kite_dir, 'fasta_no_mismatches.fa'
+        )
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
+        cls.kite_map_path = os.path.join(cls.kite_dir, 'map.txt')
+
+        cls.merge_dir = os.path.join(cls.fixtures_dir, 'merge')
+        cls.bus_split_paths = [
+            os.path.join(cls.merge_dir, 'part0'),
+            os.path.join(cls.merge_dir, 'part1'),
+            os.path.join(cls.merge_dir, 'part2'),
+        ]
+
+        cls.cellranger_dir = os.path.join(cls.fixtures_dir, 'cellranger')
+        cls.cr_matrix_path = os.path.join(cls.cellranger_dir, 'matrix.mtx')
+        cls.cr_barcodes_path = os.path.join(cls.cellranger_dir, 'barcodes.tsv')
+        cls.cr_genes_path = os.path.join(cls.cellranger_dir, 'genes.tsv')

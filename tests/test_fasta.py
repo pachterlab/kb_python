@@ -52,11 +52,40 @@ class TestFASTA(TestMixin, TestCase):
         out_path = os.path.join(
             tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
         )
-        self.assertEqual((out_path, {
-            15
-        }), fasta.generate_kite_fasta(self.kite_feature_path, out_path))
+        self.assertEqual(
+            (out_path, 15),
+            fasta.generate_kite_fasta(self.kite_feature_path, out_path)
+        )
         with open(out_path, 'r') as f, open(self.kite_fasta_path, 'r') as fa:
             self.assertEqual(fa.read(), f.read())
+
+    def test_generate_kite_fasta_no_mismatches(self):
+        out_path = os.path.join(
+            tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+        )
+        self.assertEqual((out_path, 15),
+                         fasta.generate_kite_fasta(
+                             self.kite_feature_path,
+                             out_path,
+                             no_mismatches=True
+                         ))
+        with open(out_path, 'r') as f, open(self.kite_no_mismatches_fasta_path,
+                                            'r') as fa:
+            self.assertEqual(fa.read(), f.read())
+
+    def test_generate_kite_fasta_different_length(self):
+        with mock.patch('kb_python.fasta.logger.warning') as warning:
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            self.assertEqual((out_path, 14),
+                             fasta.generate_kite_fasta(
+                                 self.kite_different_feature_path, out_path
+                             ))
+            warning.assert_called_once()
+            with open(out_path, 'r') as f, open(self.kite_different_fasta_path,
+                                                'r') as fa:
+                self.assertEqual(fa.read(), f.read())
 
     def test_generate_kite_fasta_duplicate(self):
         with self.assertRaises(Exception):
@@ -67,12 +96,19 @@ class TestFASTA(TestMixin, TestCase):
                 self.kite_duplicate_feature_path, out_path
             )
 
+    def test_generate_kite_fasta_wrong_order(self):
+        with self.assertRaises(Exception):
+            out_path = os.path.join(
+                tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
+            )
+            fasta.generate_kite_fasta(self.kite_order_feature_path, out_path)
+
     def test_generate_kite_fasta_collision(self):
         with mock.patch('kb_python.fasta.logger.warning') as warning:
             out_path = os.path.join(
                 tempfile.gettempdir(), '{}.fa'.format(uuid.uuid4())
             )
-            self.assertEqual((out_path, {15}),
+            self.assertEqual((out_path, 15),
                              fasta.generate_kite_fasta(
                                  self.kite_collision_feature_path, out_path
                              ))

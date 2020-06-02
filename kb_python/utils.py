@@ -1,5 +1,4 @@
 import concurrent.futures
-import functools
 import gzip
 import logging
 import os
@@ -7,6 +6,7 @@ import re
 import requests
 import shutil
 import subprocess as sp
+import tempfile
 import threading
 import time
 from urllib.request import urlretrieve
@@ -20,14 +20,16 @@ from .config import (
     CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
-    is_dry,
+    MAP_DIR,
     PACKAGE_PATH,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
     WHITELIST_DIR,
     UnsupportedOSException,
 )
+from .dry import dryable
 from .dry import utils as dry_utils
+from .stats import STATS
 
 logger = logging.getLogger(__name__)
 
@@ -61,31 +63,22 @@ class TqdmLoggingHandler(logging.Handler):
             self.handleError(record)
 
 
-def dryable(dry_func):
-    """Function decorator to set a function as dryable.
+def update_filename(filename, code):
+    """Update the provided path with the specified code.
 
-    When this decorator is applied, the provided `dry_func` will be called
-    instead of the actual function when the current run is a dry run.
+    For instance, if the `path` is 'output.bus' and `code` is `s` (for sort),
+    this function returns `output.s.bus`.
 
-    :param dry_func: function to call when it is a dry run
-    :type dry_func: function
+    :param filename: filename (NOT path)
+    :type filename: str
+    :param code: code to append to filename
+    :type code: str
 
-    :return: wrapped function
-    :rtype: function
+    :return: path updated with provided code
+    :rtype: str
     """
-
-    def wrapper(func):
-
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            if not is_dry():
-                return func(*args, **kwargs)
-            else:
-                return dry_func(*args, **kwargs)
-
-        return inner
-
-    return wrapper
+    name, extension = os.path.splitext(filename)
+    return f'{name}.{code}{extension}'
 
 
 def open_as_text(path, mode):
@@ -204,10 +197,11 @@ def run_executable(
     :rtype: subprocess.Process
     """
     command = [str(c) for c in command]
+    c = command.copy()
+    if alias:
+        c[0] = os.path.basename(c[0])
+    STATS.command(c)
     if not quiet:
-        c = command.copy()
-        if alias:
-            c[0] = os.path.basename(c[0])
         logger.debug(' '.join(c))
     p = sp.Popen(
         command,
@@ -367,6 +361,23 @@ def whitelist_provided(technology):
         upper].whitelist_archive
 
 
+@dryable(dry_utils.move_file)
+def move_file(source, destination):
+    """Move a file from source to destination, overwriting the file if the
+    destination exists.
+
+    :param source: path to source file
+    :type source: str
+    :param destination: path to destination
+    :type destination: str
+
+    :return: path to moved file
+    :rtype: str
+    """
+    shutil.move(source, destination)
+    return destination
+
+
 @dryable(dry_utils.copy_whitelist)
 def copy_whitelist(technology, out_dir):
     """Copies provided whitelist for specified technology.
@@ -390,6 +401,29 @@ def copy_whitelist(technology, out_dir):
     with open_as_text(archive_path, 'r') as f, open(whitelist_path, 'w') as out:
         out.write(f.read())
     return whitelist_path
+
+
+@dryable(dry_utils.copy_map)
+def copy_map(technology, out_dir):
+    """Copies provided feature-to-cell barcode mapping for the speified technology.
+
+    :param technology: the name of the technology
+    :type technology: str
+    :param out_dir: directory to put the map
+    :type out_dir: str
+
+    :return: path to map
+    :rtype: str
+    """
+    technology = TECHNOLOGIES_MAPPING[technology.upper()]
+    archive_path = os.path.join(PACKAGE_PATH, MAP_DIR, technology.map_archive)
+    map_path = os.path.join(
+        out_dir,
+        os.path.splitext(technology.map_archive)[0]
+    )
+    with open_as_text(archive_path, 'r') as f, open(map_path, 'w') as out:
+        out.write(f.read())
+    return map_path
 
 
 def concatenate_files(*paths, out_path, temp_dir='tmp'):
@@ -476,6 +510,24 @@ def stream_file(url, path):
     return path
 
 
+@dryable(dry_utils.get_temporary_filename)
+def get_temporary_filename(temp_dir=None):
+    """Create a temporary file in the provided temprorary directory.
+
+    The caller is responsible for deleting the file.
+
+    :param temp_dir: path to temporary directory, defaults to `None`
+    :type temp_dir: str, optional
+
+    :return: temporary filename
+    :rtype: str
+    """
+    fp, path = tempfile.mkstemp(dir=temp_dir)
+    os.close(fp)
+
+    return path
+
+
 def import_tcc_matrix_as_anndata(
     matrix_path, barcodes_path, ec_path, txnames_path, threads=8
 ):
@@ -532,7 +584,9 @@ def import_tcc_matrix_as_anndata(
     )
 
 
-def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
+def import_matrix_as_anndata(
+    matrix_path, barcodes_path, genes_path, t2g_path=None, name='gene'
+):
     """Import a matrix as an Anndata object.
 
     :param matrix_path: path to the matrix ec file
@@ -541,6 +595,12 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
     :type barcodes_path: str
     :param genes_path: path to the genes txt file
     :type genes_path: str
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
+    :param name: name of the columns, defaults to "gene"
+    :type name: str, optional
 
     :return: a new Anndata object
     :rtype: anndata.Anndata
@@ -549,8 +609,22 @@ def import_matrix_as_anndata(matrix_path, barcodes_path, genes_path):
         barcodes_path, index_col=0, header=None, names=['barcode']
     )
     df_genes = pd.read_csv(
-        genes_path, header=None, index_col=0, names=['gene_id'], sep='\t'
+        genes_path, header=None, index_col=0, names=[f'{name}_id'], sep='\t'
     )
+    id_to_name = {}
+    if t2g_path:
+        with open(t2g_path, 'r') as f:
+            for line in f:
+                if line.isspace():
+                    continue
+
+                split = line.strip().split('\t')
+                if len(split) > 2:
+                    id_to_name[split[1]] = split[2]
+        gene_names = [id_to_name.get(i, '') for i in df_genes.index]
+        if any(bool(g) for g in gene_names):
+            df_genes[f'{name}_name'] = gene_names
+
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
     )
@@ -572,10 +646,17 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
-    spliced_unspliced = spliced_intersection.copy()
-    spliced_unspliced.layers['spliced'] = spliced_intersection.X
-    spliced_unspliced.layers['unspliced'] = unspliced_intersection.X
-    return spliced_unspliced
+
+    df_obs = unspliced_intersection.obs
+    df_var = unspliced_intersection.var
+    return anndata.AnnData(
+        layers={
+            'spliced': spliced_intersection.X,
+            'unspliced': unspliced_intersection.X
+        },
+        obs=df_obs,
+        var=df_var
+    )
 
 
 def sum_anndatas(adata_spliced, adata_unspliced):
@@ -594,6 +675,11 @@ def sum_anndatas(adata_spliced, adata_unspliced):
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
-    spliced_unspliced = spliced_intersection.copy()
-    spliced_unspliced.X = spliced_intersection.X + unspliced_intersection.X
-    return spliced_unspliced
+
+    df_obs = unspliced_intersection.obs
+    df_var = unspliced_intersection.var
+    return anndata.AnnData(
+        X=spliced_intersection.X + unspliced_intersection.X,
+        obs=df_obs,
+        var=df_var
+    )

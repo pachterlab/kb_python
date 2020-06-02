@@ -14,33 +14,72 @@ CHUNK_SIZE = 1024 * 1024 * 4  # Download files in chunks of 4 Mb
 Technology = namedtuple(
     'Technology', [
         'name', 'description', 'nfiles', 'reads_file', 'umi_positions',
-        'barcode_positions', 'whitelist_archive'
+        'barcode_positions', 'whitelist_archive', 'map_archive'
     ]
 )
 WHITELIST_DIR = 'whitelists'
+MAP_DIR = 'maps'
 TECHNOLOGIES = [
     Technology(
         '10XV1',
         '10x version 1',
         3,
-        0,
-        [(1, 0, 0)],
-        [(2, 0, 0)],
+        2,
+        [(1, 0, 10)],
+        [(0, 0, 14)],
         '10xv1_whitelist.txt.gz',
+        None,
     ),
     Technology(
-        '10XV2', '10x version 2', 2, 1, [(0, 16, 26)], [(0, 0, 16)],
-        '10xv2_whitelist.txt.gz'
+        '10XV2',
+        '10x version 2',
+        2,
+        1,
+        [(0, 16, 26)],
+        [(0, 0, 16)],
+        '10xv2_whitelist.txt.gz',
+        None,
     ),
     Technology(
-        '10XV3', '10x version 3', 2, 1, [(0, 16, 28)], [(0, 0, 16)],
-        '10xv3_whitelist.txt.gz'
+        '10XV3',
+        '10x version 3',
+        2,
+        1,
+        [(0, 16, 28)],
+        [(0, 0, 16)],
+        '10xv3_whitelist.txt.gz',
+        '10xv3_feature_barcode_map.txt.gz',
     ),
-    Technology('CELSEQ', 'CEL-Seq', 2, 1, [(0, 8, 12)], [(0, 0, 8)], None),
     Technology(
-        'CELSEQ2', 'CEL-SEQ version 2', 2, 1, [(0, 0, 6)], [(0, 6, 12)], None
+        'CELSEQ',
+        'CEL-Seq',
+        2,
+        1,
+        [(0, 8, 12)],
+        [(0, 0, 8)],
+        None,
+        None,
     ),
-    Technology('DROPSEQ', 'DropSeq', 2, 1, [(0, 12, 20)], [(0, 0, 12)], None),
+    Technology(
+        'CELSEQ2',
+        'CEL-SEQ version 2',
+        2,
+        1,
+        [(0, 0, 6)],
+        [(0, 6, 12)],
+        None,
+        None,
+    ),
+    Technology(
+        'DROPSEQ',
+        'DropSeq',
+        2,
+        1,
+        [(0, 12, 20)],
+        [(0, 0, 12)],
+        None,
+        None,
+    ),
     Technology(
         'INDROPSV1',
         'inDrops version 1',
@@ -48,6 +87,7 @@ TECHNOLOGIES = [
         1,
         [(0, 42, 48)],
         [(0, 0, 11), (0, 30, 38)],
+        None,
         None,
     ),
     Technology(
@@ -58,6 +98,7 @@ TECHNOLOGIES = [
         [(1, 42, 48)],
         [(1, 0, 11), (1, 30, 38)],
         None,
+        None,
     ),
     Technology(
         'INDROPSV3',
@@ -67,13 +108,27 @@ TECHNOLOGIES = [
         [(1, 8, 14)],
         [(0, 0, 8), (1, 0, 8)],
         'inDropsv3_whitelist.txt.gz',
+        None,
     ),
-    Technology('SCRUBSEQ', 'SCRB-Seq', 2, 1, [(0, 6, 16)], [(0, 0, 6)], None),
     Technology(
-        'SURECELL', 'SureCell for ddSEQ', 2, 1, [(0, 51, 59)], [(0, 0, 6),
-                                                                (0, 21, 27),
-                                                                (0, 42, 48)],
-        None
+        'SCRUBSEQ',
+        'SCRB-Seq',
+        2,
+        1,
+        [(0, 6, 16)],
+        [(0, 0, 6)],
+        None,
+        None,
+    ),
+    Technology(
+        'SURECELL',
+        'SureCell for ddSEQ',
+        2,
+        1,
+        [(0, 51, 59)],
+        [(0, 0, 6), (0, 21, 27), (0, 42, 48)],
+        None,
+        None,
     ),
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}

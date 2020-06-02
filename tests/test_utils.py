@@ -13,26 +13,12 @@ from kb_python.config import CHUNK_SIZE, UnsupportedOSException
 from tests.mixins import TestMixin
 
 
-def dry_dummy_function(i):
-    return i + 1
-
-
-@utils.dryable(dry_dummy_function)
-def dummy_function(i):
-    return i
-
-
 class TestUtils(TestMixin, TestCase):
 
-    def test_dryable_not_dry(self):
-        with mock.patch('kb_python.utils.is_dry') as is_dry:
-            is_dry.return_value = False
-            self.assertEqual(1, dummy_function(1))
-
-    def test_dryable_dry(self):
-        with mock.patch('kb_python.utils.is_dry') as is_dry:
-            is_dry.return_value = True
-            self.assertEqual(2, dummy_function(1))
+    def test_update_filename(self):
+        self.assertEqual(
+            'output.s.c.bus', utils.update_filename('output.s.bus', 'c')
+        )
 
     def test_open_as_text_textfile(self):
         path = os.path.join(
@@ -87,8 +73,10 @@ class TestUtils(TestMixin, TestCase):
             rmtree.assert_called_once_with('path', ignore_errors=True)
 
     def test_run_executable(self):
-        p = utils.run_executable(['echo', 'TEST'], stream=False)
-        self.assertEqual(p.stdout.read(), 'TEST\n')
+        with mock.patch('kb_python.utils.STATS') as STATS:
+            p = utils.run_executable(['echo', 'TEST'], stream=False)
+            self.assertEqual(p.stdout.read(), 'TEST\n')
+            STATS.command.assert_called_once_with(['echo', 'TEST'])
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):
@@ -204,6 +192,10 @@ class TestUtils(TestMixin, TestCase):
             threading.thread.assert_not_called()
             urlretrieve.assert_not_called()
 
+    def test_get_temporary_filename(self):
+        path = utils.get_temporary_filename()
+        self.assertTrue(os.path.exists(path))
+
     def test_import_tcc_matrix_as_anndata(self):
         adata = utils.import_tcc_matrix_as_anndata(
             self.tcc_matrix_path, self.tcc_barcodes_path, self.tcc_ec_path,
@@ -223,6 +215,35 @@ class TestUtils(TestMixin, TestCase):
         self.assertEqual(set(), set(adata.var))
         self.assertEqual(set(), set(adata.obs))
         self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
+    def test_import_matrix_as_anndata_with_t2g(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path,
+            self.barcodes_path,
+            self.genes_path,
+            t2g_path=self.t2g_path
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
+        self.assertEqual([
+            'Clk1', 'Serpinb10', 'Olfr421-ps1', 'Olfr335-ps', 'Olfr1001-ps1',
+            'Olfr1010', 'Olfr1021-ps1', 'Olfr1038-ps', 'Olfr1077-ps1',
+            'Olfr1083-ps', 'Olfr1117-ps1', 'Olfr1165-ps', 'Olfr475-ps1',
+            'Olfr1267-ps1', 'Olfr1268-ps1', 'Olfr1273-ps', 'Olfr1300-ps1'
+        ], list(adata.var.gene_name.values))
+
+    def test_import_matrix_as_anndata_name(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path, self.barcodes_path, self.genes_path, name='test'
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.var))
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('test_id', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
 
     def test_overlay_anndatas(self):
@@ -248,6 +269,11 @@ class TestUtils(TestMixin, TestCase):
         )
         adata = utils.sum_anndatas(adata_spliced, adata_unspliced)
         self.assertEqual(2.0, adata.X[5, 15])
+
+    def test_move_file(self):
+        with mock.patch('kb_python.utils.shutil.move') as move:
+            utils.move_file('source', 'destination')
+            move.assert_called_once_with('source', 'destination')
 
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())

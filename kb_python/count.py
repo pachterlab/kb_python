@@ -1,41 +1,60 @@
+import json
 import logging
 import os
 import re
 from urllib.parse import urlparse
 
-from .config import get_bustools_binary_path, get_kallisto_binary_path
+import scipy.io
+
+from .config import get_bustools_binary_path, get_kallisto_binary_path, is_dry
 from .constants import (
     ADATA_PREFIX,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
-    BUS_FILTERED_FILENAME,
-    BUS_FILTERED_SUFFIX,
     BUS_INTRON_PREFIX,
-    BUS_S_FILENAME,
-    BUS_SC_FILENAME,
-    BUS_UNFILTERED_FILENAME,
-    BUS_UNFILTERED_SUFFIX,
+    CELLRANGER_BARCODES,
+    CELLRANGER_DIR,
+    CELLRANGER_GENES,
+    CELLRANGER_MATRIX,
+    CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    FEATURE_NAME,
+    FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
+    FILTERED_CODE,
     FILTERED_COUNTS_DIR,
+    GENE_NAME,
     INSPECT_FILENAME,
+    KALLISTO_INFO_FILENAME,
+    KB_INFO_FILENAME,
+    PROJECT_CODE,
+    REPORT_HTML_FILENAME,
+    REPORT_NOTEBOOK_FILENAME,
+    SORT_CODE,
     TCC_PREFIX,
     TXNAMES_FILENAME,
+    UNFILTERED_CODE,
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
+from .report import render_report
 from .utils import (
+    copy_map,
     copy_whitelist,
+    get_temporary_filename,
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
     make_directory,
+    move_file,
     overlay_anndatas,
     run_executable,
     stream_file,
     sum_anndatas,
+    update_filename,
     whitelist_provided,
 )
+from .stats import STATS
 from .validate import validate_files
 
 logger = logging.getLogger(__name__)
@@ -44,7 +63,7 @@ INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
 @validate_files()
-def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
+def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
     """Runs `kallisto bus`.
 
     :param fastqs: list of FASTQ file paths
@@ -57,11 +76,16 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     :type out_dir: str
     :param threads: number of threads to use, defaults to `8`
     :type threads: int, optional
+    :param n: include number of read in flag column (used when splitting indices),
+              defaults to `False`
+    :type n: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    logger.info('Generating BUS file from')
+    logger.info(
+        f'Using index {index_path} to generate BUS file to {out_dir} from'
+    )
     for fastq in fastqs:
         logger.info((' ' * 8) + fastq)
     command = [get_kallisto_binary_path(), 'bus']
@@ -69,24 +93,105 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8):
     command += ['-o', out_dir]
     command += ['-x', technology]
     command += ['-t', threads]
+    if n:
+        command += ['--num']
     command += fastqs
     run_executable(command)
 
-    bus_path = os.path.join(out_dir, BUS_FILENAME)
     return {
-        'bus': bus_path,
+        'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
 
 
-@validate_files()
-def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
-    """Runs `bustools sort`.
+@validate_files(pre=False)
+def bustools_merge(out_dirs, out_dir, threads=8):
+    """Runs `bustools merge`. Additionally, combines the `run_info.json`s into
+    one.
+
+    :param out_dirs: list of `kallisto bus` output directories
+    :type out_dirs: list
+    :param out_dir: path to output directory
+    :type out_dir: str
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+
+    :return: dictionary containing path to generated index
+    :rtype: dict
+    """
+    logger.info(f'Merging BUS records to {out_dir} from')
+    for out in out_dirs:
+        logger.info((' ' * 8) + out)
+    command = [get_bustools_binary_path(), 'merge']
+    command += ['-o', out_dir]
+    # command += ['-t', threads]
+    command += out_dirs
+    run_executable(command)
+
+    # Combine run_info.jsons (don't run this if dry)
+    info_path = None
+    if not is_dry():
+        run_info = {}
+        for o_dir in out_dirs:
+            info_path = os.path.join(o_dir, KALLISTO_INFO_FILENAME)
+            with open(info_path, 'r') as f:
+                info = json.load(f)
+
+            for key, value in info.items():
+                run_info.setdefault(key, []).append(value)
+        info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+        with open(info_path, 'w') as f:
+            json.dump(run_info, f, indent=4)
+
+    return {
+        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': info_path
+    }
+
+
+@validate_files(pre=False)
+def bustools_project(bus_path, out_path, map_path, ecmap_path, txnames_path):
+    """Runs `bustools project`.
 
     :param bus_path: path to BUS file to sort
     :type bus_path: str
     :param out_dir: path to output directory
+    :type out_dir: str
+    :param map_path: path to file containing source-to-destination mapping
+    :type map_path: str
+    :param ecmap_path: path to ecmap file, as generated by `kallisto bus`
+    :type ecmap_path: str
+    :param txnames_path: path to transcript names file, as generated by `kallisto bus`
+    :type txnames_path: str
+
+    :return: dictionary containing path to generated BUS file
+    :rtype: dict
+    """
+    logger.info('Projecting BUS file {} with map {}'.format(bus_path, map_path))
+    command = [get_bustools_binary_path(), 'project']
+    command += ['-o', out_path]
+    command += ['-m', map_path]
+    command += ['-e', ecmap_path]
+    command += ['-t', txnames_path]
+    command += ['--barcode']
+    command += [bus_path]
+    run_executable(command)
+    return {'bus': out_path}
+
+
+@validate_files()
+def bustools_sort(
+    bus_path, out_path, temp_dir='tmp', threads=8, memory='4G', flags=False
+):
+    """Runs `bustools sort`.
+
+    :param bus_path: path to BUS file to sort
+    :type bus_path: str
+    :param out_dir: path to output BUS path
     :type out_dir: str
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
@@ -94,6 +199,9 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     :type threads: int, optional
     :param memory: amount of memory to use, defaults to `4G`
     :type memory: str, optional
+    :param flags: whether to supply the `--flags` argument to sort, defaults to
+                  `False`
+    :type flags: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -104,6 +212,8 @@ def bustools_sort(bus_path, out_path, temp_dir='tmp', threads=8, memory='4G'):
     command += ['-T', temp_dir]
     command += ['-t', threads]
     command += ['-m', memory]
+    if flags:
+        command += ['--flags']
     command += [bus_path]
     run_executable(command)
     return {'bus': out_path}
@@ -164,7 +274,13 @@ def bustools_correct(bus_path, out_path, whitelist_path):
 
 @validate_files(pre=False)
 def bustools_count(
-    bus_path, out_prefix, t2g_path, ecmap_path, txnames_path, tcc=False
+    bus_path,
+    out_prefix,
+    t2g_path,
+    ecmap_path,
+    txnames_path,
+    tcc=False,
+    mm=False
 ):
     """Runs `bustools count`.
 
@@ -181,6 +297,9 @@ def bustools_count(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -197,6 +316,8 @@ def bustools_count(
     command += ['-t', txnames_path]
     if not tcc:
         command += ['--genecounts']
+    if mm:
+        command += ['--multimapping']
     command += [bus_path]
     run_executable(command)
     return {
@@ -277,13 +398,76 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
+def matrix_to_cellranger(
+    matrix_path, barcodes_path, genes_path, t2g_path, out_dir
+):
+    """Convert bustools count matrix to cellranger-format matrix.
+
+    :param matrix_path: path to matrix
+    :type matrix_path: str
+    :param barcodes_path: list of paths to barcodes.txt
+    :type barcodes_path: str
+    :param genes_path: path to genes.txt
+    :type genes_path: str
+    :param t2g_path: path to transcript-to-gene mapping
+    :type t2g_path: str
+    :param out_dir: path to output matrix
+    :type out_dir: str
+
+    :return: dictionary of matrix files
+    :rtype: dict
+    """
+    make_directory(out_dir)
+    logger.info(f'Writing matrix in cellranger format to {out_dir}')
+
+    cr_matrix_path = os.path.join(out_dir, CELLRANGER_MATRIX)
+    cr_barcodes_path = os.path.join(out_dir, CELLRANGER_BARCODES)
+    cr_genes_path = os.path.join(out_dir, CELLRANGER_GENES)
+
+    # Cellranger outputs genes x cells matrix
+    mtx = scipy.io.mmread(matrix_path)
+    scipy.io.mmwrite(cr_matrix_path, mtx.T, field='integer')
+
+    with open(barcodes_path, 'r') as f, open(cr_barcodes_path, 'w') as out:
+        for line in f:
+            if line.isspace():
+                continue
+            out.write(f'{line.strip()}-1\n')
+
+    # Get all (available) gene names
+    gene_to_name = {}
+    with open(t2g_path, 'r') as f:
+        for line in f:
+            if line.isspace():
+                continue
+            split = line.strip().split('\t')
+            if len(split) > 2:
+                gene_to_name[split[1]] = split[2]
+
+    with open(genes_path, 'r') as f, open(cr_genes_path, 'w') as out:
+        for line in f:
+            if line.isspace():
+                continue
+            gene = line.strip()
+            gene_name = gene_to_name.get(gene, gene)
+            out.write(f'{gene}\t{gene_name}\n')
+
+    return {
+        'mtx': cr_matrix_path,
+        'barcodes': cr_barcodes_path,
+        'genes': cr_genes_path
+    }
+
+
 def convert_matrix(
     counts_dir,
     matrix_path,
     barcodes_path,
     genes_path=None,
     ec_path=None,
+    t2g_path=None,
     txnames_path=None,
+    name='gene',
     loom=False,
     h5ad=False,
     tcc=False,
@@ -301,8 +485,14 @@ def convert_matrix(
     :type genes_path: str, optional
     :param ec_path: path to ec.txt, defaults to `None`
     :type ec_path: str, optional
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
     :param txnames_path: path to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
+    :param name: name of the columns, defaults to "gene"
+    :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
     :param h5ad: whether to generate h5ad file, defaults to `False`
@@ -320,7 +510,7 @@ def convert_matrix(
     adata = import_tcc_matrix_as_anndata(
         matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
     ) if tcc else import_matrix_as_anndata(
-        matrix_path, barcodes_path, genes_path
+        matrix_path, barcodes_path, genes_path, t2g_path=t2g_path, name=name
     )
     if loom:
         loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
@@ -332,6 +522,7 @@ def convert_matrix(
         logger.info('Writing matrix to h5ad {}'.format(h5ad_path))
         adata.write(h5ad_path)
         results.update({'h5ad': h5ad_path})
+
     return results
 
 
@@ -341,7 +532,9 @@ def convert_matrices(
     barcodes_paths,
     genes_paths=None,
     ec_paths=None,
+    t2g_path=None,
     txnames_path=None,
+    name='gene',
     loom=False,
     h5ad=False,
     nucleus=False,
@@ -353,15 +546,21 @@ def convert_matrices(
     :param counts_dir: path to counts directory
     :type counts_dir: str
     :param matrix_paths: list of paths to matrices
-    :type matrix_paths: str
+    :type matrix_paths: list
     :param barcodes_paths: list of paths to barcodes.txt
-    :type barcodes_paths: str
+    :type barcodes_paths: list
     :param genes_paths: list of paths to genes.txt, defaults to `None`
-    :type genes_paths: str, optional
+    :type genes_paths: list, optional
     :param ec_paths: list of path to ec.txt, defaults to `None`
-    :type ec_paths: str, optional
+    :type ec_paths: list, optional
+    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
+                     the third column of the mapping is appended to the
+                     anndata var, defaults to `None`
+    :type t2g_path: str, optional
     :param txnames_path: list of paths to transcripts.txt, defaults to `None`
     :type txnames_path: str, optional
+    :param name: name of the columns, defaults to "gene"
+    :type name: str, optional
     :param loom: whether to generate loom file, defaults to `False`
     :type loom: bool, optional
     :param h5ad: whether to generate h5ad file, defaults to `False`
@@ -393,8 +592,13 @@ def convert_matrices(
                 genes_ec_path,
                 txnames_path,
                 threads=threads
-            ) if tcc else
-            import_matrix_as_anndata(matrix_path, barcodes_path, genes_ec_path)
+            ) if tcc else import_matrix_as_anndata(
+                matrix_path,
+                barcodes_path,
+                genes_ec_path,
+                t2g_path=t2g_path,
+                name=name
+            )
         )
     logger.info('Combining matrices')
     adata = sum_anndatas(*adatas) if nucleus else overlay_anndatas(*adatas)
@@ -420,12 +624,15 @@ def filter_with_bustools(
     filtered_bus_path,
     counts_prefix=None,
     tcc=False,
+    mm=False,
+    kite=False,
     temp_dir='tmp',
     threads=8,
     memory='4G',
     count=True,
     loom=False,
-    h5ad=False
+    h5ad=False,
+    cellranger=False
 ):
     """Generate filtered count matrices with bustools.
 
@@ -446,6 +653,11 @@ def filter_with_bustools(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
+    :param kite: Whether this is a KITE workflow
+    :type kite: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -458,6 +670,9 @@ def filter_with_bustools(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
 
     :return: dictionary of generated files
     :rtype: dict
@@ -466,13 +681,15 @@ def filter_with_bustools(
     results = {}
     whitelist_result = bustools_whitelist(bus_path, whitelist_path)
     results.update(whitelist_result)
-    capture_result = bustools_correct(
+    correct_result = bustools_correct(
         bus_path,
-        os.path.join(temp_dir, os.path.basename(filtered_bus_path)),
+        os.path.join(
+            temp_dir, update_filename(os.path.basename(bus_path), CORRECT_CODE)
+        ),
         whitelist_result['whitelist'],
     )
     sort_result = bustools_sort(
-        capture_result['bus'],
+        correct_result['bus'],
         filtered_bus_path,
         temp_dir=temp_dir,
         threads=threads,
@@ -490,6 +707,7 @@ def filter_with_bustools(
             ecmap_path,
             txnames_path,
             tcc=tcc,
+            mm=mm,
         )
         results.update(count_result)
 
@@ -500,13 +718,28 @@ def filter_with_bustools(
                     count_result['mtx'],
                     count_result['barcodes'],
                     genes_path=count_result.get('genes'),
+                    t2g_path=t2g_path,
                     ec_path=count_result.get('ec'),
                     txnames_path=txnames_path,
+                    name=FEATURE_NAME if kite else GENE_NAME,
                     loom=loom,
                     h5ad=h5ad,
-                    tcc=tcc
+                    tcc=tcc,
+                    threads=threads
                 )
             )
+        if cellranger:
+            if not tcc:
+                cr_result = matrix_to_cellranger(
+                    count_result['mtx'], count_result['barcodes'],
+                    count_result['genes'], t2g_path,
+                    os.path.join(counts_dir, CELLRANGER_DIR)
+                )
+                results.update({'cellranger': cr_result})
+            else:
+                logger.warning(
+                    'TCC matrices can not be converted to cellranger-compatible format.'
+                )
 
     return results
 
@@ -558,25 +791,31 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
 
 
 def count(
-    index_path,
+    index_paths,
     t2g_path,
     technology,
     out_dir,
     fastqs,
     whitelist_path=None,
     tcc=False,
+    mm=False,
     filter=None,
+    kite=False,
+    FB=False,
     temp_dir='tmp',
     threads=8,
     memory='4G',
     overwrite=False,
     loom=False,
     h5ad=False,
+    cellranger=False,
+    inspect=True,
+    report=False,
 ):
     """Generates count matrices for single-cell RNA seq.
 
-    :param index_path: path to kallisto index
-    :type index_path: str
+    :param index_paths: paths to kallisto indices
+    :type index_paths: list
     :param t2g_path: path to transcript-to-gene mapping
     :type t2g_path: str
     :param technology: single-cell technology used
@@ -590,9 +829,17 @@ def count(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
+    :param kite: Whether this is a KITE workflow
+    :type kite: bool, optional
+    :param FB: whether 10x Genomics Feature Barcoding technology was used,
+               defaults to `False`
+    :type FB: bool, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -607,10 +854,22 @@ def count(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
+    :param inspect: whether or not to inspect the output BUS file and generate
+                    the inspect.json
+    :type inspect: bool, optional
+    :param report: generate an HTMl report, defaults to `False`
+    :type report: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
     """
+    STATS.start()
+    if not isinstance(index_paths, list):
+        index_paths = [index_paths]
+
     results = {}
 
     make_directory(out_dir)
@@ -620,14 +879,46 @@ def count(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        # Pipe any remote files.
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        bus_result = kallisto_bus(
-            fastqs, index_path, technology, out_dir, threads=threads
-        )
+        if len(index_paths) > 1:
+            logger.info(f'Generating BUS file using {len(index_paths)} indices')
+            part_dirs = []
+            for i, index_path in enumerate(index_paths):
+                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
+                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+                kallisto_bus(
+                    fastqs,
+                    index_path,
+                    technology,
+                    bus_part_dir,
+                    threads=threads,
+                    n=True
+                )
+                part_dirs.append(bus_part_dir)
+
+                # Sort each part to temp, and then overwrite the original
+                # output.bus
+                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
+                sort_part = bustools_sort(
+                    bus_part,
+                    get_temporary_filename(temp_dir),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                )
+                move_file(sort_part['bus'], bus_part)
+
+            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+        else:
+            # Pipe any remote files.
+            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            bus_result = kallisto_bus(
+                fastqs, index_paths[0], technology, out_dir, threads=threads
+            )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
@@ -636,7 +927,10 @@ def count(
 
     sort_result = bustools_sort(
         bus_result['bus'],
-        os.path.join(temp_dir, BUS_S_FILENAME),
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(bus_result['bus']), SORT_CODE)
+        ),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
@@ -648,36 +942,70 @@ def count(
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
-    inspect_result = bustools_inspect(
-        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-        whitelist_path, bus_result['ecmap']
-    )
-    unfiltered_results.update(inspect_result)
+    prev_result = sort_result
+    if FB:
+        logger.info(f'Copying {technology} feature-to-barcode map to {out_dir}')
+        map_path = copy_map(technology, out_dir)
+        project_result = bustools_project(
+            sort_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(sort_result['bus']), PROJECT_CODE
+                )
+            ), map_path, bus_result['ecmap'], bus_result['txnames']
+        )
+
+        sort2_result = bustools_sort(
+            project_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(project_result['bus']), SORT_CODE
+                )
+            ),
+            temp_dir=temp_dir,
+            threads=threads,
+            memory=memory
+        )
+        prev_result = sort2_result
+
+    if inspect:
+        inspect_result = bustools_inspect(
+            prev_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path, bus_result['ecmap']
+        )
+        unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
-        sort_result['bus'], os.path.join(temp_dir, BUS_SC_FILENAME),
-        whitelist_path
+        prev_result['bus'],
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(prev_result['bus']), CORRECT_CODE)
+        ), whitelist_path
     )
-    sort2_result = bustools_sort(
+    sort3_result = bustools_sort(
         correct_result['bus'],
-        os.path.join(out_dir, BUS_UNFILTERED_FILENAME),
+        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
     )
-    unfiltered_results.update({'bus_scs': sort2_result['bus']})
+    unfiltered_results.update({'bus_scs': sort3_result['bus']})
 
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     make_directory(counts_dir)
     counts_prefix = os.path.join(
-        counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
+        counts_dir,
+        TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
     )
     count_result = bustools_count(
-        sort2_result['bus'],
+        sort3_result['bus'],
         counts_prefix,
         t2g_path,
         bus_result['ecmap'],
         bus_result['txnames'],
         tcc=tcc,
+        mm=mm,
     )
     unfiltered_results.update(count_result)
 
@@ -689,30 +1017,47 @@ def count(
                 count_result['mtx'],
                 count_result['barcodes'],
                 genes_path=count_result.get('genes'),
+                t2g_path=t2g_path,
                 ec_path=count_result.get('ec'),
                 txnames_path=bus_result['txnames'],
+                name=FEATURE_NAME if kite else GENE_NAME,
                 loom=loom,
                 h5ad=h5ad,
                 tcc=tcc,
+                threads=threads
             )
         )
+    if cellranger:
+        if not tcc:
+            cr_result = matrix_to_cellranger(
+                count_result['mtx'], count_result['barcodes'],
+                count_result['genes'], t2g_path,
+                os.path.join(counts_dir, CELLRANGER_DIR)
+            )
+            unfiltered_results.update({'cellranger': cr_result})
+        else:
+            logger.warning(
+                'TCC matrices can not be converted to cellranger-compatible format.'
+            )
 
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
-            out_dir, FILTERED_COUNTS_DIR, TCC_PREFIX if tcc else COUNTS_PREFIX
+            out_dir, FILTERED_COUNTS_DIR,
+            TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
         )
         filtered_whitelist_path = os.path.join(
             out_dir, FILTER_WHITELIST_FILENAME
         )
-        filtered_bus_path = os.path.join(out_dir, BUS_FILTERED_FILENAME)
+        filtered_bus_path = os.path.join(out_dir, f'output.{FILTERED_CODE}.bus')
         results['filtered'] = filter_with_bustools(
-            sort2_result['bus'],
+            sort3_result['bus'],
             bus_result['ecmap'],
             bus_result['txnames'],
             t2g_path,
             filtered_whitelist_path,
             filtered_bus_path,
             counts_prefix=filtered_counts_prefix,
+            kite=kite,
             tcc=tcc,
             temp_dir=temp_dir,
             threads=threads,
@@ -721,11 +1066,40 @@ def count(
             h5ad=h5ad
         )
 
+    # Generate report.
+    STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
+    if report:
+        nb_path = os.path.join(out_dir, REPORT_NOTEBOOK_FILENAME)
+        html_path = os.path.join(out_dir, REPORT_HTML_FILENAME)
+        logger.info(
+            f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+        )
+        report_result = render_report(
+            stats_path,
+            bus_result['info'],
+            inspect_result['inspect'],
+            nb_path,
+            html_path,
+            count_result['mtx'],
+            count_result.get('barcodes'),
+            count_result.get('genes'),
+            t2g_path,
+            temp_dir=temp_dir
+        )
+        unfiltered_results.update(report_result)
+
+        if tcc:
+            logger.warning(
+                'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
+            )
+
     return results
 
 
 def count_velocity(
-    index_path,
+    index_paths,
     t2g_path,
     cdna_t2c_path,
     intron_t2c_path,
@@ -734,6 +1108,7 @@ def count_velocity(
     fastqs,
     whitelist_path=None,
     tcc=False,
+    mm=False,
     filter=None,
     temp_dir='tmp',
     threads=8,
@@ -741,12 +1116,15 @@ def count_velocity(
     overwrite=False,
     loom=False,
     h5ad=False,
+    cellranger=False,
+    report=False,
+    inspect=True,
     nucleus=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 
-    :param index_path: path to kallisto index
-    :type index_path: str
+    :param index_paths: paths to kallisto indices
+    :type index_paths: list
     :param t2g_path: path to transcript-to-gene mapping
     :type t2g_path: str
     :param cdna_t2c_path: path to cDNA transcripts-to-capture file
@@ -764,6 +1142,9 @@ def count_velocity(
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
                 defaults to `False`
     :type tcc: bool, optional
+    :param mm: whether to include BUS records that pseudoalign to multiple genes,
+               defaults to `False`
+    :type mm: bool, optional
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
@@ -781,6 +1162,14 @@ def count_velocity(
     :param h5ad: whether to convert the final count matrix into a h5ad file,
                  defaults to `False`
     :type h5ad: bool, optional
+    :param cellranger: whether to convert the final count matrix into a
+                       cellranger-compatible matrix, defaults to `False`
+    :type cellranger: bool, optional
+    :param report: generate HTML reports, defaults to `False`
+    :type report: bool, optional
+    :param inspect: whether or not to inspect the output BUS file and generate
+                    the inspect.json
+    :type inspect: bool, optional
     :param nucleus: whether this is a single-nucleus experiment. if `True`, the
                     spliced and unspliced count matrices will be summed,
                     defaults to `False`
@@ -789,8 +1178,11 @@ def count_velocity(
     :return: dictionary containing path to generated index
     :rtype: dict
     """
-    results = {}
+    STATS.start()
+    if not isinstance(index_paths, list):
+        index_paths = [index_paths]
 
+    results = {}
     make_directory(out_dir)
     unfiltered_results = results.setdefault('unfiltered', {})
 
@@ -798,13 +1190,46 @@ def count_velocity(
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        bus_result = kallisto_bus(
-            fastqs, index_path, technology, out_dir, threads=threads
-        )
+        if len(index_paths) > 1:
+            logger.info(f'Generating BUS file using {len(index_paths)} indices')
+            part_dirs = []
+            for i, index_path in enumerate(index_paths):
+                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
+                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+                kallisto_bus(
+                    fastqs,
+                    index_path,
+                    technology,
+                    bus_part_dir,
+                    threads=threads,
+                    n=True
+                )
+                part_dirs.append(bus_part_dir)
+
+                # Sort each part to temp, and then overwrite the original
+                # output.bus
+                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
+                sort_part = bustools_sort(
+                    bus_part,
+                    get_temporary_filename(temp_dir),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory,
+                    flags=True
+                )
+                move_file(sort_part['bus'], bus_part)
+
+            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+        else:
+            # Pipe any remote files.
+            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            bus_result = kallisto_bus(
+                fastqs, index_paths[0], technology, out_dir, threads=threads
+            )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
@@ -813,7 +1238,10 @@ def count_velocity(
 
     sort_result = bustools_sort(
         bus_result['bus'],
-        os.path.join(temp_dir, BUS_S_FILENAME),
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(bus_result['bus']), SORT_CODE)
+        ),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
@@ -825,18 +1253,22 @@ def count_velocity(
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
-    inspect_result = bustools_inspect(
-        sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-        whitelist_path, bus_result['ecmap']
-    )
-    unfiltered_results.update(inspect_result)
+    if inspect:
+        inspect_result = bustools_inspect(
+            sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path, bus_result['ecmap']
+        )
+        unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
-        sort_result['bus'], os.path.join(temp_dir, BUS_SC_FILENAME),
-        whitelist_path
+        sort_result['bus'],
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(sort_result['bus']), CORRECT_CODE)
+        ), whitelist_path
     )
     sort2_result = bustools_sort(
         correct_result['bus'],
-        os.path.join(out_dir, BUS_UNFILTERED_FILENAME),
+        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
         temp_dir=temp_dir,
         threads=threads,
         memory=memory
@@ -860,7 +1292,7 @@ def count_velocity(
         )
         sort_result = bustools_sort(
             capture_result['bus'],
-            os.path.join(out_dir, '{}{}'.format(prefix, BUS_UNFILTERED_SUFFIX)),
+            os.path.join(out_dir, f'{prefix}.{UNFILTERED_CODE}.bus'),
             temp_dir=temp_dir,
             threads=threads,
             memory=memory
@@ -870,6 +1302,15 @@ def count_velocity(
             unfiltered_results[prefix] = {}
         unfiltered_results[prefix].update(sort_result)
 
+        if inspect:
+            inspect_result = bustools_inspect(
+                sort_result['bus'],
+                os.path.join(
+                    out_dir, update_filename(INSPECT_FILENAME, prefix)
+                ), whitelist_path, bus_result['ecmap']
+            )
+            unfiltered_results[prefix].update(inspect_result)
+
         counts_prefix = os.path.join(counts_dir, prefix)
         count_result = bustools_count(
             sort_result['bus'],
@@ -878,8 +1319,22 @@ def count_velocity(
             bus_result['ecmap'],
             bus_result['txnames'],
             tcc=tcc,
+            mm=mm,
         )
         unfiltered_results[prefix].update(count_result)
+
+        if cellranger:
+            if not tcc:
+                cr_result = matrix_to_cellranger(
+                    count_result['mtx'], count_result['barcodes'],
+                    count_result['genes'], t2g_path,
+                    os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                )
+                unfiltered_results[prefix].update({'cellranger': cr_result})
+            else:
+                logger.warning(
+                    'TCC matrices can not be converted to cellranger-compatible format.'
+                )
 
     if loom or h5ad:
         unfiltered_results.update(
@@ -891,6 +1346,7 @@ def count_velocity(
                     unfiltered_results[prefix].get('genes')
                     for prefix in prefixes
                 ],
+                t2g_path=t2g_path,
                 ec_paths=[
                     unfiltered_results[prefix].get('ec') for prefix in prefixes
                 ],
@@ -912,7 +1368,7 @@ def count_velocity(
                     bus_result['txnames'],
                     t2g_path,
                     os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
-                    os.path.join(out_dir, BUS_FILTERED_FILENAME),
+                    os.path.join(out_dir, f'output.{FILTERED_CODE}.bus'),
                     temp_dir=temp_dir,
                     count=False
                 )
@@ -926,9 +1382,7 @@ def count_velocity(
                 )
                 filtered_sort_result = bustools_sort(
                     filtered_capture_result['bus'],
-                    os.path.join(
-                        out_dir, '{}{}'.format(prefix, BUS_FILTERED_SUFFIX)
-                    ),
+                    os.path.join(out_dir, f'{prefix}.{FILTERED_CODE}.bus'),
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory
@@ -949,8 +1403,27 @@ def count_velocity(
                     bus_result['ecmap'],
                     bus_result['txnames'],
                     tcc=tcc,
+                    mm=mm,
                 )
                 filtered_results[prefix].update(count_result)
+
+                if cellranger:
+                    if not tcc:
+                        cr_result = matrix_to_cellranger(
+                            count_result['mtx'], count_result['barcodes'],
+                            count_result['genes'], t2g_path,
+                            os.path.join(
+                                filtered_counts_dir,
+                                f'{CELLRANGER_DIR}_{prefix}'
+                            )
+                        )
+                        unfiltered_results[prefix].update({
+                            'cellranger': cr_result
+                        })
+                    else:
+                        logger.warning(
+                            'TCC matrices can not be converted to cellranger-compatible format.'
+                        )
 
         if loom or h5ad:
             filtered_results.update(
@@ -965,6 +1438,7 @@ def count_velocity(
                         filtered_results[prefix].get('genes')
                         for prefix in prefixes
                     ],
+                    t2g_path=t2g_path,
                     ec_paths=[
                         filtered_results[prefix].get('ec')
                         for prefix in prefixes
@@ -975,6 +1449,56 @@ def count_velocity(
                     tcc=tcc,
                     nucleus=nucleus,
                 )
+            )
+
+    STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
+
+    # Reports
+    nb_path = os.path.join(out_dir, REPORT_NOTEBOOK_FILENAME)
+    html_path = os.path.join(out_dir, REPORT_HTML_FILENAME)
+    if report:
+        logger.info(
+            f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+        )
+        report_result = render_report(
+            stats_path,
+            bus_result['info'],
+            unfiltered_results['inspect'],
+            nb_path,
+            html_path,
+            temp_dir=temp_dir
+        )
+
+        unfiltered_results.update(report_result)
+
+        for prefix in prefix_to_t2c:
+            nb_path = os.path.join(
+                out_dir, update_filename(REPORT_NOTEBOOK_FILENAME, prefix)
+            )
+            html_path = os.path.join(
+                out_dir, update_filename(REPORT_HTML_FILENAME, prefix)
+            )
+            logger.info(
+                f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
+            )
+            report_result = render_report(
+                stats_path,
+                bus_result['info'],
+                unfiltered_results[prefix]['inspect'],
+                nb_path,
+                html_path,
+                unfiltered_results[prefix]['mtx'],
+                unfiltered_results[prefix].get('barcodes'),
+                unfiltered_results[prefix].get('genes'),
+                t2g_path,
+                temp_dir=temp_dir
+            )
+            unfiltered_results[prefix].update(report_result)
+        if tcc:
+            logger.warning(
+                'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
             )
 
     return results
