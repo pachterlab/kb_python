@@ -5,6 +5,7 @@ import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
+from unittest.mock import ANY
 
 import anndata
 
@@ -76,7 +77,7 @@ class TestUtils(TestMixin, TestCase):
         with mock.patch('kb_python.utils.STATS') as STATS:
             p = utils.run_executable(['echo', 'TEST'], stream=False)
             self.assertEqual(p.stdout.read(), 'TEST\n')
-            STATS.command.assert_called_once_with(['echo', 'TEST'])
+            STATS.command.assert_called_once_with(['echo', 'TEST'], runtime=ANY)
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):

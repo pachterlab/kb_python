@@ -17,6 +17,7 @@ class Stats:
         self.start_time = None
         self.call = None
         self.commands = []
+        self.runtimes = []
         self.end_time = None
         self.elapsed = None
         self.version = __version__
@@ -31,13 +32,17 @@ class Stats:
         self.call = ' '.join(sys.argv)
         self.commands = []
 
-    def command(self, command):
+    def command(self, command, runtime=None):
         """Report a shell command was run.
 
         :param command: a shell command, represented as a list
         :type command: list
+        :param kwargs: additional command information
+        :type kwargs: dict
         """
-        self.commands.append(' '.join(command))
+        cmd = ' '.join(command)
+        self.commands.append(cmd)
+        self.runtimes.append(runtime or 'not measured')
 
     def end(self):
         """End collecting statistics.
@@ -70,6 +75,7 @@ class Stats:
             'elapsed': self.elapsed,
             'call': self.call,
             'commands': self.commands,
+            'runtimes': self.runtimes,
         }
 
 

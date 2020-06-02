@@ -200,9 +200,11 @@ def run_executable(
     c = command.copy()
     if alias:
         c[0] = os.path.basename(c[0])
-    STATS.command(c)
     if not quiet:
         logger.debug(' '.join(c))
+    if not wait:
+        STATS.command(c)
+    start = time.time()
     p = sp.Popen(
         command,
         stdin=stdin,
@@ -223,8 +225,7 @@ def run_executable(
                 for line in p.stderr:
                     out.append(line.strip())
                     logger.debug(line.strip())
-            else:
-                time.sleep(1)
+        STATS.command(c, runtime=time.time() - start)
 
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))

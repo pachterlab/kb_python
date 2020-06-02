@@ -54,4 +54,5 @@ class TestStats(TestMixin, TestCase):
             'elapsed': ANY,
             'call': ANY,
             'commands': ['test'],
+            'runtimes': [ANY],
         }, s.to_dict())

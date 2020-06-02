@@ -237,7 +237,7 @@ def execute_report(execute_path, nb_path, html_path):
     with open(execute_path, 'r') as f:
         nb = nbformat.read(f, as_version=4)
 
-    ep = ExecutePreprocessor()
+    ep = ExecutePreprocessor(timeout=600)
     ep.preprocess(nb)
 
     with open(nb_path, 'w') as f:
