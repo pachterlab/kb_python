@@ -4458,6 +4458,7 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 filtered_whitelist_path,
                 filtered_bus_path,
+                temp_dir=temp_dir,
                 count=False,
             )
             convert_matrices.assert_not_called()
@@ -4867,6 +4868,7 @@ class TestCount(TestMixin, TestCase):
                 self.t2g_path,
                 filtered_whitelist_path,
                 filtered_bus_path,
+                temp_dir=temp_dir,
                 count=False,
             )
             self.assertEqual(2, convert_matrices.call_count)
