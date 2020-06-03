@@ -9,6 +9,7 @@ from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
+    no_validate,
     PACKAGE_PATH,
     REFERENCES_MAPPING,
     set_dry,
@@ -595,6 +596,9 @@ def setup_count_args(parser, parent):
     report_group.add_argument(
         '--no-inspect', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_count.add_argument(
+        '--no-validate', help=argparse.SUPPRESS, action='store_true'
+    )
     parser_count.add_argument('fastqs', help='FASTQ files', nargs='+')
     return parser_count
 
@@ -667,6 +671,14 @@ def main():
     )
     logger = logging.getLogger(__name__)
     logger.addHandler(TqdmLoggingHandler())
+
+    # Validation
+    if 'no_validate' in args and args.no_validate:
+        logger.warning((
+            'File validation is turned off. '
+            'This may lead to corrupt/empty output files.'
+        ))
+        no_validate()
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
