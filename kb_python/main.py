@@ -339,7 +339,10 @@ def setup_ref_args(parser, parent):
         help=(
             'Number of files to split the index into. If this option is specified, '
             'the FASTA that is normally used to create an index is split into '
-            '`N` approximately-equal parts. Each of these FASTAs are indexed separately.'
+            '`N` approximately-equal parts. Each of these FASTAs are indexed separately. '
+            'When using this option with `--workflow lamanno`, the intron FASTA '
+            'is split into N-1 approximately-equal parts and indexed, while the '
+            'cDNA FASTA is not split and indexed.'
         ),
         type=int,
         default=1,

@@ -656,11 +656,39 @@ def ref_lamanno(
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'
             )
-        index_result = split_and_index(
-            combined_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
-        ) if n > 1 else kallisto_index(
-            combined_path, index_path, k=k or 31
-        )
+
+        # If n = 1, make single index
+        # if n = 2, make two indices, one for spliced and another for unspliced
+        # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
+        if n == 1:
+            index_result = kallisto_index(combined_path, index_path, k=k or 31)
+        else:
+            cdna_index_result = kallisto_index(
+                cdna_path, f'{index_path}_cdna', k=k or 31
+            )
+            if n == 2:
+                intron_index_result = kallisto_index(
+                    intron_path, f'{index_path}_intron', k=k or 31
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'], intron_index_result['index']
+                    ]
+                }
+            else:
+                split_index_result = split_and_index(
+                    intron_path,
+                    f'{index_path}_intron',
+                    n=n - 1,
+                    k=k or 31,
+                    temp_dir=temp_dir
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'],
+                        *split_index_result['indices']
+                    ]
+                }
         results.update(index_result)
     else:
         logger.info(
