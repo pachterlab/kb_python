@@ -480,8 +480,9 @@ def setup_count_args(parser, parent):
         help=(
             'Path to file of whitelisted barcodes to correct to. '
             'If not provided and bustools supports the technology, '
-            'a pre-packaged whitelist is used. If not, the bustools '
-            'whitelist command is used. (`kb --list` to view whitelists)'
+            'a pre-packaged whitelist is used. Otherwise, or if \'None\', is '
+            'provided, the bustools whitelist command is used. '
+            '(`kb --list` to view whitelists)'
         ),
         type=str
     )
