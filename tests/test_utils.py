@@ -97,18 +97,6 @@ class TestUtils(TestMixin, TestCase):
             utils.run_executable(['echo', 'TEST'], stream=True)
             debug_mock.assert_has_calls([call('TEST')])
 
-    def test_run_chain(self):
-        ps = utils.run_chain(['echo', 'TEST'], ['grep', 'T'])
-        self.assertEqual(ps[1].stdout.read(), 'TEST\n')
-
-    def test_run_chain_fails_single_command(self):
-        with self.assertRaises(AssertionError):
-            utils.run_chain(['echo', 'TEST'])
-
-    def test_run_chain_raises_exception_when_dead(self):
-        with self.assertRaises(sp.SubprocessError):
-            utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
-
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
             run_executable().stdout.read.return_value = 'kallisto 1.2.3'

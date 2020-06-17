@@ -525,6 +525,7 @@ def ref_lamanno(
     intron_t2c_path,
     n=1,
     k=None,
+    flank=None,
     temp_dir='tmp',
     overwrite=False,
 ):
@@ -548,6 +549,10 @@ def ref_lamanno(
     :type n: int
     :param k: override default kmer length (31), defaults to `None`
     :type k: int, optional
+    :param flank: number of bases to include from the flanking regions
+                  when generating the intron FASTA, defaults to `None`, which
+                  sets the flanking region to be k - 1 bases.
+    :type flank: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -602,7 +607,9 @@ def ref_lamanno(
                 sorted_fasta_path,
                 sorted_gtf_path,
                 intron_temp_path,
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=flank if flank is not None else k -
+                1 if k is not None else 30
             )
             introns.append(intron_fasta_path)
             intron_t2c_temp_path = get_temporary_filename(temp_dir)

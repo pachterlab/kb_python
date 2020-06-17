@@ -128,6 +128,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
             args.c2,
             n=args.n,
             k=args.k,
+            flank=args.flank,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -417,6 +418,7 @@ def setup_ref_args(parser, parent):
     parser_ref.add_argument(
         '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_ref.add_argument('--flank', help=argparse.SUPPRESS, type=int)
 
     return parser_ref
 

@@ -915,7 +915,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1031,7 +1032,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1148,7 +1150,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1263,7 +1266,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=k - 1
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1420,7 +1424,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([

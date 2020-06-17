@@ -234,55 +234,6 @@ def run_executable(
     return p
 
 
-def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
-    """Execute multiple shell commands by piping the output into inputs.
-
-    :param commands: lists of shell commands
-    :type commands: list
-    :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
-                  defaults to `None`
-    :type stdin: stream, optional
-    :param stdout: object to pass into the `stdout` argument for `subprocess.Popen`,
-                  defaults to `subprocess.PIPE`
-    :type stdout: stream, optional
-    :param wait: whether to wait until the command has finished, defaults to `True`
-    :type wait: bool, optional
-    :param stream: whether to stream the output to the command line, defaults to `True`
-    :type stream: bool, optional
-
-    :return: list of spawned subprocesses
-    :rtype: list
-    """
-    assert len(commands) > 1
-    processes = []
-    for command in commands:
-        _stdin = stdin
-        _stdout = stdout
-        _wait = wait
-        _stream = stream
-        if processes:
-            _stdin = processes[-1].stdout
-        if len(processes) != len(commands) - 1:
-            _stdout = sp.PIPE
-            _wait = False
-            _stream = False
-        p = run_executable(
-            command, stdin=_stdin, stdout=_stdout, wait=_wait, stream=_stream
-        )
-        processes.append(p)
-
-        if _stdin:
-            _stdin.close()
-
-    if wait:
-        for p in processes:
-            while p.poll() is None:
-                time.sleep(1)
-            if p.returncode != 0:
-                raise sp.CalledProcessError(p.returncode, ' '.join(command))
-    return processes
-
-
 def get_kallisto_version():
     """Get the provided Kallisto version.
 
