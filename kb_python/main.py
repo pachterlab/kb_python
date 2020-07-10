@@ -152,7 +152,7 @@ def parse_count(args):
             loom=args.loom,
             h5ad=args.h5ad,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
-	    temp_dir=args.temp_dir
+            temp_dir=args.temp_dir
         )
     else:
         count(
@@ -169,7 +169,7 @@ def parse_count(args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
-	    temp_dir=args.temp_dir
+            temp_dir=args.temp_dir
         )
 
 
@@ -398,11 +398,11 @@ def setup_count_args(parser, parent):
     )
     parser_count.add_argument(
         '--tmp',
-	dest="temp_dir",
-	metavar='TMP',
-	help='temporary directory location',
-	type=str,
-	default=TEMP_DIR
+        dest="temp_dir",
+        metavar='TMP',
+        help='temporary directory location',
+        type=str,
+        default=TEMP_DIR
     )
     parser_count.add_argument(
         '--tcc',
