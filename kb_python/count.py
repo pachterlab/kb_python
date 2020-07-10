@@ -634,6 +634,8 @@ def count(
         )
     unfiltered_results.update(bus_result)
 
+    logger.info(f'Using temp dir {temp_dir}')
+
     sort_result = bustools_sort(
         bus_result['bus'],
         os.path.join(temp_dir, BUS_S_FILENAME),

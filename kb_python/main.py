@@ -152,6 +152,7 @@ def parse_count(args):
             loom=args.loom,
             h5ad=args.h5ad,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
+	    temp_dir=args.temp_dir
         )
     else:
         count(
@@ -168,6 +169,7 @@ def parse_count(args):
             overwrite=args.overwrite,
             loom=args.loom,
             h5ad=args.h5ad,
+	    temp_dir=args.temp_dir
         )
 
 
@@ -395,6 +397,14 @@ def setup_count_args(parser, parent):
         default='4G'
     )
     parser_count.add_argument(
+        '--tmp',
+	dest="temp_dir",
+	metavar='TMP',
+	help='temporary directory location',
+	type=str,
+	default=TEMP_DIR
+    )
+    parser_count.add_argument(
         '--tcc',
         help='Generate a TCC matrix instead of a gene count matrix.',
         action='store_true'
@@ -558,8 +568,8 @@ def main():
     logger.debug(
         'bustools binary located at {}'.format(get_bustools_binary_path())
     )
-    logger.debug('Creating tmp directory')
-    make_directory(TEMP_DIR)
+    logger.debug(f'Creating tmp directory at {args.temp_dir}')
+    make_directory(args.temp_dir)
     try:
         logger.debug(args)
         COMMAND_TO_FUNCTION[args.command](args)
@@ -570,5 +580,5 @@ def main():
     finally:
         # Always clean temp dir
         if not args.keep_tmp:
-            logger.debug('Removing tmp directory')
-            remove_directory(TEMP_DIR)
+            logger.debug(f'Removing tmp directory at {args.temp_dir}')
+            remove_directory(args.temp_dir)
