@@ -195,3 +195,9 @@ class TestFASTA(TestMixin, TestCase):
         fasta.generate_unspliced_fasta(
             self.sorted_fasta_path, self.sorted_gtf_path, out_path
         )
+
+    def test_complement(self):
+        # check for each code and its complement,
+        # if the complement's complement is the code.
+        for key, value in fasta.FASTA.COMPLEMENT.items():
+            assert key == fasta.FASTA.COMPLEMENT[value]
