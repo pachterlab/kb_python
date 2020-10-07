@@ -86,7 +86,7 @@ class FASTA:
         :return: reverse complement
         :rtype: str
         """
-        return ''.join(FASTA.COMPLEMENT[b.upper()] for b in reversed(sequence))
+        return ''.join(FASTA.COMPLEMENT[b] for b in reversed(sequence.upper()))
 
     def entries(self):
         """Generator that yields one FASTA entry (sequence ID + sequence) at a time.
