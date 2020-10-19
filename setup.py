@@ -22,7 +22,7 @@ setup(
     keywords='kallisto bustools',
     python_requires='>=3.6',
     license='BSD',
-    packages=find_packages(),
+    packages=find_packages('kb_python'),
     zip_safe=False,
     include_package_data=True,
     install_requires=read('requirements.txt').strip().split('\n'),
