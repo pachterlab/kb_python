@@ -1,7 +1,8 @@
 .PHONY : install test check build docs clean push_release
 
 test:
-	nosetests --verbose --with-coverage --cover-package kb_python
+	rm -f .coverage
+	nosetests --verbose --with-coverage --cover-package kb_python tests/*
 
 check:
 	flake8 kb_python && echo OK
