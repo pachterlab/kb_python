@@ -242,7 +242,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             for expr in args.fastqs:
                 fastqs.extend(glob.glob(expr))
             args.fastqs = sorted(list(set(fastqs)))
-            logger.info(f'Found the following FASTQs:')
+            logger.info('Found the following FASTQs:')
             for fastq in args.fastqs:
                 logger.info(' ' * 8 + fastq)
             count_smartseq(
@@ -281,7 +281,7 @@ def parse_count(parser, args, temp_dir='tmp'):
                 inspect=not args.no_inspect,
                 temp_dir=temp_dir
             )
-            
+
 
 COMMAND_TO_FUNCTION = {
     'ref': parse_ref,
@@ -659,7 +659,13 @@ def setup_count_args(parser, parent):
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
     )
-    parser_count.add_argument('fastqs', help='FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.', nargs='+')
+    parser_count.add_argument(
+        'fastqs',
+        help=(
+            'FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.'
+        ),
+        nargs='+'
+    )
     return parser_count
 
 
