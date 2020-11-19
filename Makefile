@@ -1,7 +1,8 @@
 .PHONY : install test check build docs clean push_release
 
 test:
-	nosetests --verbose --with-coverage --cover-package kb_python
+	rm -f .coverage
+	nosetests --verbose --with-coverage --cover-package kb_python tests/* tests/dry/*
 
 check:
 	flake8 kb_python && echo OK
@@ -19,6 +20,7 @@ clean:
 	rm -rf kb_python.egg-info
 	rm -rf docs/_build
 	rm -rf docs/api
+	rm -rf .coverage
 
 bump_patch:
 	bumpversion patch

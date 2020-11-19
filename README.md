@@ -3,6 +3,7 @@
 [![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.24.4/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/pachterlab/kb_python/branch/master/graph/badge.svg)](https://codecov.io/gh/pachterlab/kb_python)
 [![pypi downloads](https://img.shields.io/pypi/dm/kb-python)](https://pypi.org/project/kb-python/)
 [![docs](https://readthedocs.org/projects/kb-python/badge/?version=latest)](https://kb-python.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/pypi/l/kb-python)](LICENSE)
@@ -38,7 +39,7 @@ pre-processing of single-cell RNA-seq. BioRxiv, 673285.
 None. The kallisto and bustools binaries are included with the package.
 
 ## Getting Started
-Visit the [Getting Started](https://www.kallistobus.tools/kb_getting_started) page.
+Visit the [Getting Started](https://colab.research.google.com/github/pachterlab/kallistobustools/blob/master/notebooks/kb_standard.ipynb) tutorial on Google Colab.
 
 ## Documentation
 - User documentation and tutorials are available [here](https://www.kallistobus.tools/tutorials).

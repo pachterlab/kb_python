@@ -1,5 +1,4 @@
 import concurrent.futures
-import functools
 import gzip
 import logging
 import os
@@ -21,7 +20,6 @@ from .config import (
     CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
-    is_dry,
     MAP_DIR,
     PACKAGE_PATH,
     PLATFORM,
@@ -29,6 +27,7 @@ from .config import (
     WHITELIST_DIR,
     UnsupportedOSException,
 )
+from .dry import dryable
 from .dry import utils as dry_utils
 from .stats import STATS
 
@@ -80,33 +79,6 @@ def update_filename(filename, code):
     """
     name, extension = os.path.splitext(filename)
     return f'{name}.{code}{extension}'
-
-
-def dryable(dry_func):
-    """Function decorator to set a function as dryable.
-
-    When this decorator is applied, the provided `dry_func` will be called
-    instead of the actual function when the current run is a dry run.
-
-    :param dry_func: function to call when it is a dry run
-    :type dry_func: function
-
-    :return: wrapped function
-    :rtype: function
-    """
-
-    def wrapper(func):
-
-        @functools.wraps(func)
-        def inner(*args, **kwargs):
-            if not is_dry():
-                return func(*args, **kwargs)
-            else:
-                return dry_func(*args, **kwargs)
-
-        return inner
-
-    return wrapper
 
 
 def open_as_text(path, mode):
@@ -228,9 +200,11 @@ def run_executable(
     c = command.copy()
     if alias:
         c[0] = os.path.basename(c[0])
-    STATS.command(c)
     if not quiet:
         logger.debug(' '.join(c))
+    if not wait:
+        STATS.command(c)
+    start = time.time()
     p = sp.Popen(
         command,
         stdin=stdin,
@@ -251,63 +225,13 @@ def run_executable(
                 for line in p.stderr:
                     out.append(line.strip())
                     logger.debug(line.strip())
-            else:
-                time.sleep(1)
+        STATS.command(c, runtime=time.time() - start)
 
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
 
     return p
-
-
-def run_chain(*commands, stdin=None, stdout=sp.PIPE, wait=True, stream=False):
-    """Execute multiple shell commands by piping the output into inputs.
-
-    :param commands: lists of shell commands
-    :type commands: list
-    :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
-                  defaults to `None`
-    :type stdin: stream, optional
-    :param stdout: object to pass into the `stdout` argument for `subprocess.Popen`,
-                  defaults to `subprocess.PIPE`
-    :type stdout: stream, optional
-    :param wait: whether to wait until the command has finished, defaults to `True`
-    :type wait: bool, optional
-    :param stream: whether to stream the output to the command line, defaults to `True`
-    :type stream: bool, optional
-
-    :return: list of spawned subprocesses
-    :rtype: list
-    """
-    assert len(commands) > 1
-    processes = []
-    for command in commands:
-        _stdin = stdin
-        _stdout = stdout
-        _wait = wait
-        _stream = stream
-        if processes:
-            _stdin = processes[-1].stdout
-        if len(processes) != len(commands) - 1:
-            _stdout = sp.PIPE
-            _wait = False
-            _stream = False
-        p = run_executable(
-            command, stdin=_stdin, stdout=_stdout, wait=_wait, stream=_stream
-        )
-        processes.append(p)
-
-        if _stdin:
-            _stdin.close()
-
-    if wait:
-        for p in processes:
-            while p.poll() is None:
-                time.sleep(1)
-            if p.returncode != 0:
-                raise sp.CalledProcessError(p.returncode, ' '.join(command))
-    return processes
 
 
 def get_kallisto_version():
@@ -387,6 +311,23 @@ def whitelist_provided(technology):
     upper = technology.upper()
     return upper in TECHNOLOGIES_MAPPING and TECHNOLOGIES_MAPPING[
         upper].whitelist_archive
+
+
+@dryable(dry_utils.move_file)
+def move_file(source, destination):
+    """Move a file from source to destination, overwriting the file if the
+    destination exists.
+
+    :param source: path to source file
+    :type source: str
+    :param destination: path to destination
+    :type destination: str
+
+    :return: path to moved file
+    :rtype: str
+    """
+    shutil.move(source, destination)
+    return destination
 
 
 @dryable(dry_utils.copy_whitelist)
@@ -522,6 +463,7 @@ def stream_file(url, path):
     return path
 
 
+@dryable(dry_utils.get_temporary_filename)
 def get_temporary_filename(temp_dir=None):
     """Create a temporary file in the provided temprorary directory.
 

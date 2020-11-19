@@ -8,6 +8,7 @@ BINS_DIR = 'bins'
 
 TEMP_DIR = 'tmp'
 DRY = False
+VALIDATE = True
 CHUNK_SIZE = 1024 * 1024 * 4  # Download files in chunks of 4 Mb
 
 # Technology to file position mapping
@@ -223,3 +224,19 @@ def is_dry():
     :rtype: bool
     """
     return DRY
+
+
+def no_validate():
+    """Turn off validation.
+    """
+    global VALIDATE
+    VALIDATE = False
+
+
+def is_validate():
+    """Return whether validation is turned on.
+
+    :return: whether validation is on
+    :rtype: bool
+    """
+    return VALIDATE

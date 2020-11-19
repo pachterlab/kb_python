@@ -10,6 +10,7 @@ from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
+    no_validate,
     PACKAGE_PATH,
     REFERENCES_MAPPING,
     set_dry,
@@ -79,7 +80,7 @@ def display_technologies():
         for row in rows[1:]:
             max_lens[i] = max(max_lens[i], len(row[i]))
 
-    rows.insert(1, ['-' * l for l in max_lens])
+    rows.insert(1, ['-' * l for l in max_lens])  # noqa
     for row in rows:
         for col, l in zip(row, max_lens):
             print(col.ljust(l + 4), end='')
@@ -95,14 +96,14 @@ def parse_ref(parser, args, temp_dir='tmp'):
     """
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
-            parser.error(f'K-mer length must be a positive odd integer.')
+            parser.error('K-mer length must be a positive odd integer.')
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         parser.error(
-            f'There must be the same number of FASTAs as there are GTFs.'
+            'There must be the same number of FASTAs as there are GTFs.'
         )
 
     if args.d is not None:
@@ -129,6 +130,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
             args.c2,
             n=args.n,
             k=args.k,
+            flank=args.flank,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -164,13 +166,21 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    logger = logging.getLogger(__name__)
     if args.report:
-        logging.getLogger(__name__).warning((
+        logger.warning((
             'Using `--report` may cause `kb` to exceed maximum memory specified '
             'and crash for large count matrices.'
         ))
 
     args.i = args.i.split(',')
+    if len(args.i) > 1:
+        logger.warning((
+            'Multiple indices were provided. Aligning to split indices is currently '
+            'EXPERIMENTAL and results in loss of reads. It is recommended to '
+            'use a single index until this feature is fully supported. Use at '
+            'your own risk!'
+        ))
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -201,13 +211,14 @@ def parse_count(parser, args, temp_dir='tmp'):
             h5ad=args.h5ad,
             cellranger=args.cellranger,
             report=args.report,
+            inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus' or args.nucleus,
             temp_dir=temp_dir
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
             parser.error(
-                f'`kite:10xFB` workflow is only supported with technology `10XV3`'
+                '`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
         # Smart-seq
@@ -267,9 +278,10 @@ def parse_count(parser, args, temp_dir='tmp'):
                 h5ad=args.h5ad,
                 cellranger=args.cellranger,
                 report=args.report,
+                inspect=not args.no_inspect,
                 temp_dir=temp_dir
             )
-
+            
 
 COMMAND_TO_FUNCTION = {
     'ref': parse_ref,
@@ -382,7 +394,10 @@ def setup_ref_args(parser, parent):
         help=(
             'Number of files to split the index into. If this option is specified, '
             'the FASTA that is normally used to create an index is split into '
-            '`N` approximately-equal parts. Each of these FASTAs are indexed separately.'
+            '`N` approximately-equal parts. Each of these FASTAs are indexed separately. '
+            'When using this option with `--workflow lamanno`, the intron FASTA '
+            'is split into N-1 approximately-equal parts and indexed, while the '
+            'cDNA FASTA is not split and indexed.'
         ),
         type=int,
         default=1,
@@ -457,6 +472,7 @@ def setup_ref_args(parser, parent):
     parser_ref.add_argument(
         '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_ref.add_argument('--flank', help=argparse.SUPPRESS, type=int)
 
     return parser_ref
 
@@ -520,8 +536,9 @@ def setup_count_args(parser, parent):
         help=(
             'Path to file of whitelisted barcodes to correct to. '
             'If not provided and bustools supports the technology, '
-            'a pre-packaged whitelist is used. If not, the bustools '
-            'whitelist command is used. (`kb --list` to view whitelists)'
+            'a pre-packaged whitelist is used. Otherwise, or if \'None\', is '
+            'provided, the bustools whitelist command is used. '
+            '(`kb --list` to view whitelists)'
         ),
         type=str
     )
@@ -626,7 +643,8 @@ def setup_count_args(parser, parent):
         help='Convert count matrices to cellranger-compatible format',
         action='store_true'
     )
-    parser_count.add_argument(
+    report_group = parser_count.add_mutually_exclusive_group()
+    report_group.add_argument(
         '--report',
         help=(
             'Generate a HTML report containing run statistics and basic plots. '
@@ -635,13 +653,13 @@ def setup_count_args(parser, parent):
         ),
         action='store_true'
     )
-    parser_count.add_argument(
-        'fastqs',
-        help=(
-            'FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.'
-        ),
-        nargs='+'
+    report_group.add_argument(
+        '--no-inspect', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_count.add_argument(
+        '--no-validate', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument('fastqs', help='FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.', nargs='+')
     return parser_count
 
 
@@ -711,6 +729,14 @@ def main():
         format='[%(asctime)s] %(levelname)7s %(message)s',
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
+
+    # Validation
+    if 'no_validate' in args and args.no_validate:
+        logger.warning((
+            'File validation is turned off. '
+            'This may lead to corrupt/empty output files.'
+        ))
+        no_validate()
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.

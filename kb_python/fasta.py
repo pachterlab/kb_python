@@ -18,16 +18,21 @@ class FASTA:
     """
     PARSER = re.compile(r'^>(?P<sequence_id>\S+)(?P<group>.*)')
     GROUP_PARSER = re.compile(r'(?P<key>\S+?):(?P<value>\S+)')
-    BASEPAIRS = {
-        'a': 'T',
+    COMPLEMENT = {
         'A': 'T',
-        'c': 'G',
         'C': 'G',
-        'g': 'C',
         'G': 'C',
-        't': 'A',
         'T': 'A',
-        'n': 'N',
+        'Y': 'R',
+        'R': 'Y',
+        'W': 'W',
+        'S': 'S',
+        'K': 'M',
+        'M': 'K',
+        'D': 'H',
+        'V': 'B',
+        'H': 'D',
+        'B': 'V',
         'N': 'N',
     }
     SEQUENCE_PARSER = re.compile(r'[^atcgATCG]')
@@ -82,7 +87,7 @@ class FASTA:
         :return: reverse complement
         :rtype: str
         """
-        return ''.join(FASTA.BASEPAIRS[b] for b in reversed(sequence))
+        return ''.join(FASTA.COMPLEMENT[b] for b in reversed(sequence.upper()))
 
     def entries(self, parse=True):
         """Generator that yields one FASTA entry (sequence ID + sequence) at a time.
@@ -242,7 +247,7 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     if len(lengths) > 1:
         logger.warning(
             'Detected barcodes of different lengths: {}'.format(
-                ','.join(str(l) for l in lengths)
+                ','.join(str(l) for l in lengths)  # noqa
             )
         )
     for f1, f2 in itertools.combinations(variants.keys(), 2):

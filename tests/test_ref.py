@@ -1,6 +1,5 @@
 import os
 import tarfile
-import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
@@ -71,9 +70,7 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(2, warning.call_count)
 
     def test_kallisto_index(self):
-        index_path = os.path.join(
-            tempfile.gettempdir(), '{}.idx'.format(uuid.uuid4())
-        )
+        index_path = os.path.join(self.temp_dir, '{}.idx'.format(uuid.uuid4()))
         self.assertFalse(os.path.exists(index_path))
         result = ref.kallisto_index(self.fasta_path, index_path)
         for key, path in result.items():
@@ -82,7 +79,7 @@ class TestRef(TestMixin, TestCase):
     def test_split_and_index(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_prefix = os.path.join(temp_dir, 'index')
             get_temporary_filename.side_effect = [
                 os.path.join(temp_dir, 'temp1'),
@@ -112,9 +109,7 @@ class TestRef(TestMixin, TestCase):
             ])
 
     def test_create_t2g_from_fasta(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_fasta(
             self.split_intron_fasta_path, t2g_path
         )
@@ -123,26 +118,20 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_fasta_kite(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_fasta(self.kite_fasta_path, t2g_path)
         with open(result['t2g'], 'r') as f, open(self.kite_t2g_path,
                                                  'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_gtf(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_gtf(self.unsorted_gtf_path, t2g_path)
         with open(result['t2g'], 'r') as f, open(self.gtf_t2g_path, 'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_gtf_with_intron(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_gtf(
             self.unsorted_gtf_path, t2g_path, intron=True
         )
@@ -151,9 +140,7 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2c(self):
-        t2c_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2c_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2c(self.unsorted_fasta_path, t2c_path)
         with open(result['t2c'], 'r') as f, open(self.fasta_t2c_path,
                                                  'r') as t2c:
@@ -163,23 +150,21 @@ class TestRef(TestMixin, TestCase):
         with mock.patch('kb_python.ref.download_file') as download_file:
             reference = REFERENCES_MAPPING['human']
             files = {
-                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
-                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+                'i': os.path.join(self.temp_dir, 'TEST.idx'),
+                'g': os.path.join(self.temp_dir, 'TEST.txt')
             }
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -205,23 +190,21 @@ class TestRef(TestMixin, TestCase):
             exists.return_value = True
             reference = REFERENCES_MAPPING['human']
             files = {
-                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
-                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+                'i': os.path.join(self.temp_dir, 'TEST.idx'),
+                'g': os.path.join(self.temp_dir, 'TEST.txt')
             }
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -238,21 +221,19 @@ class TestRef(TestMixin, TestCase):
     def test_download_reference_less_files(self):
         with mock.patch('kb_python.ref.download_file') as download_file:
             reference = REFERENCES_MAPPING['human']
-            files = {'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx')}
-            temp_dir = tempfile.mkdtemp()
+            files = {'i': os.path.join(self.temp_dir, 'TEST.idx')}
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -266,7 +247,7 @@ class TestRef(TestMixin, TestCase):
 
     def test_decompress_file_text(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             self.assertEqual(
                 'textfile.txt',
                 ref.decompress_file('textfile.txt', temp_dir=temp_dir)
@@ -275,7 +256,7 @@ class TestRef(TestMixin, TestCase):
 
     def test_decompress_file_gzip(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             decompress_gzip.return_value = 'textfile.txt'
             self.assertEqual(
                 'textfile.txt',
@@ -298,7 +279,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -364,7 +345,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -431,7 +412,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -539,7 +520,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -600,7 +581,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -640,7 +621,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -682,7 +663,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -721,7 +702,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -760,7 +741,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -796,7 +777,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -843,7 +824,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -915,7 +896,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -940,7 +922,7 @@ class TestRef(TestMixin, TestCase):
             )
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_split(self):
+    def test_ref_lamanno_split_2(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.decompress_file') as decompress_file,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
@@ -951,12 +933,11 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.generate_intron_fasta') as generate_intron_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
             mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
-            mock.patch('kb_python.ref.split_and_index') as split_and_index,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
-            index_path = mock.MagicMock()
+            temp_dir = self.temp_dir
+            index_path = 'index'
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
             sorted_gtf_path = mock.MagicMock()
@@ -976,7 +957,11 @@ class TestRef(TestMixin, TestCase):
             check_chromosomes.return_value = chromosomes
             generate_cdna_fasta.return_value = 'cdna'
             generate_intron_fasta.return_value = 'intron'
-            split_and_index.return_value = {'indices': ['index.0', 'index.1']}
+            kallisto_index.side_effect = [{
+                'index': 'index_cdna'
+            }, {
+                'index': 'index_intron'
+            }]
             create_t2g_from_fasta.return_value = {'t2g': t2g_path}
             create_t2c.side_effect = [{
                 't2c': 'cdna_t2c'
@@ -993,7 +978,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_fasta': intron_fasta_path,
                 'cdna_t2c': cdna_t2c_path,
                 'intron_t2c': intron_t2c_path,
-                'indices': ['index.0', 'index.1'],
+                'indices': ['index_cdna', 'index_intron'],
             },
                              ref.ref_lamanno(
                                  self.fasta_path,
@@ -1028,7 +1013,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1048,10 +1034,130 @@ class TestRef(TestMixin, TestCase):
                     temp_dir=temp_dir
                 )
             ])
-            split_and_index.assert_called_once_with(
-                combined_path, index_path, k=31, n=2, temp_dir=temp_dir
+            self.assertEqual(2, kallisto_index.call_count)
+            kallisto_index.assert_has_calls([
+                call(cdna_fasta_path, 'index_cdna', k=31),
+                call(intron_fasta_path, 'index_intron', k=31),
+            ])
+
+    def test_ref_lamanno_split_3(self):
+        with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.ref.decompress_file') as decompress_file,\
+            mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
+            mock.patch('kb_python.ref.sort_fasta') as sort_fasta,\
+            mock.patch('kb_python.ref.sort_gtf') as sort_gtf,\
+            mock.patch('kb_python.ref.check_chromosomes') as check_chromosomes,\
+            mock.patch('kb_python.ref.generate_cdna_fasta') as generate_cdna_fasta,\
+            mock.patch('kb_python.ref.generate_intron_fasta') as generate_intron_fasta,\
+            mock.patch('kb_python.ref.create_t2c') as create_t2c,\
+            mock.patch('kb_python.ref.concatenate_files') as concatenate_files,\
+            mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
+            mock.patch('kb_python.ref.split_and_index') as split_and_index,\
+            mock.patch('kb_python.ref.glob.glob') as glob:
+            glob.return_value = []
+            temp_dir = self.temp_dir
+            index_path = 'index'
+            t2g_path = mock.MagicMock()
+            sorted_fasta_path = mock.MagicMock()
+            sorted_gtf_path = mock.MagicMock()
+            cdna_fasta_path = mock.MagicMock()
+            intron_fasta_path = mock.MagicMock()
+            cdna_t2c_path = mock.MagicMock()
+            intron_t2c_path = mock.MagicMock()
+            combined_path = mock.MagicMock()
+            chromosomes = {'1', '2'}
+            get_temporary_filename.side_effect = [
+                'fasta', 'gtf', 'cdna', 'cdna_t2c', 'intron', 'intron_t2c',
+                'combined'
+            ]
+            decompress_file.side_effect = [self.fasta_path, self.gtf_path]
+            sort_fasta.return_value = sorted_fasta_path, chromosomes
+            sort_gtf.return_value = sorted_gtf_path, chromosomes
+            check_chromosomes.return_value = chromosomes
+            generate_cdna_fasta.return_value = 'cdna'
+            generate_intron_fasta.return_value = 'intron'
+            kallisto_index.return_value = {'index': 'index_cdna'}
+            split_and_index.return_value = {
+                'indices': ['index_intron.0', 'index_intron.1']
+            }
+            create_t2g_from_fasta.return_value = {'t2g': t2g_path}
+            create_t2c.side_effect = [{
+                't2c': 'cdna_t2c'
+            }, {
+                't2c': 'intron_t2c'
+            }]
+            concatenate_files.side_effect = [
+                cdna_fasta_path, cdna_t2c_path, intron_fasta_path,
+                intron_t2c_path, combined_path
+            ]
+            self.assertEqual({
+                't2g': t2g_path,
+                'cdna_fasta': cdna_fasta_path,
+                'intron_fasta': intron_fasta_path,
+                'cdna_t2c': cdna_t2c_path,
+                'intron_t2c': intron_t2c_path,
+                'indices': ['index_cdna', 'index_intron.0', 'index_intron.1'],
+            },
+                             ref.ref_lamanno(
+                                 self.fasta_path,
+                                 self.gtf_path,
+                                 cdna_fasta_path,
+                                 intron_fasta_path,
+                                 index_path,
+                                 t2g_path,
+                                 cdna_t2c_path,
+                                 intron_t2c_path,
+                                 n=3,
+                                 temp_dir=temp_dir
+                             ))
+            self.assertEqual(2, decompress_file.call_count)
+            decompress_file.assert_has_calls([
+                call(self.fasta_path, temp_dir=temp_dir),
+                call(self.gtf_path, temp_dir=temp_dir),
+            ])
+            create_t2g_from_fasta.assert_called_once_with(
+                combined_path, t2g_path
             )
-            kallisto_index.assert_not_called()
+            sort_fasta.assert_called_once_with(self.fasta_path, 'fasta')
+            sort_gtf.assert_called_once_with(self.gtf_path, 'gtf')
+            check_chromosomes.assert_called_once_with(chromosomes, chromosomes)
+            generate_cdna_fasta.assert_called_once_with(
+                sorted_fasta_path,
+                sorted_gtf_path,
+                'cdna',
+                chromosomes=chromosomes
+            )
+            generate_intron_fasta.assert_called_once_with(
+                sorted_fasta_path,
+                sorted_gtf_path,
+                'intron',
+                chromosomes=chromosomes,
+                flank=30
+            )
+            self.assertEqual(2, create_t2c.call_count)
+            create_t2c.assert_has_calls([
+                call('cdna', 'cdna_t2c'),
+                call('intron', 'intron_t2c')
+            ])
+            self.assertEqual(5, concatenate_files.call_count)
+            concatenate_files.assert_has_calls([
+                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
+                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
+                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
+                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call(
+                    cdna_fasta_path,
+                    intron_fasta_path,
+                    out_path='combined',
+                    temp_dir=temp_dir
+                )
+            ])
+            kallisto_index.assert_called_once_with(
+                cdna_fasta_path, 'index_cdna', k=31
+            )
+            split_and_index.assert_called_once_with(
+                intron_fasta_path, 'index_intron', n=2, k=31, temp_dir=temp_dir
+            )
 
     def test_ref_lamanno_override_k(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
@@ -1068,7 +1174,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -1141,7 +1247,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=k - 1
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1179,7 +1286,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
@@ -1225,7 +1332,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -1298,7 +1405,8 @@ class TestRef(TestMixin, TestCase):
                 sorted_fasta_path,
                 sorted_gtf_path,
                 'intron',
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=30
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([

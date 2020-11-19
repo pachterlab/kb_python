@@ -67,16 +67,16 @@ def check_chromosomes(fasta_chromosomes, gtf_chromosomes):
     gtf_unique = gtf_chromosomes - fasta_chromosomes
     if fasta_unique:
         logger.warning((
-            'The following chromosomes were found in the FASTA but doens\'t have '
+            'The following chromosomes were found in the FASTA but does not have '
             'any "transcript" features in the GTF: {}. '
             'No sequences will be generated for these chromosomes.'
         ).format(', '.join(fasta_unique)))
     if gtf_unique:
         logger.warning((
             'The following chromosomes were found to have "transcript" features '
-            'in the GTF but doens\'t exist in the FASTA. '
+            'in the GTF but does not exist in the FASTA. '
             'No sequences will be generated for these chromosomes.'
-        ).format(', '.join(fasta_unique)))
+        ))
     chromosomes = set.intersection(fasta_chromosomes, gtf_chromosomes)
 
     return chromosomes
@@ -525,6 +525,7 @@ def ref_lamanno(
     intron_t2c_path,
     n=1,
     k=None,
+    flank=None,
     temp_dir='tmp',
     overwrite=False,
 ):
@@ -548,6 +549,10 @@ def ref_lamanno(
     :type n: int
     :param k: override default kmer length (31), defaults to `None`
     :type k: int, optional
+    :param flank: number of bases to include from the flanking regions
+                  when generating the intron FASTA, defaults to `None`, which
+                  sets the flanking region to be k - 1 bases.
+    :type flank: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -602,7 +607,9 @@ def ref_lamanno(
                 sorted_fasta_path,
                 sorted_gtf_path,
                 intron_temp_path,
-                chromosomes=chromosomes
+                chromosomes=chromosomes,
+                flank=flank if flank is not None else k -
+                1 if k is not None else 30
             )
             introns.append(intron_fasta_path)
             intron_t2c_temp_path = get_temporary_filename(temp_dir)
@@ -656,11 +663,39 @@ def ref_lamanno(
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'
             )
-        index_result = split_and_index(
-            combined_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
-        ) if n > 1 else kallisto_index(
-            combined_path, index_path, k=k or 31
-        )
+
+        # If n = 1, make single index
+        # if n = 2, make two indices, one for spliced and another for unspliced
+        # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
+        if n == 1:
+            index_result = kallisto_index(combined_path, index_path, k=k or 31)
+        else:
+            cdna_index_result = kallisto_index(
+                cdna_path, f'{index_path}_cdna', k=k or 31
+            )
+            if n == 2:
+                intron_index_result = kallisto_index(
+                    intron_path, f'{index_path}_intron', k=k or 31
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'], intron_index_result['index']
+                    ]
+                }
+            else:
+                split_index_result = split_and_index(
+                    intron_path,
+                    f'{index_path}_intron',
+                    n=n - 1,
+                    k=k or 31,
+                    temp_dir=temp_dir
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'],
+                        *split_index_result['indices']
+                    ]
+                }
         results.update(index_result)
     else:
         logger.info(

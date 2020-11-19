@@ -4,6 +4,8 @@ import sys
 
 from . import __version__
 from .config import is_dry
+from .dry import dummy_function
+from .dry import dryable
 
 
 class Stats:
@@ -16,6 +18,7 @@ class Stats:
         self.start_time = None
         self.call = None
         self.commands = []
+        self.runtimes = []
         self.end_time = None
         self.elapsed = None
         self.version = __version__
@@ -30,13 +33,17 @@ class Stats:
         self.call = ' '.join(sys.argv)
         self.commands = []
 
-    def command(self, command):
+    def command(self, command, runtime=None):
         """Report a shell command was run.
 
         :param command: a shell command, represented as a list
         :type command: list
+        :param kwargs: additional command information
+        :type kwargs: dict
         """
-        self.commands.append(' '.join(command))
+        cmd = ' '.join(command)
+        self.commands.append(cmd)
+        self.runtimes.append(runtime or 'not measured')
 
     def end(self):
         """End collecting statistics.
@@ -44,6 +51,7 @@ class Stats:
         self.end_time = dt.datetime.now()
         self.elapsed = (self.end_time - self.start_time).total_seconds()
 
+    @dryable(dummy_function)
     def save(self, path):
         """Save statistics as JSON to path.
 
@@ -69,6 +77,7 @@ class Stats:
             'elapsed': self.elapsed,
             'call': self.call,
             'commands': self.commands,
+            'runtimes': self.runtimes,
         }
 
 

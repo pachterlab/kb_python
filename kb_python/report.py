@@ -10,7 +10,8 @@ from jinja2 import Template
 
 from . import __version__
 from .config import PACKAGE_PATH
-from .utils import dryable, get_temporary_filename
+from .dry import dryable
+from .utils import get_temporary_filename
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +237,7 @@ def execute_report(execute_path, nb_path, html_path):
     with open(execute_path, 'r') as f:
         nb = nbformat.read(f, as_version=4)
 
-    ep = ExecutePreprocessor()
+    ep = ExecutePreprocessor(timeout=600)
     ep.preprocess(nb)
 
     with open(nb_path, 'w') as f:
