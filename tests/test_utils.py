@@ -1,10 +1,10 @@
 import gzip
 import os
 import subprocess as sp
-import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
+from unittest.mock import ANY
 
 import anndata
 
@@ -13,31 +13,15 @@ from kb_python.config import CHUNK_SIZE, UnsupportedOSException
 from tests.mixins import TestMixin
 
 
-def dry_dummy_function(i):
-    return i + 1
-
-
-@utils.dryable(dry_dummy_function)
-def dummy_function(i):
-    return i
-
-
 class TestUtils(TestMixin, TestCase):
 
-    def test_dryable_not_dry(self):
-        with mock.patch('kb_python.utils.is_dry') as is_dry:
-            is_dry.return_value = False
-            self.assertEqual(1, dummy_function(1))
-
-    def test_dryable_dry(self):
-        with mock.patch('kb_python.utils.is_dry') as is_dry:
-            is_dry.return_value = True
-            self.assertEqual(2, dummy_function(1))
+    def test_update_filename(self):
+        self.assertEqual(
+            'output.s.c.bus', utils.update_filename('output.s.bus', 'c')
+        )
 
     def test_open_as_text_textfile(self):
-        path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         with utils.open_as_text(path, 'w') as f:
             f.write('TESTING')
         self.assertTrue(os.path.exists(path))
@@ -45,7 +29,7 @@ class TestUtils(TestMixin, TestCase):
             self.assertEqual(f.read(), 'TESTING')
 
     def test_open_as_text_gzip(self):
-        path = os.path.join(tempfile.gettempdir(), '{}.gz'.format(uuid.uuid4()))
+        path = os.path.join(self.temp_dir, '{}.gz'.format(uuid.uuid4()))
         with utils.open_as_text(path, 'w') as f:
             f.write('TESTING')
         self.assertTrue(os.path.exists(path))
@@ -54,10 +38,8 @@ class TestUtils(TestMixin, TestCase):
 
     def test_decompress_gzip(self):
         filename = str(uuid.uuid4())
-        gzip_path = os.path.join(
-            tempfile.gettempdir(), '{}.gz'.format(filename)
-        )
-        out_path = os.path.join(tempfile.gettempdir(), filename)
+        gzip_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
+        out_path = os.path.join(self.temp_dir, filename)
         with gzip.open(gzip_path, 'wt') as f:
             f.write('TESTING\nTEST')
         self.assertEqual(out_path, utils.decompress_gzip(gzip_path, out_path))
@@ -67,8 +49,8 @@ class TestUtils(TestMixin, TestCase):
 
     def test_compress_gzip(self):
         filename = str(uuid.uuid4())
-        file_path = os.path.join(tempfile.gettempdir(), filename)
-        out_path = os.path.join(tempfile.gettempdir(), '{}.gz'.format(filename))
+        file_path = os.path.join(self.temp_dir, filename)
+        out_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
         with open(file_path, 'w') as f:
             f.write('TESTING\nTEST')
         self.assertEqual(out_path, utils.compress_gzip(file_path, out_path))
@@ -87,8 +69,10 @@ class TestUtils(TestMixin, TestCase):
             rmtree.assert_called_once_with('path', ignore_errors=True)
 
     def test_run_executable(self):
-        p = utils.run_executable(['echo', 'TEST'], stream=False)
-        self.assertEqual(p.stdout.read(), 'TEST\n')
+        with mock.patch('kb_python.utils.STATS') as STATS:
+            p = utils.run_executable(['echo', 'TEST'], stream=False)
+            self.assertEqual(p.stdout.read(), 'TEST\n')
+            STATS.command.assert_called_once_with(['echo', 'TEST'], runtime=ANY)
 
     def test_run_exectuable_raises_exception(self):
         with self.assertRaises(sp.SubprocessError):
@@ -107,18 +91,6 @@ class TestUtils(TestMixin, TestCase):
         with mock.patch('kb_python.utils.logger.debug') as debug_mock:
             utils.run_executable(['echo', 'TEST'], stream=True)
             debug_mock.assert_has_calls([call('TEST')])
-
-    def test_run_chain(self):
-        ps = utils.run_chain(['echo', 'TEST'], ['grep', 'T'])
-        self.assertEqual(ps[1].stdout.read(), 'TEST\n')
-
-    def test_run_chain_fails_single_command(self):
-        with self.assertRaises(AssertionError):
-            utils.run_chain(['echo', 'TEST'])
-
-    def test_run_chain_raises_exception_when_dead(self):
-        with self.assertRaises(sp.SubprocessError):
-            utils.run_chain(['sleep', '5'], ['grep', 'TEST'], ['ls'])
 
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
@@ -153,7 +125,7 @@ class TestUtils(TestMixin, TestCase):
     def test_download_file(self):
         with mock.patch('kb_python.utils.requests.get') as get,\
             mock.patch('kb_python.utils.tqdm') as tqdm:
-            path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+            path = os.path.join(self.temp_dir, str(uuid.uuid4()))
             get.return_value.headers = {'Content-Length': str(1024 * 2)}
             get.return_value.iter_content.return_value = [
                 b'1' * 1024, b'2' * 1024
@@ -204,6 +176,10 @@ class TestUtils(TestMixin, TestCase):
             threading.thread.assert_not_called()
             urlretrieve.assert_not_called()
 
+    def test_get_temporary_filename(self):
+        path = utils.get_temporary_filename()
+        self.assertTrue(os.path.exists(path))
+
     def test_import_tcc_matrix_as_anndata(self):
         adata = utils.import_tcc_matrix_as_anndata(
             self.tcc_matrix_path, self.tcc_barcodes_path, self.tcc_ec_path,
@@ -223,6 +199,35 @@ class TestUtils(TestMixin, TestCase):
         self.assertEqual(set(), set(adata.var))
         self.assertEqual(set(), set(adata.obs))
         self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
+    def test_import_matrix_as_anndata_with_t2g(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path,
+            self.barcodes_path,
+            self.genes_path,
+            t2g_path=self.t2g_path
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
+        self.assertEqual([
+            'Clk1', 'Serpinb10', 'Olfr421-ps1', 'Olfr335-ps', 'Olfr1001-ps1',
+            'Olfr1010', 'Olfr1021-ps1', 'Olfr1038-ps', 'Olfr1077-ps1',
+            'Olfr1083-ps', 'Olfr1117-ps1', 'Olfr1165-ps', 'Olfr475-ps1',
+            'Olfr1267-ps1', 'Olfr1268-ps1', 'Olfr1273-ps', 'Olfr1300-ps1'
+        ], list(adata.var.gene_name.values))
+
+    def test_import_matrix_as_anndata_name(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_path, self.barcodes_path, self.genes_path, name='test'
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.var))
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('test_id', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
 
     def test_overlay_anndatas(self):
@@ -249,12 +254,17 @@ class TestUtils(TestMixin, TestCase):
         adata = utils.sum_anndatas(adata_spliced, adata_unspliced)
         self.assertEqual(2.0, adata.X[5, 15])
 
+    def test_move_file(self):
+        with mock.patch('kb_python.utils.shutil.move') as move:
+            utils.move_file('source', 'destination')
+            move.assert_called_once_with('source', 'destination')
+
     def test_copy_whitelist(self):
-        whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
+        whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
 
     def test_concatenate_files(self):
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = self.temp_dir
         file1_path = os.path.join(temp_dir, str(uuid.uuid4()))
         file2_path = os.path.join(temp_dir, '{}.gz'.format(uuid.uuid4()))
 
@@ -267,7 +277,7 @@ class TestUtils(TestMixin, TestCase):
             file1_path,
             file2_path,
             out_path=os.path.join(temp_dir, str(uuid.uuid4())),
-            temp_dir=tempfile.mkdtemp()
+            temp_dir=self.temp_dir
         )
 
         with open(out_path, 'r') as f:

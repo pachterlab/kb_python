@@ -5,7 +5,7 @@ import re
 
 import scipy.io
 
-from .config import get_bustools_binary_path, is_dry
+from .config import get_bustools_binary_path, is_dry, is_validate
 from .utils import run_executable
 
 logger = logging.getLogger(__name__)
@@ -76,6 +76,10 @@ def validate(path):
 
     :raises FileVerificationFailed: if the file failed verification
     """
+    # Validation is turned off.
+    if not is_validate():
+        return
+
     ext = os.path.splitext(path)[1]
     if ext in VALIDATORS:
         VALIDATORS[ext](path)

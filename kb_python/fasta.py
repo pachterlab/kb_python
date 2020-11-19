@@ -18,18 +18,24 @@ class FASTA:
     """
     PARSER = re.compile(r'^>(?P<sequence_id>\S+)(?P<group>.*)')
     GROUP_PARSER = re.compile(r'(?P<key>\S+?):(?P<value>\S+)')
-    BASEPAIRS = {
-        'a': 'T',
+    COMPLEMENT = {
         'A': 'T',
-        'c': 'G',
         'C': 'G',
-        'g': 'C',
         'G': 'C',
-        't': 'A',
         'T': 'A',
-        'n': 'N',
+        'Y': 'R',
+        'R': 'Y',
+        'W': 'W',
+        'S': 'S',
+        'K': 'M',
+        'M': 'K',
+        'D': 'H',
+        'V': 'B',
+        'H': 'D',
+        'B': 'V',
         'N': 'N',
     }
+    SEQUENCE_PARSER = re.compile(r'[^atcgATCG]')
 
     def __init__(self, fasta_path):
         self.fasta_path = fasta_path
@@ -81,10 +87,14 @@ class FASTA:
         :return: reverse complement
         :rtype: str
         """
-        return ''.join(FASTA.BASEPAIRS[b] for b in reversed(sequence))
+        return ''.join(FASTA.COMPLEMENT[b] for b in reversed(sequence.upper()))
 
-    def entries(self):
+    def entries(self, parse=True):
         """Generator that yields one FASTA entry (sequence ID + sequence) at a time.
+
+        :param parse: whether or not to parse the header into a dictionary,
+                      defaults to `True`
+        :type parse: bool, optional
 
         :return: a generator that yields a tuple of the FASTA entry
         :rtype: generator
@@ -98,7 +108,7 @@ class FASTA:
                         yield info, sequence
                         sequence = ''
 
-                    info = FASTA.parse_header(line)
+                    info = FASTA.parse_header(line) if parse else line.strip()
                 else:
                     sequence += line.strip()
 
@@ -155,7 +165,7 @@ class FASTA:
         return out_path, chromosomes
 
 
-def generate_kite_fasta(feature_path, out_path):
+def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     """Generate a FASTA file for feature barcoding with the KITE workflow.
 
     This FASTA contains all sequences that are 1 hamming distance from the
@@ -169,6 +179,12 @@ def generate_kite_fasta(feature_path, out_path):
     :type feature_path: str
     :param out_path: path to FASTA to generate
     :type out_path: str
+    :param no_mismatches: whether to generate hamming distance 1 variants,
+                          defaults to `False`
+    :type no_mismatches: bool, optional
+
+    :raises Exception: if there are barcodes of different lengths
+    :raises Exception: if there are duplicate barcodes
 
     :return: (path to generated FASTA, set of barcode lengths)
     :rtype: tuple
@@ -204,11 +220,20 @@ def generate_kite_fasta(feature_path, out_path):
     variants = {}
     # Generate all feature barcode variations before saving to check for collisions.
     for i, row in df_features.iterrows():
+        # Check that the first column contains the sequence
+        # and the second column the feature name.
+        if FASTA.SEQUENCE_PARSER.search(row.sequence.upper()):
+            raise Exception((
+                'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
+                'Does the first column contain the sequences and the second column the feature names?'
+            ))
+
         lengths.add(len(row.sequence))
         features[row['name']] = row.sequence
         variants[row['name']] = {
             name: seq
             for name, seq in generate_mismatches(row['name'], row.sequence)
+            if not no_mismatches
         }
 
     # Check duplicate barcodes.
@@ -222,15 +247,15 @@ def generate_kite_fasta(feature_path, out_path):
     if len(lengths) > 1:
         logger.warning(
             'Detected barcodes of different lengths: {}'.format(
-                ','.join(str(l) for l in lengths)
+                ','.join(str(l) for l in lengths)  # noqa
             )
         )
     for f1, f2 in itertools.combinations(variants.keys(), 2):
         v1 = variants[f1]
         v2 = variants[f2]
-        if len(set(v1.values()).intersection(set(v2.values()))) > 0:
+        if len(set.intersection(set(v1.values()), set(v2.values()))) > 0:
             logger.warning((
-                f'Detected collision between variants of feature barcodes {f1} and {f2}. '
+                f'Detected features with barcodes that are not >2 hamming distance apart: {f1}, {f2}. '
                 f'Hamming distance 1 variants for these barcodes will not be generated.'
             ))
             variants[f1] = {}
@@ -247,7 +272,7 @@ def generate_kite_fasta(feature_path, out_path):
                 f.write(f'{FASTA.make_header(name, attributes)}\n')
                 f.write(f'{variant}\n')
 
-    return out_path, lengths
+    return out_path, min(lengths)
 
 
 def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
@@ -333,11 +358,15 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
                         gene_id, gene_version
                     ) if gene_version else gene_id
                     gene_name = gtf_entry['group'].get('gene_name', '')
+                    transcript_name = gtf_entry['group'].get(
+                        'transcript_name', ''
+                    )
 
                     if transcript not in transcript_infos:
                         attributes = [
                             ('gene_id', gene),
                             ('gene_name', gene_name),
+                            ('transcript_name', transcript_name),
                             ('chr', chromosome),
                             ('start', start),
                             ('end', end),
@@ -355,15 +384,15 @@ def generate_cdna_fasta(fasta_path, gtf_path, out_path, chromosomes=None):
                                    ) - set(transcript_infos.keys())
             if info_unique:
                 raise Exception(
-                    'The following transcripts have "exon" feature(s) but no '
-                    'corresponding "transcript" feature: {}'.format(
+                    'The following transcripts have "transcript" feature(s) but no '
+                    'corresponding "exon" feature: {}'.format(
                         ', '.join(info_unique)
                     )
                 )
             if sequences_unique:
                 raise Exception(
-                    'The following transcripts have a "transcript" feature but no '
-                    'corresponding "exon" feature(s): {}'.format(
+                    'The following transcripts have a "exon" feature but no '
+                    'corresponding "transcript" feature(s): {}'.format(
                         ', '.join(sequences_unique)
                     )
                 )
@@ -477,11 +506,15 @@ def generate_intron_fasta(
                         gene_id, gene_version
                     ) if gene_version else gene_id
                     gene_name = gtf_entry['group'].get('gene_name', '')
+                    transcript_name = gtf_entry['group'].get(
+                        'transcript_name', ''
+                    )
 
                     if transcript not in transcript_infos:
                         attributes = [
                             ('gene_id', gene),
                             ('gene_name', gene_name),
+                            ('transcript_name', transcript_name),
                             ('chr', chromosome),
                             ('start', start),
                             ('end', end),

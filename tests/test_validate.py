@@ -52,9 +52,8 @@ class TestValidate(TestMixin, TestCase):
                 validate.validate_mtx('path')
 
     def test_validate(self):
-        with mock.patch('kb_python.validate.validate') as v:
+        with mock.patch('kb_python.validate.VALIDATORS'):
             validate.validate('path/to/bus.bus')
-            v.assert_called_once_with('path/to/bus.bus')
 
     def validate_files(self):
         with mock.patch('kb_python.validate.validate') as v,\
@@ -94,3 +93,10 @@ class TestValidate(TestMixin, TestCase):
                 call('test1'),
                 call('test2')
             ])
+
+    def test_validate_off(self):
+        with mock.patch('kb_python.validate.is_validate') as is_validate,\
+            mock.patch('kb_python.validate.validate_bus') as v:
+            is_validate.return_value = False
+            validate.validate('path/to/bus.bus')
+            v.assert_not_called()
