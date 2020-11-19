@@ -1,7 +1,6 @@
 import gzip
 import os
 import subprocess as sp
-import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
@@ -22,9 +21,7 @@ class TestUtils(TestMixin, TestCase):
         )
 
     def test_open_as_text_textfile(self):
-        path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         with utils.open_as_text(path, 'w') as f:
             f.write('TESTING')
         self.assertTrue(os.path.exists(path))
@@ -32,7 +29,7 @@ class TestUtils(TestMixin, TestCase):
             self.assertEqual(f.read(), 'TESTING')
 
     def test_open_as_text_gzip(self):
-        path = os.path.join(tempfile.gettempdir(), '{}.gz'.format(uuid.uuid4()))
+        path = os.path.join(self.temp_dir, '{}.gz'.format(uuid.uuid4()))
         with utils.open_as_text(path, 'w') as f:
             f.write('TESTING')
         self.assertTrue(os.path.exists(path))
@@ -41,10 +38,8 @@ class TestUtils(TestMixin, TestCase):
 
     def test_decompress_gzip(self):
         filename = str(uuid.uuid4())
-        gzip_path = os.path.join(
-            tempfile.gettempdir(), '{}.gz'.format(filename)
-        )
-        out_path = os.path.join(tempfile.gettempdir(), filename)
+        gzip_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
+        out_path = os.path.join(self.temp_dir, filename)
         with gzip.open(gzip_path, 'wt') as f:
             f.write('TESTING\nTEST')
         self.assertEqual(out_path, utils.decompress_gzip(gzip_path, out_path))
@@ -54,8 +49,8 @@ class TestUtils(TestMixin, TestCase):
 
     def test_compress_gzip(self):
         filename = str(uuid.uuid4())
-        file_path = os.path.join(tempfile.gettempdir(), filename)
-        out_path = os.path.join(tempfile.gettempdir(), '{}.gz'.format(filename))
+        file_path = os.path.join(self.temp_dir, filename)
+        out_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
         with open(file_path, 'w') as f:
             f.write('TESTING\nTEST')
         self.assertEqual(out_path, utils.compress_gzip(file_path, out_path))
@@ -130,7 +125,7 @@ class TestUtils(TestMixin, TestCase):
     def test_download_file(self):
         with mock.patch('kb_python.utils.requests.get') as get,\
             mock.patch('kb_python.utils.tqdm') as tqdm:
-            path = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
+            path = os.path.join(self.temp_dir, str(uuid.uuid4()))
             get.return_value.headers = {'Content-Length': str(1024 * 2)}
             get.return_value.iter_content.return_value = [
                 b'1' * 1024, b'2' * 1024
@@ -265,11 +260,11 @@ class TestUtils(TestMixin, TestCase):
             move.assert_called_once_with('source', 'destination')
 
     def test_copy_whitelist(self):
-        whitelist_path = utils.copy_whitelist('10xv1', tempfile.mkdtemp())
+        whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
 
     def test_concatenate_files(self):
-        temp_dir = tempfile.mkdtemp()
+        temp_dir = self.temp_dir
         file1_path = os.path.join(temp_dir, str(uuid.uuid4()))
         file2_path = os.path.join(temp_dir, '{}.gz'.format(uuid.uuid4()))
 
@@ -282,7 +277,7 @@ class TestUtils(TestMixin, TestCase):
             file1_path,
             file2_path,
             out_path=os.path.join(temp_dir, str(uuid.uuid4())),
-            temp_dir=tempfile.mkdtemp()
+            temp_dir=self.temp_dir
         )
 
         with open(out_path, 'r') as f:

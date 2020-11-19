@@ -24,8 +24,9 @@ from .utils import (
     get_kallisto_version,
     make_directory,
     remove_directory,
-    TqdmLoggingHandler,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def display_info():
@@ -164,13 +165,21 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
+    logger = logging.getLogger(__name__)
     if args.report:
-        logging.getLogger(__name__).warning((
+        logger.warning((
             'Using `--report` may cause `kb` to exceed maximum memory specified '
             'and crash for large count matrices.'
         ))
 
     args.i = args.i.split(',')
+    if len(args.i) > 1:
+        logger.warning((
+            'Multiple indices were provided. Aligning to split indices is currently '
+            'EXPERIMENTAL and results in loss of reads. It is recommended to '
+            'use a single index until this feature is fully supported. Use at '
+            'your own risk!'
+        ))
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -675,8 +684,6 @@ def main():
         format='[%(asctime)s] %(levelname)7s %(message)s',
         level=logging.DEBUG if args.verbose else logging.INFO,
     )
-    logger = logging.getLogger(__name__)
-    logger.addHandler(TqdmLoggingHandler())
 
     # Validation
     if 'no_validate' in args and args.no_validate:

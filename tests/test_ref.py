@@ -1,6 +1,5 @@
 import os
 import tarfile
-import tempfile
 import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
@@ -71,9 +70,7 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(2, warning.call_count)
 
     def test_kallisto_index(self):
-        index_path = os.path.join(
-            tempfile.gettempdir(), '{}.idx'.format(uuid.uuid4())
-        )
+        index_path = os.path.join(self.temp_dir, '{}.idx'.format(uuid.uuid4()))
         self.assertFalse(os.path.exists(index_path))
         result = ref.kallisto_index(self.fasta_path, index_path)
         for key, path in result.items():
@@ -82,7 +79,7 @@ class TestRef(TestMixin, TestCase):
     def test_split_and_index(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_prefix = os.path.join(temp_dir, 'index')
             get_temporary_filename.side_effect = [
                 os.path.join(temp_dir, 'temp1'),
@@ -112,9 +109,7 @@ class TestRef(TestMixin, TestCase):
             ])
 
     def test_create_t2g_from_fasta(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_fasta(
             self.split_intron_fasta_path, t2g_path
         )
@@ -123,26 +118,20 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_fasta_kite(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_fasta(self.kite_fasta_path, t2g_path)
         with open(result['t2g'], 'r') as f, open(self.kite_t2g_path,
                                                  'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_gtf(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_gtf(self.unsorted_gtf_path, t2g_path)
         with open(result['t2g'], 'r') as f, open(self.gtf_t2g_path, 'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2g_from_gtf_with_intron(self):
-        t2g_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_gtf(
             self.unsorted_gtf_path, t2g_path, intron=True
         )
@@ -151,9 +140,7 @@ class TestRef(TestMixin, TestCase):
             self.assertEqual(f.read(), t2g.read())
 
     def test_create_t2c(self):
-        t2c_path = os.path.join(
-            tempfile.gettempdir(), '{}.txt'.format(uuid.uuid4())
-        )
+        t2c_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2c(self.unsorted_fasta_path, t2c_path)
         with open(result['t2c'], 'r') as f, open(self.fasta_t2c_path,
                                                  'r') as t2c:
@@ -163,23 +150,21 @@ class TestRef(TestMixin, TestCase):
         with mock.patch('kb_python.ref.download_file') as download_file:
             reference = REFERENCES_MAPPING['human']
             files = {
-                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
-                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+                'i': os.path.join(self.temp_dir, 'TEST.idx'),
+                'g': os.path.join(self.temp_dir, 'TEST.txt')
             }
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -205,23 +190,21 @@ class TestRef(TestMixin, TestCase):
             exists.return_value = True
             reference = REFERENCES_MAPPING['human']
             files = {
-                'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx'),
-                'g': os.path.join(tempfile.mkdtemp(), 'TEST.txt')
+                'i': os.path.join(self.temp_dir, 'TEST.idx'),
+                'g': os.path.join(self.temp_dir, 'TEST.txt')
             }
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -238,21 +221,19 @@ class TestRef(TestMixin, TestCase):
     def test_download_reference_less_files(self):
         with mock.patch('kb_python.ref.download_file') as download_file:
             reference = REFERENCES_MAPPING['human']
-            files = {'i': os.path.join(tempfile.mkdtemp(), 'TEST.idx')}
-            temp_dir = tempfile.mkdtemp()
+            files = {'i': os.path.join(self.temp_dir, 'TEST.idx')}
+            temp_dir = self.temp_dir
 
-            test_index_path = os.path.join(
-                tempfile.mkdtemp(), 'transcriptome.idx'
-            )
+            test_index_path = os.path.join(self.temp_dir, 'transcriptome.idx')
             test_t2g_path = os.path.join(
-                tempfile.mkdtemp(), 'transcripts_to_genes.txt'
+                self.temp_dir, 'transcripts_to_genes.txt'
             )
             with open(test_index_path, 'w') as index, open(test_t2g_path,
                                                            'w') as t2g:
                 index.write('INDEX')
                 t2g.write('T2G')
             test_tar_path = os.path.join(
-                tempfile.gettempdir(), '{}.tar.gz'.format(uuid.uuid4())
+                self.temp_dir, '{}.tar.gz'.format(uuid.uuid4())
             )
             with tarfile.open(test_tar_path, 'w:gz') as f:
                 f.add(
@@ -266,7 +247,7 @@ class TestRef(TestMixin, TestCase):
 
     def test_decompress_file_text(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             self.assertEqual(
                 'textfile.txt',
                 ref.decompress_file('textfile.txt', temp_dir=temp_dir)
@@ -275,7 +256,7 @@ class TestRef(TestMixin, TestCase):
 
     def test_decompress_file_gzip(self):
         with mock.patch('kb_python.ref.decompress_gzip') as decompress_gzip:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             decompress_gzip.return_value = 'textfile.txt'
             self.assertEqual(
                 'textfile.txt',
@@ -298,7 +279,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -364,7 +345,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -431,7 +412,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -539,7 +520,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -600,7 +581,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -640,7 +621,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -682,7 +663,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -721,7 +702,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -760,7 +741,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -796,7 +777,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             feature_path = mock.MagicMock()
             fasta_path = mock.MagicMock()
             index_path = mock.MagicMock()
@@ -843,7 +824,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -955,7 +936,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = 'index'
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -1074,7 +1055,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.split_and_index') as split_and_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = 'index'
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -1193,7 +1174,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = []
             k = 999
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()
@@ -1305,7 +1286,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             cdna_fasta_path = mock.MagicMock()
@@ -1351,7 +1332,7 @@ class TestRef(TestMixin, TestCase):
             mock.patch('kb_python.ref.kallisto_index') as kallisto_index,\
             mock.patch('kb_python.ref.glob.glob') as glob:
             glob.return_value = ['index']
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             index_path = mock.MagicMock()
             t2g_path = mock.MagicMock()
             sorted_fasta_path = mock.MagicMock()

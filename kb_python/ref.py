@@ -67,14 +67,14 @@ def check_chromosomes(fasta_chromosomes, gtf_chromosomes):
     gtf_unique = gtf_chromosomes - fasta_chromosomes
     if fasta_unique:
         logger.warning((
-            'The following chromosomes were found in the FASTA but doens\'t have '
+            'The following chromosomes were found in the FASTA but does not have '
             'any "transcript" features in the GTF: {}. '
             'No sequences will be generated for these chromosomes.'
         ).format(', '.join(fasta_unique)))
     if gtf_unique:
         logger.warning((
             'The following chromosomes were found to have "transcript" features '
-            'in the GTF but doens\'t exist in the FASTA. '
+            'in the GTF but does not exist in the FASTA. '
             'No sequences will be generated for these chromosomes.'
         ))
     chromosomes = set.intersection(fasta_chromosomes, gtf_chromosomes)

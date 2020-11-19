@@ -1,5 +1,4 @@
 import os
-import tempfile
 from unittest import mock, TestCase
 from unittest.mock import ANY, call
 
@@ -11,6 +10,8 @@ from kb_python.constants import (
     BUS_FILTERED_FILENAME,
     BUS_FILTERED_SUFFIX,
     BUS_INTRON_PREFIX,
+    BUS_MASHED_FILENAME,
+    BUS_MERGED_FILENAME,
     BUS_S_FILENAME,
     BUS_SC_FILENAME,
     BUS_UNFILTERED_FILENAME,
@@ -21,6 +22,7 @@ from kb_python.constants import (
     CELLRANGER_MATRIX,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    ECMAP_MERGED_FILENAME,
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
     FILTERED_COUNTS_DIR,
@@ -39,12 +41,13 @@ from tests.mixins import TestMixin
 class TestCount(TestMixin, TestCase):
 
     def setUp(self):
+        super(TestCount, self).setUp()
         makedirs_mock = mock.patch('kb_python.count.make_directory')
         makedirs_mock.start()
         self.addCleanup(makedirs_mock.stop)
 
     def test_kallisto_bus(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         result = count.kallisto_bus(
             self.fastqs, self.index_path, self.technology, out_dir, threads=1
         )
@@ -57,11 +60,124 @@ class TestCount(TestMixin, TestCase):
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
-    def test_bustools_merge(self):
-        out_dir = tempfile.mkdtemp()
-        result = count.bustools_merge(self.bus_split_paths, out_dir, threads=1)
+    def test_kallisto_bus_split(self):
+        fastqs = [mock.MagicMock(), mock.MagicMock()]
+        index_paths = [mock.MagicMock(), mock.MagicMock()]
+        out_dir = self.temp_dir
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs, \
+            mock.patch('kb_python.count.kallisto_bus') as kallisto_bus, \
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort, \
+            mock.patch('kb_python.count.move_file') as move_file, \
+            mock.patch('kb_python.count.bustools_mash') as bustools_mash, \
+            mock.patch('kb_python.count.get_temporary_filename') as get_temporary_filename, \
+            mock.patch('kb_python.count.bustools_merge') as bustools_merge:
+            stream_fastqs.return_value = fastqs
+            bustools_sort.side_effect = [{
+                'bus': 'sort1'
+            }, {
+                'bus': 'sort2'
+            }, {
+                'bus': 'sort3'
+            }]
+            bustools_mash.return_value = {
+                'bus': 'bus_mashed',
+                'ecmap': 'ecmap_mashed',
+                'txnames': 'txnames_mashed',
+                'info': 'info_mashed'
+            }
+            bustools_merge.return_value = {
+                'bus': 'bus_merged',
+                'ecmap': 'ecmap_merged',
+            }
+            result = count.kallisto_bus_split(
+                fastqs,
+                index_paths,
+                self.technology,
+                out_dir,
+                temp_dir=self.temp_dir
+            )
+            self.assertEqual({
+                'bus': os.path.join(out_dir, BUS_FILENAME),
+                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+            }, result)
+            stream_fastqs.assert_has_calls([
+                call(fastqs, temp_dir=self.temp_dir),
+                call(fastqs, temp_dir=self.temp_dir)
+            ])
+            kallisto_bus.assert_has_calls([
+                call(
+                    fastqs,
+                    index_paths[0],
+                    self.technology,
+                    os.path.join(self.temp_dir, 'bus_part0'),
+                    threads=ANY,
+                    n=True,
+                    k=True
+                ),
+                call(
+                    fastqs,
+                    index_paths[1],
+                    self.technology,
+                    os.path.join(self.temp_dir, 'bus_part1'),
+                    threads=ANY,
+                    n=True,
+                    k=True
+                )
+            ])
+            bustools_sort.assert_has_calls([
+                call(
+                    os.path.join(self.temp_dir, 'bus_part0', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=self.temp_dir,
+                    threads=ANY,
+                    memory=ANY,
+                    flags=True
+                ),
+                call(
+                    os.path.join(self.temp_dir, 'bus_part1', 'output.bus'),
+                    get_temporary_filename.return_value,
+                    temp_dir=self.temp_dir,
+                    threads=ANY,
+                    memory=ANY,
+                    flags=True
+                ),
+                call(
+                    'bus_mashed',
+                    get_temporary_filename.return_value,
+                    temp_dir=self.temp_dir,
+                    threads=ANY,
+                    memory=ANY,
+                    flags=True
+                ),
+            ])
+            move_file.assert_has_calls([
+                call(
+                    'sort1',
+                    os.path.join(self.temp_dir, 'bus_part0', 'output.bus')
+                ),
+                call(
+                    'sort2',
+                    os.path.join(self.temp_dir, 'bus_part1', 'output.bus')
+                ),
+                call('sort3', 'bus_mashed'),
+                call('bus_merged', os.path.join(out_dir, BUS_FILENAME)),
+                call('ecmap_merged', os.path.join(out_dir, ECMAP_FILENAME))
+            ])
+            bustools_mash.assert_called_once_with([
+                os.path.join(self.temp_dir, 'bus_part0'),
+                os.path.join(self.temp_dir, 'bus_part1')
+            ], out_dir)
+            bustools_merge.assert_called_once_with(
+                'bus_mashed', out_dir, 'ecmap_mashed', 'txnames_mashed'
+            )
+
+    def test_bustools_mash(self):
+        out_dir = self.temp_dir
+        result = count.bustools_mash(self.bus_split_paths, out_dir)
         self.assertEqual({
-            'bus': os.path.join(out_dir, BUS_FILENAME),
+            'bus': os.path.join(out_dir, BUS_MASHED_FILENAME),
             'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
             'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
             'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
@@ -69,8 +185,21 @@ class TestCount(TestMixin, TestCase):
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
+    def test_bustools_merge(self):
+        out_dir = self.temp_dir
+        result = count.bustools_merge(
+            self.bus_mashed_path, out_dir, self.ecmap_mashed_path,
+            self.txnames_mashed_path
+        )
+        self.assertEqual({
+            'bus': os.path.join(out_dir, BUS_MERGED_FILENAME),
+            'ecmap': os.path.join(out_dir, ECMAP_MERGED_FILENAME)
+        }, result)
+        for key, path in result.items():
+            self.assertTrue(os.path.exists(path))
+
     def test_bustools_project(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, 'projected.bus')
         result = count.bustools_project(
             self.bus_path, out_path, self.kite_map_path, self.ecmap_path,
@@ -81,7 +210,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_sort(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, BUS_S_FILENAME)
         result = count.bustools_sort(
             self.bus_path, out_path, threads=1, memory='1G'
@@ -91,7 +220,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_inspect(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, INSPECT_FILENAME)
         result = count.bustools_inspect(
             self.bus_s_path, out_path, self.whitelist_path, self.ecmap_path
@@ -101,7 +230,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_correct(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, BUS_SC_FILENAME)
         result = count.bustools_correct(
             self.bus_s_path, out_path, self.whitelist_path
@@ -111,7 +240,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_count(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         counts_path = os.path.join(out_dir, COUNTS_PREFIX)
         result = count.bustools_count(
             self.bus_scs_path, counts_path, self.t2g_path, self.ecmap_path,
@@ -126,7 +255,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_capture(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, 'capture.bus')
         result = count.bustools_capture(
             self.lamanno_bus_scs_path, out_path, self.lamanno_cdna_t2c_path,
@@ -137,7 +266,7 @@ class TestCount(TestMixin, TestCase):
             self.assertTrue(os.path.exists(path))
 
     def test_bustools_whitelist(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         out_path = os.path.join(out_dir, 'whitelist.txt')
         result = count.bustools_whitelist(self.bus_s_path, out_path)
         self.assertEqual({'whitelist': out_path}, result)
@@ -407,7 +536,7 @@ class TestCount(TestMixin, TestCase):
             threads = 99999
             memory = 'memory'
             counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             whitelist_path = mock.MagicMock()
             capture_path = mock.MagicMock()
             sort_path = 'busfile.c.bus'
@@ -480,7 +609,7 @@ class TestCount(TestMixin, TestCase):
             threads = 99999
             memory = 'memory'
             counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             whitelist_path = mock.MagicMock()
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
@@ -570,7 +699,7 @@ class TestCount(TestMixin, TestCase):
             threads = 99999
             memory = 'memory'
             counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             whitelist_path = mock.MagicMock()
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
@@ -633,7 +762,7 @@ class TestCount(TestMixin, TestCase):
             threads = 99999
             memory = 'memory'
             counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             whitelist_path = mock.MagicMock()
             capture_path = mock.MagicMock()
             sort_path = 'path/to/busfile.bus'
@@ -709,7 +838,7 @@ class TestCount(TestMixin, TestCase):
             threads = 99999
             memory = 'memory'
             counts_prefix = os.path.join(counts_dir, COUNTS_PREFIX)
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             whitelist_path = mock.MagicMock()
             capture_path = mock.MagicMock()
             sort_path = 'busfile.c.bus'
@@ -789,7 +918,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_stream_fastqs_local(self):
         with mock.patch('kb_python.count.stream_file') as stream_file:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             fastqs = ['path/to/file1.gz', 'path/to/file2.gz']
             stream_file.side_effect = ['FILE 1', 'FILE 2']
             self.assertEqual(
@@ -799,7 +928,7 @@ class TestCount(TestMixin, TestCase):
 
     def test_stream_fastqs_remote(self):
         with mock.patch('kb_python.count.stream_file') as stream_file:
-            temp_dir = tempfile.mkdtemp()
+            temp_dir = self.temp_dir
             fastqs = ['http://path/to/file1.gz', 'https://path/to/file2.gz']
             local_fastqs = [
                 os.path.join(temp_dir, os.path.basename(fastq))
@@ -817,7 +946,7 @@ class TestCount(TestMixin, TestCase):
     def test_copy_or_create_whitelist_provided(self):
         with mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist:
-            out_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
             count.copy_or_create_whitelist(
                 self.technology, self.bus_s_path, out_dir
             )
@@ -827,7 +956,7 @@ class TestCount(TestMixin, TestCase):
     def test_copy_or_create_whitelist_not_provided(self):
         with mock.patch('kb_python.count.copy_whitelist') as copy_whitelist,\
             mock.patch('kb_python.count.bustools_whitelist') as bustools_whitelist:
-            out_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
             count.copy_or_create_whitelist(
                 'UNSUPPORTED', self.bus_s_path, out_dir
             )
@@ -837,7 +966,7 @@ class TestCount(TestMixin, TestCase):
             )
 
     def test_matrix_to_cellranger(self):
-        out_dir = tempfile.mkdtemp()
+        out_dir = self.temp_dir
         result = count.matrix_to_cellranger(
             self.matrix_path, self.barcodes_path, self.genes_path,
             self.t2g_path, out_dir
@@ -856,7 +985,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -867,8 +995,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata:
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -974,7 +1102,6 @@ class TestCount(TestMixin, TestCase):
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -987,7 +1114,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_report(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -998,8 +1124,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1114,7 +1240,6 @@ class TestCount(TestMixin, TestCase):
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -1134,9 +1259,9 @@ class TestCount(TestMixin, TestCase):
     def test_count_split(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
-            mock.patch('kb_python.count.move_file') as move_file,\
-            mock.patch('kb_python.count.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.count.kallisto_bus_split') as kallisto_bus_split,\
+            mock.patch('kb_python.count.move_file'),\
+            mock.patch('kb_python.count.get_temporary_filename'),\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -1147,8 +1272,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1163,17 +1288,13 @@ class TestCount(TestMixin, TestCase):
             bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
             bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             stream_fastqs.return_value = self.fastqs
-            bustools_merge.return_value = {
+            kallisto_bus_split.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
                 'info': info_path
             }
             bustools_sort.side_effect = [{
-                'bus': 'temp1'
-            }, {
-                'bus': 'temp2'
-            }, {
                 'bus': bus_s_path
             }, {
                 'bus': bus_scs_path
@@ -1210,63 +1331,16 @@ class TestCount(TestMixin, TestCase):
                                          temp_dir=temp_dir,
                                          threads=threads,
                                          memory=memory))
-            self.assertEqual(2, stream_fastqs.call_count)
-            stream_fastqs.assert_has_calls([
-                call(self.fastqs, temp_dir=temp_dir),
-                call(self.fastqs, temp_dir=temp_dir)
-            ])
-            self.assertEqual(2, kallisto_bus.call_count)
-            kallisto_bus.assert_has_calls([
-                call(
-                    self.fastqs,
-                    'index.0',
-                    self.technology,
-                    os.path.join(temp_dir, 'bus_part0'),
-                    threads=threads,
-                    n=True
-                ),
-                call(
-                    self.fastqs,
-                    'index.1',
-                    self.technology,
-                    os.path.join(temp_dir, 'bus_part1'),
-                    threads=threads,
-                    n=True
-                )
-            ])
-            self.assertEqual(2, move_file.call_count)
-            move_file.assert_has_calls([
-                call(
-                    'temp1', os.path.join(temp_dir, 'bus_part0', 'output.bus')
-                ),
-                call(
-                    'temp2', os.path.join(temp_dir, 'bus_part1', 'output.bus')
-                )
-            ])
-            bustools_merge.assert_called_once_with([
-                os.path.join(temp_dir, 'bus_part0'),
-                os.path.join(temp_dir, 'bus_part1')
-            ],
-                                                   out_dir,
-                                                   threads=threads)
-            self.assertEqual(bustools_sort.call_count, 4)
+            kallisto_bus.assert_not_called()
+            kallisto_bus_split.assert_called_once_with(
+                self.fastqs, ['index.0', 'index.1'],
+                self.technology,
+                out_dir,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
             bustools_sort.assert_has_calls([
-                call(
-                    os.path.join(temp_dir, 'bus_part0', 'output.bus'),
-                    get_temporary_filename.return_value,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                ),
-                call(
-                    os.path.join(temp_dir, 'bus_part1', 'output.bus'),
-                    get_temporary_filename.return_value,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                ),
                 call(
                     bus_path,
                     bus_s_path,
@@ -1314,8 +1388,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1441,7 +1515,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_cellranger(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -1453,8 +1526,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
             mock.patch('kb_python.count.matrix_to_cellranger') as matrix_to_cellranger:
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1577,7 +1650,6 @@ class TestCount(TestMixin, TestCase):
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -1606,8 +1678,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1775,8 +1847,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
             )
@@ -1898,8 +1970,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, FEATURE_PREFIX
             )
@@ -2038,8 +2110,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, FEATURE_PREFIX
             )
@@ -2210,8 +2282,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_prefix = os.path.join(
                 out_dir, UNFILTERED_COUNTS_DIR, FEATURE_PREFIX
             )
@@ -2340,7 +2412,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_velocity_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -2352,8 +2423,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata:
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -2582,7 +2653,6 @@ class TestCount(TestMixin, TestCase):
             ])
             filter_with_bustools.assert_not_called()
             convert_matrices.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -2593,7 +2663,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_velocity_cellranger(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -2606,8 +2675,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
             mock.patch('kb_python.count.matrix_to_cellranger') as matrix_to_cellranger:
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             cellranger_cdna_dir = os.path.join(
                 counts_dir, f'{CELLRANGER_DIR}_{BUS_CDNA_PREFIX}'
@@ -2886,7 +2955,6 @@ class TestCount(TestMixin, TestCase):
             ])
             filter_with_bustools.assert_not_called()
             convert_matrices.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -2917,7 +2985,6 @@ class TestCount(TestMixin, TestCase):
     def test_count_velocity_report(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -2929,8 +2996,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report') as render_report,\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -3179,7 +3246,6 @@ class TestCount(TestMixin, TestCase):
             ])
             filter_with_bustools.assert_not_called()
             convert_matrices.assert_not_called()
-            bustools_merge.assert_not_called()
 
             STATS.start.assert_called_once()
             STATS.end.assert_called_once()
@@ -3232,9 +3298,9 @@ class TestCount(TestMixin, TestCase):
     def test_count_velocity_split(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_merge') as bustools_merge,\
-            mock.patch('kb_python.count.move_file') as move_file,\
-            mock.patch('kb_python.count.get_temporary_filename') as get_temporary_filename,\
+            mock.patch('kb_python.count.kallisto_bus_split') as kallisto_bus_split,\
+            mock.patch('kb_python.count.move_file'),\
+            mock.patch('kb_python.count.get_temporary_filename'),\
             mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
             mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
             mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
@@ -3246,8 +3312,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -3281,17 +3347,13 @@ class TestCount(TestMixin, TestCase):
             cdna_t2c_path = mock.MagicMock()
             intron_t2c_path = mock.MagicMock()
             stream_fastqs.return_value = self.fastqs
-            bustools_merge.return_value = {
+            kallisto_bus_split.return_value = {
                 'bus': bus_path,
                 'ecmap': ecmap_path,
                 'txnames': txnames_path,
                 'info': info_path
             }
             bustools_sort.side_effect = [{
-                'bus': 'temp1'
-            }, {
-                'bus': 'temp2'
-            }, {
                 'bus': bus_s_path
             }, {
                 'bus': bus_scs_path
@@ -3400,63 +3462,16 @@ class TestCount(TestMixin, TestCase):
                                      threads=threads,
                                      memory=memory)
             )
-            self.assertEqual(2, stream_fastqs.call_count)
-            stream_fastqs.assert_has_calls([
-                call(self.fastqs, temp_dir=temp_dir),
-                call(self.fastqs, temp_dir=temp_dir)
-            ])
-            self.assertEqual(2, kallisto_bus.call_count)
-            kallisto_bus.assert_has_calls([
-                call(
-                    self.fastqs,
-                    'index.0',
-                    self.technology,
-                    os.path.join(temp_dir, 'bus_part0'),
-                    threads=threads,
-                    n=True
-                ),
-                call(
-                    self.fastqs,
-                    'index.1',
-                    self.technology,
-                    os.path.join(temp_dir, 'bus_part1'),
-                    threads=threads,
-                    n=True
-                )
-            ])
-            self.assertEqual(2, move_file.call_count)
-            move_file.assert_has_calls([
-                call(
-                    'temp1', os.path.join(temp_dir, 'bus_part0', 'output.bus')
-                ),
-                call(
-                    'temp2', os.path.join(temp_dir, 'bus_part1', 'output.bus')
-                )
-            ])
-            bustools_merge.assert_called_once_with([
-                os.path.join(temp_dir, 'bus_part0'),
-                os.path.join(temp_dir, 'bus_part1')
-            ],
-                                                   out_dir,
-                                                   threads=threads)
-            self.assertEqual(bustools_sort.call_count, 6)
+            kallisto_bus.assert_not_called()
+            kallisto_bus_split.assert_called_once_with(
+                self.fastqs, ['index.0', 'index.1'],
+                self.technology,
+                out_dir,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
             bustools_sort.assert_has_calls([
-                call(
-                    os.path.join(temp_dir, 'bus_part0', 'output.bus'),
-                    get_temporary_filename.return_value,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                ),
-                call(
-                    os.path.join(temp_dir, 'bus_part1', 'output.bus'),
-                    get_temporary_filename.return_value,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                ),
                 call(
                     bus_path,
                     bus_s_path,
@@ -3540,8 +3555,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -3820,8 +3835,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -4068,8 +4083,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'
@@ -4478,8 +4493,8 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
-            out_dir = tempfile.mkdtemp()
-            temp_dir = tempfile.mkdtemp()
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
             counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
             threads = 99999
             memory = 'TEST'

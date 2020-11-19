@@ -1,5 +1,4 @@
 import os
-import tempfile
 import uuid
 from unittest import TestCase
 
@@ -62,9 +61,7 @@ class TestGTF(TestMixin, TestCase):
         self.assertEqual(8, len(list(gtf.entries())))
 
     def test_sort(self):
-        out_path = os.path.join(
-            tempfile.gettempdir(), '{}.gtf'.format(uuid.uuid4())
-        )
+        out_path = os.path.join(self.temp_dir, '{}.gtf'.format(uuid.uuid4()))
         gtf = GTF(self.unsorted_gtf_path)
         self.assertEqual((out_path, {'1', '2'}), gtf.sort(out_path))
 

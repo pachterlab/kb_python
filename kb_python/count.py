@@ -12,6 +12,8 @@ from .constants import (
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
+    BUS_MASHED_FILENAME,
+    BUS_MERGED_FILENAME,
     CELLRANGER_BARCODES,
     CELLRANGER_DIR,
     CELLRANGER_GENES,
@@ -19,6 +21,7 @@ from .constants import (
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
+    ECMAP_MERGED_FILENAME,
     FEATURE_NAME,
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
@@ -63,7 +66,9 @@ INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
 @validate_files()
-def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
+def kallisto_bus(
+    fastqs, index_path, technology, out_dir, threads=8, n=False, k=False
+):
     """Runs `kallisto bus`.
 
     :param fastqs: list of FASTQ file paths
@@ -79,8 +84,11 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
     :param n: include number of read in flag column (used when splitting indices),
               defaults to `False`
     :type n: bool, optional
+    :param k: alignment is done per k-mer (used when splitting indices),
+              defaults to `False`
+    :type k: bool, optional
 
-    :return: dictionary containing path to generated index
+    :return: dictionary containing paths to generated files
     :rtype: dict
     """
     logger.info(
@@ -95,6 +103,8 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
     command += ['-t', threads]
     if n:
         command += ['--num']
+    if k:
+        command += ['--kmer']
     command += fastqs
     run_executable(command)
 
@@ -106,27 +116,115 @@ def kallisto_bus(fastqs, index_path, technology, out_dir, threads=8, n=False):
     }
 
 
+def kallisto_bus_split(
+    fastqs,
+    index_paths,
+    technology,
+    out_dir,
+    temp_dir='tmp',
+    threads=8,
+    memory='4G'
+):
+    """Runs `kallisto bus` with split indices.
+
+    :param fastqs: list of FASTQ file paths or URLs
+    :type fastqs: list
+    :param index_paths: paths to kallisto indices
+    :type index_paths: list
+    :param technology: single-cell technology used
+    :type technology: str
+    :param out_dir: path to output directory
+    :type out_dir: str
+    :param temp_dir: path to temporary directory, defaults to `tmp`
+    :type temp_dir: str, optional
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+    :param memory: amount of memory to use, defaults to `4G`
+    :type memory: str, optional
+
+    :return: dictionary containing paths to generated files
+    :rtype: dict
+    """
+    logger.info(f'Generating BUS file using {len(index_paths)} indices')
+    part_dirs = []
+    for i, index_path in enumerate(index_paths):
+        bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
+        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+        kallisto_bus(
+            fastqs,
+            index_path,
+            technology,
+            bus_part_dir,
+            threads=threads,
+            n=True,
+            k=True
+        )
+        part_dirs.append(bus_part_dir)
+
+        # Sort each part to temp, and then overwrite the original
+        # output.bus
+        bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
+        sort_part = bustools_sort(
+            bus_part,
+            get_temporary_filename(temp_dir),
+            temp_dir=temp_dir,
+            threads=threads,
+            memory=memory,
+            flags=True
+        )
+        move_file(sort_part['bus'], bus_part)
+
+    # Mash parts into one & sort by flag again
+    mash_result = bustools_mash(part_dirs, out_dir)
+    sort_result = bustools_sort(
+        mash_result['bus'],
+        get_temporary_filename(temp_dir),
+        temp_dir=temp_dir,
+        threads=threads,
+        memory=memory,
+        flags=True
+    )
+    move_file(sort_result['bus'], mash_result['bus'])
+
+    # Merge
+    merge_result = bustools_merge(
+        mash_result['bus'], out_dir, mash_result['ecmap'],
+        mash_result['txnames']
+    )
+
+    # Move files to appropriate places
+    bus_path = os.path.join(out_dir, BUS_FILENAME)
+    ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+    move_file(merge_result['bus'], bus_path)
+    move_file(merge_result['ecmap'], ecmap_path)
+
+    return {
+        'bus': bus_path,
+        'ecmap': ecmap_path,
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+    }
+
+
 @validate_files(pre=False)
-def bustools_merge(out_dirs, out_dir, threads=8):
-    """Runs `bustools merge`. Additionally, combines the `run_info.json`s into
+def bustools_mash(out_dirs, out_dir):
+    """Runs `bustools mash`. Additionally, combines the `run_info.json`s into
     one.
 
-    :param out_dirs: list of `kallisto bus` output directories
+    :param out_dirs: list of `kallisto bus` output directories. Note that
+                     BUS files should be sorted by flag
     :type out_dirs: list
     :param out_dir: path to output directory
     :type out_dir: str
-    :param threads: number of threads to use, defaults to `8`
-    :type threads: int, optional
 
-    :return: dictionary containing path to generated index
+    :return: dictionary containing paths to generated files
     :rtype: dict
     """
-    logger.info(f'Merging BUS records to {out_dir} from')
+    logger.info(f'Mashing BUS records to {out_dir} from')
     for out in out_dirs:
         logger.info((' ' * 8) + out)
-    command = [get_bustools_binary_path(), 'merge']
+    command = [get_bustools_binary_path(), 'mash']
     command += ['-o', out_dir]
-    # command += ['-t', threads]
     command += out_dirs
     run_executable(command)
 
@@ -144,12 +242,42 @@ def bustools_merge(out_dirs, out_dir, threads=8):
         info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
         with open(info_path, 'w') as f:
             json.dump(run_info, f, indent=4)
-
     return {
-        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'bus': os.path.join(out_dir, BUS_MASHED_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': info_path
+    }
+
+
+@validate_files(pre=False)
+def bustools_merge(bus_path, out_dir, ecmap_path, txnames_path):
+    """Runs `bustools merge`.
+
+    :param bus_path: path to BUS file to merge
+    :type bus_path: str
+    :param out_dir: path to output directory, where the merged BUS file and
+                    ecmap will be written
+    :type out_dir: str
+    :param ecmap_path: path to ecmap file, as generated by `kallisto bus`
+    :type ecmap_path: str
+    :param txnames_path: path to transcript names file, as generated by `kallisto bus`
+    :type txnames_path: str
+
+    :return: dictionary containing path to generated BUS file and merged ecmap
+    :rtype: dict
+    """
+    logger.info(f'Merging BUS records in {bus_path} to {out_dir}')
+    command = [get_bustools_binary_path(), 'merge']
+    command += ['-o', out_dir]
+    command += ['-e', ecmap_path]
+    command += ['-t', txnames_path]
+    command += [bus_path]
+    run_executable(command)
+
+    return {
+        'bus': os.path.join(out_dir, BUS_MERGED_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_MERGED_FILENAME),
     }
 
 
@@ -183,7 +311,7 @@ def bustools_project(bus_path, out_path, map_path, ecmap_path, txnames_path):
     return {'bus': out_path}
 
 
-@validate_files()
+@validate_files(pre=False)
 def bustools_sort(
     bus_path, out_path, temp_dir='tmp', threads=8, memory='4G', flags=False
 ):
@@ -884,35 +1012,15 @@ def count(
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
         if len(index_paths) > 1:
-            logger.info(f'Generating BUS file using {len(index_paths)} indices')
-            part_dirs = []
-            for i, index_path in enumerate(index_paths):
-                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
-                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-                kallisto_bus(
-                    fastqs,
-                    index_path,
-                    technology,
-                    bus_part_dir,
-                    threads=threads,
-                    n=True
-                )
-                part_dirs.append(bus_part_dir)
-
-                # Sort each part to temp, and then overwrite the original
-                # output.bus
-                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
-                sort_part = bustools_sort(
-                    bus_part,
-                    get_temporary_filename(temp_dir),
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                )
-                move_file(sort_part['bus'], bus_part)
-
-            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+            bus_result = kallisto_bus_split(
+                fastqs,
+                index_paths,
+                technology,
+                out_dir,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
         else:
             # Pipe any remote files.
             fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
@@ -1195,35 +1303,15 @@ def count_velocity(
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
         if len(index_paths) > 1:
-            logger.info(f'Generating BUS file using {len(index_paths)} indices')
-            part_dirs = []
-            for i, index_path in enumerate(index_paths):
-                bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
-                fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-                kallisto_bus(
-                    fastqs,
-                    index_path,
-                    technology,
-                    bus_part_dir,
-                    threads=threads,
-                    n=True
-                )
-                part_dirs.append(bus_part_dir)
-
-                # Sort each part to temp, and then overwrite the original
-                # output.bus
-                bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
-                sort_part = bustools_sort(
-                    bus_part,
-                    get_temporary_filename(temp_dir),
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    flags=True
-                )
-                move_file(sort_part['bus'], bus_part)
-
-            bus_result = bustools_merge(part_dirs, out_dir, threads=threads)
+            bus_result = kallisto_bus_split(
+                fastqs,
+                index_paths,
+                technology,
+                out_dir,
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
         else:
             # Pipe any remote files.
             fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)

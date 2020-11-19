@@ -1,5 +1,4 @@
 import os
-import tempfile
 import uuid
 from unittest import TestCase
 from unittest.mock import ANY
@@ -37,7 +36,7 @@ class TestStats(TestMixin, TestCase):
         s.start()
         s.end()
 
-        path = os.path.join(tempfile.mkdtemp(), str(uuid.uuid4()))
+        path = os.path.join(self.temp_dir, str(uuid.uuid4()))
         self.assertEqual(path, s.save(path))
         self.assertTrue(os.path.exists(path))
 

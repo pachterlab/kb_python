@@ -1,8 +1,16 @@
 import os
+import shutil
+import tempfile
 from unittest import TestCase
 
 
 class TestMixin(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @classmethod
     def setUpClass(cls):
@@ -141,12 +149,16 @@ class TestMixin(TestCase):
         cls.kite_t2g_path = os.path.join(cls.kite_dir, 't2g.txt')
         cls.kite_map_path = os.path.join(cls.kite_dir, 'map.txt')
 
-        cls.merge_dir = os.path.join(cls.fixtures_dir, 'merge')
+        cls.split_dir = os.path.join(cls.fixtures_dir, 'split')
         cls.bus_split_paths = [
-            os.path.join(cls.merge_dir, 'part0'),
-            os.path.join(cls.merge_dir, 'part1'),
-            os.path.join(cls.merge_dir, 'part2'),
+            os.path.join(cls.split_dir, 'part0'),
+            os.path.join(cls.split_dir, 'part1'),
+            os.path.join(cls.split_dir, 'part2'),
         ]
+        cls.mash_dir = os.path.join(cls.fixtures_dir, 'mash')
+        cls.bus_mashed_path = os.path.join(cls.mash_dir, 'mashed.bus')
+        cls.ecmap_mashed_path = os.path.join(cls.mash_dir, 'matrix.ec')
+        cls.txnames_mashed_path = os.path.join(cls.mash_dir, 'transcripts.txt')
 
         cls.cellranger_dir = os.path.join(cls.fixtures_dir, 'cellranger')
         cls.cr_matrix_path = os.path.join(cls.cellranger_dir, 'matrix.mtx')
