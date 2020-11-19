@@ -15,7 +15,7 @@ setup(
     author='Kyung Hoi (Joseph) Min',
     author_email='phoenixter96@gmail.com',
     maintainer='Pachter Lab',
-    maintainer_email='lsledd@caltech.edu',
+    maintainer_email='lpachter@caltech.edu',
     description='Python wrapper around kallisto | bustools for scRNA-seq analysis',  # noqa
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -39,6 +39,7 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Utilities',
     ],
