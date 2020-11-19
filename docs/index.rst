@@ -6,7 +6,7 @@
 Welcome to kb-python's documentation!
 =====================================
 
-This page contains **DEVELOPER** documentation for ``kb-python`` version ``0.24.4``.
+This page contains **DEVELOPER** documentation for ``kb-python`` version ``0.25.0``.
 For user documentation and tutorials, please go to `kallisto | bustools <https://www.kallistobus.tools/>`_.
 
 Development Prerequisites
