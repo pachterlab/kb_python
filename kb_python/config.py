@@ -131,6 +131,9 @@ TECHNOLOGIES = [
         None,
         None,
     ),
+    Technology(
+        'SMARTSEQ', 'Smart-seq2', 2, '0, 1 (paired)', [], [], None, None
+    )
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 

@@ -8,7 +8,9 @@ import scipy.io
 
 from .config import get_bustools_binary_path, get_kallisto_binary_path, is_dry
 from .constants import (
+    ABUNDANCE_FILENAME,
     ADATA_PREFIX,
+    BATCH_FILENAME,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
@@ -18,6 +20,7 @@ from .constants import (
     CELLRANGER_DIR,
     CELLRANGER_GENES,
     CELLRANGER_MATRIX,
+    CELLS_FILENAME,
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
@@ -36,6 +39,7 @@ from .constants import (
     REPORT_NOTEBOOK_FILENAME,
     SORT_CODE,
     TCC_PREFIX,
+    TRANSCRIPT_NAME,
     TXNAMES_FILENAME,
     UNFILTERED_CODE,
     UNFILTERED_COUNTS_DIR,
@@ -63,6 +67,40 @@ from .validate import validate_files
 logger = logging.getLogger(__name__)
 
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
+
+
+@validate_files()
+def kallisto_pseudo(batch_path, index_path, out_dir, threads=8):
+    """Runs `kallisto pseudo`.
+
+    :param batch_path: path to textfile containing batch definitions
+    :type batch_path: str
+    :param index_path: path to kallisto index
+    :type index_path: str
+    :param out_dir: path to output directory
+    :type out_dir: str
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+
+    :return: dictionary containing output files
+    :rtype: dict
+    """
+    logger.info(f'Using index {index_path} to generate matrices to {out_dir}')
+    command = [get_kallisto_binary_path(), 'pseudo']
+    command += ['--quant']
+    command += ['-i', index_path]
+    command += ['-o', out_dir]
+    command += ['-b', batch_path]
+    command += ['-t', threads]
+    run_executable(command)
+
+    return {
+        'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'cells': os.path.join(out_dir, CELLS_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+    }
 
 
 @validate_files()
@@ -524,6 +562,27 @@ def bustools_whitelist(bus_path, out_path):
     ]
     run_executable(command)
     return {'whitelist': out_path}
+
+
+def write_smartseq_batch(pairs_1, pairs_2, out_path):
+    """Write a 3-column TSV specifying batch information for Smart-seq reads.
+    This file is required to use `kallisto pseudo` on multiple samples (= cells).
+
+    :param pairs_1: list of paths to FASTQs corresponding to pair 1
+    :type pairs_1: list
+    :param pairs_2: list of paths to FASTQS corresponding to pair 2
+    :type pairs_2: list
+    :param out_path: path to batch file to output
+    :type out_path: str
+
+    :return: dictionary of written batch file
+    :rtype: dict
+    """
+    logger.info(f'Writing batch definition textfile to {out_path}')
+    with open(out_path, 'w') as f:
+        for i, (read_1, read_2) in enumerate(zip(pairs_1, pairs_2)):
+            f.write(f'{i}\t{read_1}\t{read_2}\n')
+    return {'batch': out_path}
 
 
 def matrix_to_cellranger(
@@ -1202,6 +1261,91 @@ def count(
             logger.warning(
                 'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
             )
+
+    return results
+
+
+def count_smartseq(
+    index_paths,
+    t2g_path,
+    technology,
+    out_dir,
+    fastqs,
+    temp_dir='tmp',
+    threads=8,
+    memory='4G',
+    overwrite=False,
+    loom=False,
+    h5ad=False,
+):
+    """Generates gene or isoform count matrices from Smart-seq reads.
+    """
+    STATS.start()
+    if not isinstance(index_paths, list):
+        index_paths = [index_paths]
+
+    # Smart-seq does not support multiple indices.
+    if len(index_paths) > 1:
+        raise Exception(
+            f'Technology {technology} does not support multiple indices.'
+        )
+
+    # Smart-seq does not support fastq streaming.
+    if any(urlparse(fastq).scheme in ('http', 'https', 'ftp', 'ftps')
+           for fastq in fastqs):
+        raise Exception(
+            f'Technology {technology} does not support FASTQ streaming.'
+        )
+
+    results = {}
+
+    make_directory(out_dir)
+
+    pseudo_result = {
+        'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'cells': os.path.join(out_dir, CELLS_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+    }
+
+    if any(not os.path.exists(path)
+           for name, path in pseudo_result.items()) or overwrite:
+        # Write batch information.
+        batch_result = write_smartseq_batch(
+            fastqs[::2], fastqs[1::2], os.path.join(out_dir, BATCH_FILENAME)
+        )
+        results.update(batch_result)
+
+        kallisto_pseudo(
+            batch_result['batch'], index_paths[0], out_dir, threads=threads
+        )
+    else:
+        logger.info(
+            'Skipping kallisto pseudo because output files already exist. Use the --overwrite flag to overwrite.'
+        )
+    results.update(pseudo_result)
+
+    # Convert outputs.
+    if loom or h5ad:
+        results.update(
+            convert_matrix(
+                out_dir,
+                pseudo_result['mtx'],
+                pseudo_result['cells'],
+                pseudo_result['txnames'],
+                t2g_path=t2g_path,
+                name=TRANSCRIPT_NAME,
+                loom=loom,
+                h5ad=h5ad,
+                threads=threads
+            )
+        )
+
+    # Generate report.
+    STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
 
     return results
 

@@ -3,6 +3,7 @@ import json
 import sys
 
 from . import __version__
+from .config import is_dry
 from .dry import dummy_function
 from .dry import dryable
 
@@ -60,8 +61,9 @@ class Stats:
         :return: path to saved JSON
         :rtype: str
         """
-        with open(path, 'w') as f:
-            json.dump(self.to_dict(), f, indent=4)
+        if not is_dry():
+            with open(path, 'w') as f:
+                json.dump(self.to_dict(), f, indent=4)
         return path
 
     def to_dict(self):

@@ -33,6 +33,7 @@ FEATURE_PREFIX = 'cells_x_features'
 ADATA_PREFIX = 'adata'
 GENE_NAME = 'gene'
 FEATURE_NAME = 'feature'
+TRANSCRIPT_NAME = 'transcript'
 
 UNFILTERED_COUNTS_DIR = 'counts_unfiltered'
 FILTERED_COUNTS_DIR = 'counts_filtered'
@@ -43,6 +44,12 @@ CELLRANGER_GENES = 'genes.tsv'
 
 BUS_UNFILTERED_SUFFIX = '.unfiltered.bus'
 BUS_FILTERED_SUFFIX = '.filtered.bus'
+
+# Smartseq file names
+BATCH_FILENAME = 'batch.txt'
+ABUNDANCE_FILENAME = 'matrix.abundance.mtx'
+CELLS_FILENAME = 'matrix.cells'
+GENE_DIR = 'counts_gene'
 
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of
