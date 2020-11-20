@@ -4,6 +4,7 @@ from collections import namedtuple
 
 PACKAGE_PATH = os.path.dirname(__file__)
 PLATFORM = platform.system().lower()
+ARCHITECTURE = platform.machine().lower()
 BINS_DIR = 'bins'
 
 TEMP_DIR = 'tmp'
@@ -183,11 +184,11 @@ def get_kallisto_binary_path():
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
     path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
+        PACKAGE_PATH, BINS_DIR, PLATFORM, ARCHITECTURE, 'kallisto', bin_filename
     )
     if not os.path.exists(path):
         raise UnsupportedOSException(
-            'This operating system ({}) is not supported.'.format(PLATFORM)
+            f'This operating system ({PLATFORM}, {ARCHITECTURE}) is not supported.'
         )
     return path
 
@@ -201,11 +202,11 @@ def get_bustools_binary_path():
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
     path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
+        PACKAGE_PATH, BINS_DIR, PLATFORM, ARCHITECTURE, 'bustools', bin_filename
     )
     if not os.path.exists(path):
         raise UnsupportedOSException(
-            'This operating system ({}) is not supported.'.format(PLATFORM)
+            f'This operating system ({PLATFORM}, {ARCHITECTURE}) is not supported.'
         )
     return path
 
