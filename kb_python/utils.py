@@ -606,6 +606,7 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
     return anndata.AnnData(
+        X=spliced_intersection.X,
         layers={
             'spliced': spliced_intersection.X,
             'unspliced': unspliced_intersection.X
