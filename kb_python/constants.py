@@ -50,6 +50,7 @@ BATCH_FILENAME = 'batch.txt'
 ABUNDANCE_FILENAME = 'matrix.abundance.mtx'
 CELLS_FILENAME = 'matrix.cells'
 GENE_DIR = 'counts_gene'
+GENES_FILENAME = 'genes.txt'
 
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of

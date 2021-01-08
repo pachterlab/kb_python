@@ -39,8 +39,14 @@ class TestMixin(TestCase):
 
         cls.counts_dir = os.path.join(cls.fixtures_dir, 'counts')
         cls.matrix_path = os.path.join(cls.counts_dir, 'genes.mtx')
+        cls.matrix_duplicated_path = os.path.join(
+            cls.counts_dir, 'genes_duplicated.mtx'
+        )
         cls.barcodes_path = os.path.join(cls.counts_dir, 'genes.barcodes.txt')
         cls.genes_path = os.path.join(cls.counts_dir, 'genes.genes.txt')
+        cls.genes_duplicated_path = os.path.join(
+            cls.counts_dir, 'duplicated.genes.txt'
+        )
         cls.loom_path = os.path.join(cls.counts_dir, 'genes.loom')
         cls.h5ad_path = os.path.join(cls.counts_dir, 'genes.h5ad')
 
@@ -171,4 +177,10 @@ class TestMixin(TestCase):
             os.path.join(cls.smartseq_dir, 'R1.fastq.gz'),
             os.path.join(cls.smartseq_dir, 'R2.fastq.gz')
         ]
+        cls.smartseq_t2g_path = os.path.join(
+            cls.smartseq_dir, 'transcripts_to_genes.txt'
+        )
+        cls.smartseq_txnames_path = os.path.join(
+            cls.smartseq_dir, 'transcripts.txt'
+        )
         cls.smartseq_out_dir = os.path.join(cls.smartseq_dir, 'out')

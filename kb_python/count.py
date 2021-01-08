@@ -31,6 +31,7 @@ from .constants import (
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
     GENE_NAME,
+    GENES_FILENAME,
     INSPECT_FILENAME,
     KALLISTO_INFO_FILENAME,
     KB_INFO_FILENAME,
@@ -39,7 +40,6 @@ from .constants import (
     REPORT_NOTEBOOK_FILENAME,
     SORT_CODE,
     TCC_PREFIX,
-    TRANSCRIPT_NAME,
     TXNAMES_FILENAME,
     UNFILTERED_CODE,
     UNFILTERED_COUNTS_DIR,
@@ -54,7 +54,9 @@ from .utils import (
     import_tcc_matrix_as_anndata,
     make_directory,
     move_file,
+    open_as_text,
     overlay_anndatas,
+    read_t2g,
     run_executable,
     stream_file,
     sum_anndatas,
@@ -564,24 +566,24 @@ def bustools_whitelist(bus_path, out_path):
     return {'whitelist': out_path}
 
 
-def write_smartseq_batch(pairs_1, pairs_2, out_path):
+def write_smartseq_batch(fastq_pairs, cell_ids, out_path):
     """Write a 3-column TSV specifying batch information for Smart-seq reads.
     This file is required to use `kallisto pseudo` on multiple samples (= cells).
 
-    :param pairs_1: list of paths to FASTQs corresponding to pair 1
-    :type pairs_1: list
-    :param pairs_2: list of paths to FASTQS corresponding to pair 2
-    :type pairs_2: list
+    :param fastq_pairs: list of pairs of FASTQs
+    :type fastq_pairs: list
+    :param cell_ids: list of cell IDs
+    :type cell_ids: list
     :param out_path: path to batch file to output
     :type out_path: str
 
     :return: dictionary of written batch file
     :rtype: dict
     """
-    logger.info(f'Writing batch definition textfile to {out_path}')
+    logger.info(f'Writing batch definition TSV to {out_path}')
     with open(out_path, 'w') as f:
-        for i, (read_1, read_2) in enumerate(zip(pairs_1, pairs_2)):
-            f.write(f'{i}\t{read_1}\t{read_2}\n')
+        for cell_id, (fastq_1, fastq_2) in zip(cell_ids, fastq_pairs):
+            f.write(f'{cell_id}\t{fastq_1}\t{fastq_2}\n')
     return {'batch': out_path}
 
 
@@ -977,6 +979,41 @@ def copy_or_create_whitelist(technology, bus_path, out_dir):
         )['whitelist']
 
 
+def convert_transcripts_to_genes(txnames_path, t2g_path, genes_path):
+    """Convert a textfile containing transcript IDs to another textfile containing
+    gene IDs, given a transcript-to-gene mapping.
+
+    :param txnames_path: path to transcripts.txt
+    :type txnames_path: str
+    :param t2g_path: path to transcript-to-genes mapping
+    :type t2g_path: str
+    :param genes_path: path to output genes.txt
+    :type genes_path: str
+
+    :return: path to written genes.txt
+    :rtype: str
+    """
+    t2g = read_t2g(t2g_path)
+    with open_as_text(txnames_path, 'r') as f, open_as_text(genes_path,
+                                                            'w') as out:
+        for line in f:
+            if line.isspace():
+                continue
+            transcript = line.strip()
+            if transcript not in t2g:
+                logger.warning(
+                    f'Transcript {transcript} was found in {txnames_path} but not in {t2g_path}. '
+                    'This transcript will not be converted to a gene.'
+                )
+            attributes = t2g.get(transcript)
+
+            if attributes:
+                out.write(f'{attributes[0]}\n')
+            else:
+                out.write(f'{transcript}\n')
+    return genes_path
+
+
 def count(
     index_paths,
     t2g_path,
@@ -1270,7 +1307,8 @@ def count_smartseq(
     t2g_path,
     technology,
     out_dir,
-    fastqs,
+    fastq_pairs,
+    cell_ids=None,
     temp_dir='tmp',
     threads=8,
     memory='4G',
@@ -1292,7 +1330,8 @@ def count_smartseq(
 
     # Smart-seq does not support fastq streaming.
     if any(urlparse(fastq).scheme in ('http', 'https', 'ftp', 'ftps')
-           for fastq in fastqs):
+           for pair in fastq_pairs
+           for fastq in pair):
         raise Exception(
             f'Technology {technology} does not support FASTQ streaming.'
         )
@@ -1313,11 +1352,13 @@ def count_smartseq(
            for name, path in pseudo_result.items()) or overwrite:
         # Write batch information.
         batch_result = write_smartseq_batch(
-            fastqs[::2], fastqs[1::2], os.path.join(out_dir, BATCH_FILENAME)
+            fastq_pairs,
+            cell_ids if cell_ids else list(range(len(fastq_pairs))),
+            os.path.join(out_dir, BATCH_FILENAME),
         )
         results.update(batch_result)
 
-        kallisto_pseudo(
+        pseudo_result = kallisto_pseudo(
             batch_result['batch'], index_paths[0], out_dir, threads=threads
         )
     else:
@@ -1326,6 +1367,13 @@ def count_smartseq(
         )
     results.update(pseudo_result)
 
+    # Manually write genes.txt
+    # NOTE: there will be duplicated genes
+    genes_path = os.path.join(out_dir, GENES_FILENAME)
+    results['genes'] = convert_transcripts_to_genes(
+        pseudo_result['txnames'], t2g_path, genes_path
+    )
+
     # Convert outputs.
     if loom or h5ad:
         results.update(
@@ -1333,9 +1381,8 @@ def count_smartseq(
                 out_dir,
                 pseudo_result['mtx'],
                 pseudo_result['cells'],
-                pseudo_result['txnames'],
+                results['genes'],
                 t2g_path=t2g_path,
-                name=TRANSCRIPT_NAME,
                 loom=loom,
                 h5ad=h5ad,
                 threads=threads
