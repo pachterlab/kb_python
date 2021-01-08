@@ -180,6 +180,13 @@ class TestUtils(TestMixin, TestCase):
         path = utils.get_temporary_filename()
         self.assertTrue(os.path.exists(path))
 
+    def test_read_t2g(self):
+        t2g = utils.read_t2g(self.t2g_path)
+        self.assertEqual(16457, len(t2g))
+        self.assertIn('ENSMUST00000158488.1', t2g)
+        self.assertEqual(('ENSMUSG00000089113.1', 'Gm22902'),
+                         t2g['ENSMUST00000158488.1'])
+
     def test_import_tcc_matrix_as_anndata(self):
         adata = utils.import_tcc_matrix_as_anndata(
             self.tcc_matrix_path, self.tcc_barcodes_path, self.tcc_ec_path,
@@ -196,10 +203,30 @@ class TestUtils(TestMixin, TestCase):
             self.matrix_path, self.barcodes_path, self.genes_path
         )
         self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual((29, 17), adata.shape)
         self.assertEqual(set(), set(adata.var))
         self.assertEqual(set(), set(adata.obs))
         self.assertEqual('gene_id', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
+        self.assertEqual(1, adata.X[9, 0])
+        self.assertEqual(1, adata.X[15, 0])
+
+    def test_import_matrix_as_anndata_duplicated(self):
+        adata = utils.import_matrix_as_anndata(
+            self.matrix_duplicated_path,
+            self.barcodes_path,
+            self.genes_duplicated_path,
+        )
+        self.assertIsInstance(adata, anndata.AnnData)
+        self.assertEqual(set(), set(adata.obs))
+        self.assertEqual('gene_id', adata.var.index.name)
+        self.assertEqual('barcode', adata.obs.index.name)
+
+        self.assertEqual((29, 16), adata.shape)
+        self.assertNotIn('ENSMUSG00000092572.7', adata.var.index)
+        self.assertEqual(
+            5, adata.X[15, adata.var.index.get_loc('ENSMUSG00000026034.17')]
+        )
 
     def test_import_matrix_as_anndata_with_t2g(self):
         adata = utils.import_matrix_as_anndata(

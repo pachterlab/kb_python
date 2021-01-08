@@ -30,12 +30,12 @@ from kb_python.constants import (
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
     FILTERED_COUNTS_DIR,
+    GENES_FILENAME,
     INSPECT_FILENAME,
     KALLISTO_INFO_FILENAME,
     KB_INFO_FILENAME,
     REPORT_HTML_FILENAME,
     REPORT_NOTEBOOK_FILENAME,
-    TRANSCRIPT_NAME,
     TXNAMES_FILENAME,
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
@@ -303,12 +303,15 @@ class TestCount(TestMixin, TestCase):
 
     def test_write_smartseq_batch(self):
         out_path = os.path.join(self.temp_dir, str(uuid.uuid4()))
-        pairs_1 = ['r1_1', 'r2_1']
-        pairs_2 = ['r1_2', 'r2_2']
-        self.assertEqual({'batch': out_path},
-                         count.write_smartseq_batch(pairs_1, pairs_2, out_path))
+        fastq_pairs = [['r1_1', 'r2_1'], ['r1_2', 'r2_2']]
+        cell_ids = ['cell_1', 'cell_2']
+        self.assertEqual({
+            'batch': out_path
+        }, count.write_smartseq_batch(fastq_pairs, cell_ids, out_path))
         with open(out_path, 'r') as f:
-            self.assertEqual('0\tr1_1\tr1_2\n1\tr2_1\tr2_2\n', f.read())
+            self.assertEqual(
+                'cell_1\tr1_1\tr2_1\ncell_2\tr1_2\tr2_2\n', f.read()
+            )
 
     def test_convert_matrix_loom(self):
         with mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
@@ -1001,6 +1004,24 @@ class TestCount(TestMixin, TestCase):
             bustools_whitelist.assert_called_once_with(
                 self.bus_s_path, os.path.join(out_dir, WHITELIST_FILENAME)
             )
+
+    def test_convert_transcripts_to_genes(self):
+        with mock.patch('kb_python.count.read_t2g') as read_t2g:
+            read_t2g.return_value = {
+                'ENST00000003583.12': ('ENSG00000001460.18', 'STPG1')
+            }
+            genes_path = os.path.join(self.temp_dir, 'genes.txt')
+            self.assertEqual(
+                genes_path,
+                count.convert_transcripts_to_genes(
+                    self.smartseq_txnames_path, self.smartseq_t2g_path,
+                    genes_path
+                )
+            )
+            with open(genes_path, 'r') as f:
+                self.assertEqual(['ENSG00000001460.18', 'ENST00000003912.7'], [
+                    line.strip() for line in f if not line.isspace()
+                ])
 
     def test_matrix_to_cellranger(self):
         out_dir = self.temp_dir
@@ -2450,16 +2471,25 @@ class TestCount(TestMixin, TestCase):
         with mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
             mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
-            mock.patch('kb_python.count.convert_matrix') as convert_matrix:
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
+            mock.patch('kb_python.count.convert_transcripts_to_genes') as convert_transcripts_to_genes:
             out_dir = 'out'
             temp_dir = 'temp'
             threads = 99999
             memory = 'mem'
             t2g_path = 't2g'
             technology = 'tech'
-            fastqs = ['r1', 'r2', 'r3', 'r4']
+            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
             index_paths = ['index']
             STATS.save.return_value = 'stats'
+            convert_transcripts_to_genes.return_value = 'genes.txt'
+            kallisto_pseudo.return_value = {
+                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+                'cells': os.path.join(out_dir, CELLS_FILENAME),
+                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
+            }
             write_smartseq_batch.return_value = {'batch': 'batch.txt'}
             self.assertEqual({
                 'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
@@ -2468,24 +2498,29 @@ class TestCount(TestMixin, TestCase):
                 'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
                 'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
                 'stats': 'stats',
-                'batch': 'batch.txt'
+                'batch': 'batch.txt',
+                'genes': 'genes.txt'
             },
                              count.count_smartseq(
                                  index_paths,
                                  t2g_path,
                                  technology,
                                  out_dir,
-                                 fastqs,
+                                 fastq_pairs,
                                  temp_dir=temp_dir,
                                  threads=threads,
                                  memory=memory
                              ))
 
-            write_smartseq_batch.assert_called_once_with(['r1', 'r3'], [
-                'r2', 'r4'
-            ], os.path.join(out_dir, BATCH_FILENAME))
+            write_smartseq_batch.assert_called_once_with(
+                fastq_pairs, [0, 1], os.path.join(out_dir, BATCH_FILENAME)
+            )
             kallisto_pseudo.assert_called_once_with(
                 'batch.txt', 'index', out_dir, threads=threads
+            )
+            convert_transcripts_to_genes.assert_called_once_with(
+                os.path.join(out_dir, TXNAMES_FILENAME), t2g_path,
+                os.path.join(out_dir, GENES_FILENAME)
             )
             convert_matrix.assert_not_called()
 
@@ -2493,17 +2528,26 @@ class TestCount(TestMixin, TestCase):
         with mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
             mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
-            mock.patch('kb_python.count.convert_matrix') as convert_matrix:
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
+            mock.patch('kb_python.count.convert_transcripts_to_genes') as convert_transcripts_to_genes:
             out_dir = 'out'
             temp_dir = 'temp'
             threads = 99999
             memory = 'mem'
             t2g_path = 't2g'
             technology = 'tech'
-            fastqs = ['r1', 'r2', 'r3', 'r4']
+            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
             index_paths = ['index']
             STATS.save.return_value = 'stats'
             write_smartseq_batch.return_value = {'batch': 'batch.txt'}
+            convert_transcripts_to_genes.return_value = 'genes.txt'
+            kallisto_pseudo.return_value = {
+                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+                'cells': os.path.join(out_dir, CELLS_FILENAME),
+                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
+            }
             self.assertEqual({
                 'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
                 'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
@@ -2511,33 +2555,37 @@ class TestCount(TestMixin, TestCase):
                 'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
                 'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
                 'stats': 'stats',
-                'batch': 'batch.txt'
+                'batch': 'batch.txt',
+                'genes': 'genes.txt'
             },
                              count.count_smartseq(
                                  index_paths,
                                  t2g_path,
                                  technology,
                                  out_dir,
-                                 fastqs,
+                                 fastq_pairs,
                                  temp_dir=temp_dir,
                                  threads=threads,
                                  memory=memory,
                                  h5ad=True
                              ))
 
-            write_smartseq_batch.assert_called_once_with(['r1', 'r3'], [
-                'r2', 'r4'
-            ], os.path.join(out_dir, BATCH_FILENAME))
+            write_smartseq_batch.assert_called_once_with(
+                fastq_pairs, [0, 1], os.path.join(out_dir, BATCH_FILENAME)
+            )
             kallisto_pseudo.assert_called_once_with(
                 'batch.txt', 'index', out_dir, threads=threads
+            )
+            convert_transcripts_to_genes.assert_called_once_with(
+                os.path.join(out_dir, TXNAMES_FILENAME), t2g_path,
+                os.path.join(out_dir, GENES_FILENAME)
             )
             convert_matrix.assert_called_once_with(
                 out_dir,
                 os.path.join(out_dir, ABUNDANCE_FILENAME),
                 os.path.join(out_dir, CELLS_FILENAME),
-                os.path.join(out_dir, TXNAMES_FILENAME),
+                'genes.txt',
                 t2g_path=t2g_path,
-                name=TRANSCRIPT_NAME,
                 loom=False,
                 h5ad=True,
                 threads=threads
@@ -2554,7 +2602,7 @@ class TestCount(TestMixin, TestCase):
             memory = 'mem'
             t2g_path = 't2g'
             technology = 'tech'
-            fastqs = ['r1', 'r2', 'r3', 'r4']
+            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
             index_paths = ['index', 'index2']
             with self.assertRaises(Exception):
                 count.count_smartseq(
@@ -2562,7 +2610,7 @@ class TestCount(TestMixin, TestCase):
                     t2g_path,
                     technology,
                     out_dir,
-                    fastqs,
+                    fastq_pairs,
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory
@@ -2579,7 +2627,7 @@ class TestCount(TestMixin, TestCase):
             memory = 'mem'
             t2g_path = 't2g'
             technology = 'tech'
-            fastqs = ['http://r1', 'r2', 'r3', 'r4']
+            fastq_pairs = [['http://r1', 'r2'], ['r3', 'r4']]
             index_paths = ['index']
             with self.assertRaises(Exception):
                 count.count_smartseq(
@@ -2587,7 +2635,7 @@ class TestCount(TestMixin, TestCase):
                     t2g_path,
                     technology,
                     out_dir,
-                    fastqs,
+                    fastq_pairs,
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory
