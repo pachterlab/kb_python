@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import textwrap
+import warnings
 
 from . import __version__
 from .config import (
@@ -24,6 +25,7 @@ from .utils import (
     get_bustools_version,
     get_kallisto_version,
     make_directory,
+    open_as_text,
     remove_directory,
 )
 
@@ -189,7 +191,7 @@ def parse_count(parser, args, temp_dir='tmp'):
         # Smartseq can not be used with lamanno or nucleus.
         if args.x.upper() == 'SMARTSEQ':
             parser.error(
-                f'Technology {args.x} can not be used with workflow {args.workflow}.'
+                f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
 
         count_velocity(
@@ -224,7 +226,7 @@ def parse_count(parser, args, temp_dir='tmp'):
         # Smart-seq
         if args.x.upper() == 'SMARTSEQ':
             if args.dry_run:
-                parser.error(f'Technology {args.x} does not support dry run.')
+                parser.error(f'Technology `{args.x}` does not support dry run.')
 
             # Check for ignored arguments. (i.e. arguments either not supported or
             # not yet implemented)
@@ -234,23 +236,62 @@ def parse_count(parser, args, temp_dir='tmp'):
             for arg in ignored:
                 if getattr(args, arg):
                     logger.warning(
-                        f'Argument `{arg}` is not supported for technology {args.x}. This argument will be ignored.'
+                        f'Argument `{arg}` is not supported for technology `{args.x}`. This argument will be ignored.'
                     )
 
-            # Allow glob notation for fastqs.
-            fastqs = []
-            for expr in args.fastqs:
-                fastqs.extend(glob.glob(expr))
-            args.fastqs = sorted(list(set(fastqs)))
+            # Check if batch TSV was provided.
+            batch_path = None
+            if len(args.fastqs) == 1:
+                try:
+                    with open_as_text(args.fastqs[0], 'r') as f:
+                        if not f.readline().startswith('@'):
+                            batch_path = args.fastqs[0]
+                except Exception:
+                    pass
+
+            cells = {}
+            if batch_path:
+                with open(batch_path, 'r') as f:
+                    for line in f:
+                        if line.isspace() or line.startswith('#'):
+                            continue
+                        cell_id, fastq_1, fastq_2 = line.strip().split('\t')
+                        if cell_id in cells:
+                            parser.error(
+                                f'Found duplicate cell ID {cell_id} in {batch_path}.'
+                            )
+                        cells[cell_id] = (fastq_1, fastq_2)
+            else:
+                # Allow glob notation for fastqs.
+                fastqs = []
+                for expr in args.fastqs:
+                    fastqs.extend(glob.glob(expr))
+                if len(fastqs) % 2:
+                    logger.warning(f'{len(fastqs)} FASTQs found. ')
+                fastqs = sorted(set(fastqs))
+                for cell_id, i in enumerate(range(0, len(fastqs), 2)):
+                    fastq_1, fastq_2 = fastqs[i], (
+                        fastqs[i + 1] if i + 1 < len(fastqs) else ''
+                    )
+                    cells[cell_id] = (fastq_2, fastq_2)
             logger.info('Found the following FASTQs:')
-            for fastq in args.fastqs:
-                logger.info(' ' * 8 + fastq)
+            fastq_pairs = []
+            cell_ids = []
+            for cell_id, (fastq_1, fastq_2) in cells.items():
+                logger.info(f'        {cell_id}    {fastq_1}  {fastq_2}')
+                cell_ids.append(cell_id)
+                fastq_pairs.append((fastq_1, fastq_2))
+                if not fastq_1 or not fastq_2:
+                    parser.error(
+                        f'Single-end reads are currently not supported with technology `{args.x}`.'
+                    )
             count_smartseq(
                 args.i,
                 args.g,
                 args.x,
                 args.o,
-                args.fastqs,
+                fastq_pairs,
+                cell_ids=cell_ids,
                 threads=args.t,
                 memory=args.m,
                 overwrite=args.overwrite,
@@ -662,7 +703,11 @@ def setup_count_args(parser, parent):
     parser_count.add_argument(
         'fastqs',
         help=(
-            'FASTQ files. Glob expressions can be used only with technology `SMARTSEQ`.'
+            'FASTQ files. For technology `SMARTSEQ`, all input FASTQs are '
+            'alphabetically sorted by path and paired in order, and cell IDs '
+            'are assigned as incrementing integers starting from zero. A single '
+            'batch TSV with cell ID, read 1, and read 2 as columns can be '
+            'provided to override this behavior.'
         ),
         nargs='+'
     )
@@ -757,7 +802,12 @@ def main():
 
     # Turn off logging from other packages.
     try:
-        logging.getLogger('anndata').disable(level=logging.CRITICAL)
+        anndata_logger = logging.getLogger('anndata')
+        h5py_logger = logging.getLogger('h5py')
+        anndata_logger.setLevel(logging.CRITICAL + 10)
+        anndata_logger.propagate = False
+        h5py_logger.setLevel(logging.CRITICAL + 10)
+        h5py_logger.propagate = False
     except Exception:
         pass
 
@@ -782,7 +832,9 @@ def main():
     make_directory(temp_dir)
     try:
         logger.debug(args)
-        COMMAND_TO_FUNCTION[args.command](parser, args, temp_dir=temp_dir)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            COMMAND_TO_FUNCTION[args.command](parser, args, temp_dir=temp_dir)
     except Exception:
         if is_dry():
             raise

@@ -14,6 +14,7 @@ from urllib.request import urlretrieve
 import anndata
 import pandas as pd
 import scipy.io
+from scipy import sparse
 from tqdm import tqdm
 
 from .config import (
@@ -481,6 +482,34 @@ def get_temporary_filename(temp_dir=None):
     return path
 
 
+def read_t2g(t2g_path):
+    """Given a transcript-to-gene mapping path, read it into a dictionary.
+    The first column is always assumed to tbe the transcript IDs.
+
+    :param t2g_path: path to t2g
+    :type t2g_path: str
+
+    :return: dictionary containing transcript IDs as keys and all other columns
+             as a tuple as values
+    :rtype: dict
+    """
+    t2g = {}
+    with open_as_text(t2g_path, 'r') as f:
+        for line in f:
+            if line.isspace():
+                continue
+            split = line.strip().split('\t')
+            transcript = split[0]
+            other = tuple(split[1:])
+            if transcript in t2g:
+                logger.warning(
+                    f'Found duplicate entries for {transcript} in {t2g_path}. '
+                    'Earlier entries will be ignored.'
+                )
+            t2g[transcript] = other
+    return t2g
+
+
 def import_tcc_matrix_as_anndata(
     matrix_path, barcodes_path, ec_path, txnames_path, threads=8
 ):
@@ -567,23 +596,38 @@ def import_matrix_as_anndata(
     df_genes.index = df_genes.index.astype(
         str
     )  # To prevent logging from anndata
+    mtx = scipy.io.mmread(matrix_path)
+
+    # If any of the genes are duplicated, collapse them by summing
+    if any(df_genes.index.duplicated()):
+        logger.debug(
+            f'Deduplicating genes found in {genes_path} by adding duplicates'
+        )
+        mtx = mtx.tocsc()
+        gene_indices = {}
+        for i, gene in enumerate(df_genes.index):
+            gene_indices.setdefault(gene, []).append(i)
+        genes = []
+        deduplicated_mtx = sparse.lil_matrix(
+            (len(df_barcodes), len(gene_indices))
+        )
+        for i, gene in enumerate(sorted(gene_indices.keys())):
+            genes.append(gene)
+            indices = gene_indices[gene]
+            deduplicated_mtx[:, i] = mtx[:, indices].sum(axis=1)
+        df_genes = pd.DataFrame(index=pd.Series(genes, name=f'{name}_id'))
+        mtx = deduplicated_mtx
+
+    t2g = read_t2g(t2g_path) if t2g_path else {}
     id_to_name = {}
-    if t2g_path:
-        with open(t2g_path, 'r') as f:
-            for line in f:
-                if line.isspace():
-                    continue
+    for transcript, attributes in t2g.items():
+        if len(attributes) > 1:
+            id_to_name[attributes[0]] = attributes[1]
+    gene_names = [id_to_name.get(i, '') for i in df_genes.index]
+    if any(bool(g) for g in gene_names):
+        df_genes[f'{name}_name'] = gene_names
 
-                split = line.strip().split('\t')
-                if len(split) > 2:
-                    id_to_name[split[1]] = split[2]
-        gene_names = [id_to_name.get(i, '') for i in df_genes.index]
-        if any(bool(g) for g in gene_names):
-            df_genes[f'{name}_name'] = gene_names
-
-    return anndata.AnnData(
-        X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_genes
-    )
+    return anndata.AnnData(X=mtx.tocsr(), obs=df_barcodes, var=df_genes)
 
 
 def overlay_anndatas(adata_spliced, adata_unspliced):
