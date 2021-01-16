@@ -136,30 +136,39 @@ def parse_ref(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
-    elif args.workflow == 'kite':
-        ref_kite(
-            args.feature,
-            args.f1,
-            args.i,
-            args.g,
-            n=args.n,
-            k=args.k,
-            no_mismatches=args.no_mismatches,
-            overwrite=args.overwrite,
-            temp_dir=temp_dir
-        )
     else:
-        ref(
-            args.fasta,
-            args.gtf,
-            args.f1,
-            args.i,
-            args.g,
-            n=args.n,
-            k=args.k,
-            overwrite=args.overwrite,
-            temp_dir=temp_dir
-        )
+        # Report extraneous options
+        velocity_only = ['f2', 'c1', 'c2', 'flank']
+        for arg in velocity_only:
+            if getattr(args, arg):
+                parser.error(
+                    f'Option `{arg}` is not supported for workflow `{args.workflow}`'
+                )
+
+        if args.workflow == 'kite':
+            ref_kite(
+                args.feature,
+                args.f1,
+                args.i,
+                args.g,
+                n=args.n,
+                k=args.k,
+                no_mismatches=args.no_mismatches,
+                overwrite=args.overwrite,
+                temp_dir=temp_dir
+            )
+        else:
+            ref(
+                args.fasta,
+                args.gtf,
+                args.f1,
+                args.i,
+                args.g,
+                n=args.n,
+                k=args.k,
+                overwrite=args.overwrite,
+                temp_dir=temp_dir
+            )
 
 
 def parse_count(parser, args, temp_dir='tmp'):
