@@ -94,8 +94,17 @@ class TestMixin(TestCase):
 
         cls.gtf_dir = os.path.join(cls.fixtures_dir, 'gtf')
         cls.unsorted_gtf_path = os.path.join(cls.gtf_dir, 'not_sorted.gtf')
+        cls.unsorted_gtf_with_space_path = os.path.join(
+            cls.gtf_dir, 'not_sorted_with_space.gtf'
+        )
         cls.sorted_gtf_path = os.path.join(cls.gtf_dir, 'sorted.gtf')
+        cls.sorted_gtf_with_space_path = os.path.join(
+            cls.gtf_dir, 'sorted_with_space.gtf'
+        )
         cls.gtf_t2g_path = os.path.join(cls.gtf_dir, 't2g.txt')
+        cls.gtf_t2g_with_space_path = os.path.join(
+            cls.gtf_dir, 't2g_with_space.txt'
+        )
         cls.fasta_t2g_intron_path = os.path.join(cls.gtf_dir, 't2g_intron.txt')
         cls.gtf_t2g_intron_path = os.path.join(
             cls.gtf_dir, 't2g_intron_gtf.txt'
@@ -110,6 +119,9 @@ class TestMixin(TestCase):
         cls.sorted_fasta_path = os.path.join(cls.fasta_dir, 'sorted.fa')
         cls.fasta_t2c_path = os.path.join(cls.fasta_dir, 't2c.txt')
         cls.split_cdna_fasta_path = os.path.join(cls.fasta_dir, 'cdna_split.fa')
+        cls.split_cdna_fasta_with_space_path = os.path.join(
+            cls.fasta_dir, 'cdna_split_with_space.fa'
+        )
         cls.split_intron_fasta_path = os.path.join(
             cls.fasta_dir, 'intron_split.fa'
         )

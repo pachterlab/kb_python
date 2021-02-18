@@ -56,6 +56,23 @@ class TestGTF(TestMixin, TestCase):
             }
         }, GTF.parse_entry(line))
 
+    def test_parse_entry_with_space(self):
+        line = '2\thavana\tgene\t2\t3\t.\t+\t.\tgene_id "ENSMUSG00000102693 [A]"; gene_version "1"; gene_name "4933401J01Rik"; gene_source "havana"; gene_biotype "TEC";'  # noqa
+        self.assertEqual({
+            'seqname': '2',
+            'feature': 'gene',
+            'start': 2,
+            'end': 3,
+            'strand': '+',
+            'group': {
+                'gene_id': 'ENSMUSG00000102693[A]',
+                'gene_version': '1',
+                'gene_name': '4933401J01Rik',
+                'gene_source': 'havana',
+                'gene_biotype': 'TEC'
+            }
+        }, GTF.parse_entry(line))
+
     def test_entries(self):
         gtf = GTF(self.unsorted_gtf_path)
         self.assertEqual(8, len(list(gtf.entries())))

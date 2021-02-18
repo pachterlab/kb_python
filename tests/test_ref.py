@@ -130,6 +130,15 @@ class TestRef(TestMixin, TestCase):
         with open(result['t2g'], 'r') as f, open(self.gtf_t2g_path, 'r') as t2g:
             self.assertEqual(f.read(), t2g.read())
 
+    def test_create_t2g_from_gtf_with_space(self):
+        t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
+        result = ref.create_t2g_from_gtf(
+            self.unsorted_gtf_with_space_path, t2g_path
+        )
+        with open(result['t2g'], 'r') as f, open(self.gtf_t2g_with_space_path,
+                                                 'r') as t2g:
+            self.assertEqual(f.read(), t2g.read())
+
     def test_create_t2g_from_gtf_with_intron(self):
         t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
         result = ref.create_t2g_from_gtf(

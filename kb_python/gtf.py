@@ -25,7 +25,7 @@ class GTF:
         (?P<group>.*)           # groups
     ''', re.VERBOSE
     )
-    GROUP_PARSER = re.compile(r'(?P<key>\S+?)\s*"(?P<value>.+?)"')
+    GROUP_PARSER = re.compile(r'(?P<key>\S+?)\s*"(?P<value>.+?)";?')
 
     def __init__(self, gtf_path):
         self.gtf_path = gtf_path
@@ -46,7 +46,9 @@ class GTF:
             groupdict['start'] = int(groupdict['start'])
             groupdict['end'] = int(groupdict['end'])
             groupdict['group'] = dict(
-                GTF.GROUP_PARSER.findall(groupdict.get('group', ''))
+                GTF.GROUP_PARSER.findall(
+                    groupdict.get('group', '').replace(' ', '')
+                )
             )
             if not groupdict['group']:
                 logger.warning(

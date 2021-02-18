@@ -114,6 +114,20 @@ class TestFASTA(TestMixin, TestCase):
                                             'r') as split:
             self.assertEqual(f.read(), split.read())
 
+    def test_generate_cdna_fasta_with_space(self):
+        out_path = os.path.join(self.temp_dir, '{}.fa'.format(uuid.uuid4()))
+        self.assertEqual(
+            out_path,
+            fasta.generate_cdna_fasta(
+                self.sorted_fasta_path, self.sorted_gtf_with_space_path,
+                out_path
+            )
+        )
+        with open(out_path,
+                  'r') as f, open(self.split_cdna_fasta_with_space_path,
+                                  'r') as split:
+            self.assertEqual(f.read(), split.read())
+
     def test_generate_cdna_fasta_no_exon(self):
         with self.assertRaises(Exception):
             out_path = os.path.join(self.temp_dir, '{}.fa'.format(uuid.uuid4()))
