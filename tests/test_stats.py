@@ -47,7 +47,10 @@ class TestStats(TestMixin, TestCase):
         s.end()
 
         self.assertEqual({
+            'workdir': ANY,
             'version': ANY,
+            'kallisto': ANY,
+            'bustools': ANY,
             'start_time': ANY,
             'end_time': ANY,
             'elapsed': ANY,

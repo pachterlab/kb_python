@@ -1,8 +1,9 @@
 import os
 import platform
+import shutil
 from collections import namedtuple
 
-PACKAGE_PATH = os.path.dirname(__file__)
+PACKAGE_PATH = os.path.abspath(os.path.dirname(__file__))
 PLATFORM = platform.system().lower()
 BINS_DIR = 'bins'
 
@@ -10,6 +11,43 @@ TEMP_DIR = 'tmp'
 DRY = False
 VALIDATE = True
 CHUNK_SIZE = 1024 * 1024 * 4  # Download files in chunks of 4 Mb
+
+
+def get_provided_kallisto_path():
+    """Finds platform-dependent kallisto binary included with the installation.
+
+    :return: path to the binary, `None` if not found
+    :rtype: str
+    """
+    bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
+    path = os.path.join(
+        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
+    )
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+def get_provided_bustools_path():
+    """Finds platform-dependent bustools binary included with the installation.
+
+    :return: path to the binary, `None` if not found
+    :rtype: str
+    """
+    bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
+    path = os.path.join(
+        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
+    )
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+# Binary paths. These should hold the full path to the binaries that should
+# be called throughout the execution of the program. Therefore, this
+# usually needs to be set only once. Defaults to provided binaries.
+KALLISTO_PATH = get_provided_kallisto_path()
+BUSTOOLS_PATH = get_provided_bustools_path()
 
 # Technology to file position mapping
 Technology = namedtuple(
@@ -174,40 +212,68 @@ class UnsupportedOSException(Exception):
     pass
 
 
-def get_kallisto_binary_path():
-    """Get the path to the platform-dependent Kallisto binary included with
-    the installation.
+class NotExecutableException(Exception):
+    pass
 
-    :return: path to the binary
-    :rtype: str
+
+def get_kallisto_binary_path():
+    """Dummy function that simply returns the current value of KALLISTO_PATH.
     """
-    bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
-    )
-    if not os.path.exists(path):
-        raise UnsupportedOSException(
-            'This operating system ({}) is not supported.'.format(PLATFORM)
-        )
-    return path
+    return KALLISTO_PATH
 
 
 def get_bustools_binary_path():
-    """Get the path to the platform-dependent Bustools binary included with
-    the installation.
-
-    :return: path to the binary
-    :rtype: str
+    """Dummy function that simply returns the current value of BUSTOOLS_PATH.
     """
-    bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
-    )
-    if not os.path.exists(path):
-        raise UnsupportedOSException(
-            'This operating system ({}) is not supported.'.format(PLATFORM)
-        )
-    return path
+    return BUSTOOLS_PATH
+
+
+def set_kallisto_binary_path(path):
+    """Helper function to set the KALLISTO_PATH variable. Automatically finds the
+    full path to the executable and sets that as KALLISTO_PATH.
+    """
+    global KALLISTO_PATH
+
+    shutil_path = shutil.which(path)
+    actual_path = None
+
+    # First, check if it is an executable in the user's PATH
+    if shutil_path:
+        actual_path = os.path.abspath(shutil_path)
+    elif os.path.isfile(path):
+        actual_path = os.path.abspath(path)
+    else:
+        raise Exception(f'Unable to resolve path {path}')
+
+    # Check that it is executable
+    if not os.access(actual_path, os.X_OK):
+        raise NotExecutableException(f'{actual_path} is not executable')
+
+    KALLISTO_PATH = actual_path
+
+
+def set_bustools_binary_path(path):
+    """Helper function to set the BUSTOOLS_PATH variable. Automatically finds the
+    full path to the executable and sets that as BUSTOOLS_PATH.
+    """
+    global BUSTOOLS_PATH
+
+    shutil_path = shutil.which(path)
+    actual_path = None
+
+    # First, check if it is an executable in the user's PATH
+    if shutil_path:
+        actual_path = os.path.abspath(shutil_path)
+    elif os.path.isfile(path):
+        actual_path = os.path.abspath(path)
+    else:
+        raise Exception(f'Unable to resolve path {path}')
+
+    # Check that it is executable
+    if not os.access(actual_path, os.X_OK):
+        raise NotExecutableException(f'{actual_path} is not executable')
+
+    BUSTOOLS_PATH = actual_path
 
 
 def set_dry():
