@@ -31,8 +31,7 @@ If you use `kb` we ask that you cite the following two papers:
 [1] Bray, N. L., Pimentel, H., Melsted, P., & Pachter, L. (2016). Near-optimal
 probabilistic RNA-seq quantification. Nature biotechnology, 34(5), 525.
 
-[2] Melsted, P., Booeshaghi, A. S., Liu, L., Gao, F., Lu, L., Min, K. H., da Veiga Beltrame, E., Hjorleifsson, K. E., Gehring, J., & Pachter, L. (2021). Modular and efficient
-pre-processing of single-cell RNA-seq. Nature Biotechnology.
+[2] Melsted, P., Booeshaghi, A. S., Liu, L., Gao, F., Lu, L., Min, K. H., da Veiga Beltrame, E., Hjorleifsson, K. E., Gehring, J., & Pachter, L. (2021). Modular and efficient pre-processing of single-cell RNA-seq. Nature Biotechnology.
 
 ## Prerequisites
 None. The kallisto and bustools binaries are included with the package.
