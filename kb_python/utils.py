@@ -166,6 +166,7 @@ def run_executable(
     quiet=False,
     returncode=0,
     alias=True,
+    record=True,
 ):
     """Execute a single shell command.
 
@@ -193,6 +194,8 @@ def run_executable(
     :param alias: whether to use the basename of the first element of `command`,
                   defaults to `True`
     :type alias: bool, optional
+    :param record: whether to record the call statistics, defaults to `True`
+    :type record: bool, optional
 
     :return: the spawned process
     :rtype: subprocess.Process
@@ -203,7 +206,7 @@ def run_executable(
         c[0] = os.path.basename(c[0])
     if not quiet:
         logger.debug(' '.join(c))
-    if not wait:
+    if not wait and record:
         STATS.command(c)
     start = time.time()
     p = sp.Popen(
@@ -226,7 +229,8 @@ def run_executable(
                 for line in p.stderr:
                     out.append(line.strip())
                     logger.debug(line.strip())
-        STATS.command(c, runtime=time.time() - start)
+        if record:
+            STATS.command(c, runtime=time.time() - start)
 
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))
@@ -243,7 +247,10 @@ def get_kallisto_version():
     :return: tuple of major, minor, patch versions
     :rtype: tuple
     """
-    p = run_executable([get_kallisto_binary_path()], quiet=True, returncode=1)
+    p = run_executable([get_kallisto_binary_path()],
+                       quiet=True,
+                       returncode=1,
+                       record=False)
     match = VERSION_PARSER.match(p.stdout.read())
     return tuple(int(ver) for ver in match.groups()) if match else None
 
@@ -256,7 +263,10 @@ def get_bustools_version():
     :return: tuple of major, minor, patch versions
     :rtype: tuple
     """
-    p = run_executable([get_bustools_binary_path()], quiet=True, returncode=1)
+    p = run_executable([get_bustools_binary_path()],
+                       quiet=True,
+                       returncode=1,
+                       record=False)
     match = VERSION_PARSER.match(p.stdout.read())
     return tuple(int(ver) for ver in match.groups()) if match else None
 
@@ -296,7 +306,8 @@ def get_supported_technologies():
     """
     p = run_executable([get_kallisto_binary_path(), 'bus', '--list'],
                        quiet=True,
-                       returncode=1)
+                       returncode=1,
+                       record=False)
     return parse_technologies(p.stdout)
 
 

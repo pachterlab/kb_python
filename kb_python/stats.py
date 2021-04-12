@@ -1,9 +1,14 @@
 import datetime as dt
 import json
+import os
 import sys
 
 from . import __version__
-from .config import is_dry
+from .config import (
+    get_bustools_binary_path,
+    get_kallisto_binary_path,
+    is_dry,
+)
 from .dry import dummy_function
 from .dry import dryable
 
@@ -13,8 +18,9 @@ class Stats:
     """
 
     def __init__(self):
-        self.kallisto_version = None
-        self.bustools_version = None
+        self.workdir = None
+        self.kallisto = None
+        self.bustools = None
         self.start_time = None
         self.call = None
         self.commands = []
@@ -26,12 +32,24 @@ class Stats:
     def start(self):
         """Start collecting statistics.
 
-        Sets start time, the command line call,
-        and the commands array to an empty list.
+        Sets start time, the command line call, and the commands array to an empty list.
+        Additionally, sets the kallisto and bustools paths and versions.
         """
         self.start_time = dt.datetime.now()
         self.call = ' '.join(sys.argv)
         self.commands = []
+        self.workdir = os.getcwd()
+
+        # Import here to prevent circular imports
+        from .utils import get_bustools_version, get_kallisto_version
+        self.kallisto = {
+            'path': get_kallisto_binary_path(),
+            'version': '.'.join(str(i) for i in get_kallisto_version())
+        }
+        self.bustools = {
+            'path': get_bustools_binary_path(),
+            'version': '.'.join(str(i) for i in get_bustools_version())
+        }
 
     def command(self, command, runtime=None):
         """Report a shell command was run.
@@ -71,7 +89,10 @@ class Stats:
         by the report-rendering functions.
         """
         return {
+            'workdir': self.workdir,
             'version': self.version,
+            'kallisto': self.kallisto,
+            'bustools': self.bustools,
             'start_time': self.start_time.isoformat(),
             'end_time': self.end_time.isoformat(),
             'elapsed': self.elapsed,

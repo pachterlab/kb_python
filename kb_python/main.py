@@ -15,6 +15,8 @@ from .config import (
     PACKAGE_PATH,
     REFERENCES_MAPPING,
     set_dry,
+    set_bustools_binary_path,
+    set_kallisto_binary_path,
     TECHNOLOGIES,
     TEMP_DIR,
 )
@@ -136,30 +138,39 @@ def parse_ref(parser, args, temp_dir='tmp'):
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
-    elif args.workflow == 'kite':
-        ref_kite(
-            args.feature,
-            args.f1,
-            args.i,
-            args.g,
-            n=args.n,
-            k=args.k,
-            no_mismatches=args.no_mismatches,
-            overwrite=args.overwrite,
-            temp_dir=temp_dir
-        )
     else:
-        ref(
-            args.fasta,
-            args.gtf,
-            args.f1,
-            args.i,
-            args.g,
-            n=args.n,
-            k=args.k,
-            overwrite=args.overwrite,
-            temp_dir=temp_dir
-        )
+        # Report extraneous options
+        velocity_only = ['f2', 'c1', 'c2', 'flank']
+        for arg in velocity_only:
+            if getattr(args, arg):
+                parser.error(
+                    f'Option `{arg}` is not supported for workflow `{args.workflow}`'
+                )
+
+        if args.workflow == 'kite':
+            ref_kite(
+                args.feature,
+                args.f1,
+                args.i,
+                args.g,
+                n=args.n,
+                k=args.k,
+                no_mismatches=args.no_mismatches,
+                overwrite=args.overwrite,
+                temp_dir=temp_dir
+            )
+        else:
+            ref(
+                args.fasta,
+                args.gtf,
+                args.f1,
+                args.i,
+                args.g,
+                n=args.n,
+                k=args.k,
+                overwrite=args.overwrite,
+                temp_dir=temp_dir
+            )
 
 
 def parse_count(parser, args, temp_dir='tmp'):
@@ -273,7 +284,7 @@ def parse_count(parser, args, temp_dir='tmp'):
                     fastq_1, fastq_2 = fastqs[i], (
                         fastqs[i + 1] if i + 1 < len(fastqs) else ''
                     )
-                    cells[cell_id] = (fastq_2, fastq_2)
+                    cells[cell_id] = (fastq_1, fastq_2)
             logger.info('Found the following FASTQs:')
             fastq_pairs = []
             cell_ids = []
@@ -717,6 +728,10 @@ def setup_count_args(parser, parent):
 def main():
     """Command-line entrypoint.
     """
+    # Get prepackaged kallisto and bustools paths.
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
     # Main parser
     parser = argparse.ArgumentParser(
         description='kb_python {}'.format(__version__)
@@ -747,6 +762,18 @@ def main():
     )
     parent.add_argument(
         '--verbose', help='Print debugging information', action='store_true'
+    )
+    parent.add_argument(
+        '--kallisto',
+        help=f'Path to kallisto binary to use (default: {kallisto_path})',
+        type=str,
+        default=kallisto_path
+    )
+    parent.add_argument(
+        '--bustools',
+        help=f'Path to bustools binary to use (default: {bustools_path})',
+        type=str,
+        default=bustools_path
     )
 
     # Command parsers
@@ -819,12 +846,14 @@ def main():
         ))
 
     logger.debug('Printing verbose output')
-    logger.debug(
-        'kallisto binary located at {}'.format(get_kallisto_binary_path())
-    )
-    logger.debug(
-        'bustools binary located at {}'.format(get_bustools_binary_path())
-    )
+
+    # Set binary paths
+    set_kallisto_binary_path(args.kallisto)
+    set_bustools_binary_path(args.bustools)
+
+    logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
+    logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
+
     temp_dir = args.tmp or os.path.join(
         args.o, TEMP_DIR
     ) if 'o' in args else TEMP_DIR
