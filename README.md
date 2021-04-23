@@ -8,7 +8,7 @@
 [![docs](https://readthedocs.org/projects/kb-python/badge/?version=latest)](https://kb-python.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/pypi/l/kb-python)](LICENSE)
 
-kb-python is a python package that wraps the [kallisto | bustools](https://www.kallistobus.tools) single-cell RNA-seq workflow [1]. It was developed by Kyung Hoi (Joseph) Min and A. Sina Booeshaghi.
+kb-python is a python package that wraps the [kallisto | bustools](https://www.kallistobus.tools) single-cell RNA-seq workflow [2]. It was developed by Kyung Hoi (Joseph) Min and A. Sina Booeshaghi.
 
 The wrapper simplifies downloading and running of the kallisto
 [1] and bustools [2] programs. It was inspired by Sten Linnarsson’s `loompy
