@@ -857,6 +857,16 @@ def main():
     temp_dir = args.tmp or os.path.join(
         args.o, TEMP_DIR
     ) if 'o' in args else TEMP_DIR
+    # Check if temp_dir exists and exit if it does.
+    # This is so that kb doesn't accidently use an existing directory and
+    # delete it afterwards.
+    if os.path.exists(temp_dir):
+        parser.error(
+            f'Temporary directory `{temp_dir}` exists! Is another instance running? '
+            'Either remove the existing directory or use `--tmp` to specify a '
+            'different temporary directory.'
+        )
+
     logger.debug(f'Creating {temp_dir} directory')
     make_directory(temp_dir)
     try:
