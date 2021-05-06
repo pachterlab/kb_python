@@ -854,9 +854,9 @@ def main():
     logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
     logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
 
-    temp_dir = args.tmp or os.path.join(
-        args.o, TEMP_DIR
-    ) if 'o' in args else TEMP_DIR
+    temp_dir = args.tmp or (
+        os.path.join(args.o, TEMP_DIR) if 'o' in args else TEMP_DIR
+    )
     # Check if temp_dir exists and exit if it does.
     # This is so that kb doesn't accidently use an existing directory and
     # delete it afterwards.
@@ -867,7 +867,7 @@ def main():
             'different temporary directory.'
         )
 
-    logger.debug(f'Creating {temp_dir} directory')
+    logger.debug(f'Creating `{temp_dir}` directory')
     make_directory(temp_dir)
     try:
         logger.debug(args)
@@ -881,5 +881,5 @@ def main():
     finally:
         # Always clean temp dir
         if not args.keep_tmp:
-            logger.debug(f'Removing {temp_dir} directory')
+            logger.debug(f'Removing `{temp_dir}` directory')
             remove_directory(temp_dir)
