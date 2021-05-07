@@ -1,14 +1,12 @@
 import functools
-import logging
 import os
 import re
 
 import scipy.io
 
 from .config import get_bustools_binary_path, is_dry, is_validate
+from .logging import logger
 from .utils import run_executable
-
-logger = logging.getLogger(__name__)
 
 BUSTOOLS_INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
