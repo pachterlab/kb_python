@@ -22,6 +22,7 @@ from .config import (
 )
 from .constants import INFO_FILENAME
 from .count import count, count_smartseq, count_velocity
+from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
@@ -30,8 +31,6 @@ from .utils import (
     open_as_text,
     remove_directory,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def display_info():
@@ -179,7 +178,6 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    logger = logging.getLogger(__name__)
     if args.report:
         logger.warning((
             'Using `--report` may cause `kb` to exceed maximum memory specified '
@@ -725,6 +723,7 @@ def setup_count_args(parser, parent):
     return parser_count
 
 
+@logger.namespaced('main')
 def main():
     """Command-line entrypoint.
     """
@@ -803,10 +802,7 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        format='[%(asctime)s] %(levelname)7s %(message)s',
-        level=logging.DEBUG if args.verbose else logging.INFO,
-    )
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
     # Validation
     if 'no_validate' in args and args.no_validate:
@@ -826,17 +822,6 @@ def main():
         if args.dry_run:
             logging.disable(level=logging.CRITICAL)
             set_dry()
-
-    # Turn off logging from other packages.
-    try:
-        anndata_logger = logging.getLogger('anndata')
-        h5py_logger = logging.getLogger('h5py')
-        anndata_logger.setLevel(logging.CRITICAL + 10)
-        anndata_logger.propagate = False
-        h5py_logger.setLevel(logging.CRITICAL + 10)
-        h5py_logger.propagate = False
-    except Exception:
-        pass
 
     if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
         logger.warning((

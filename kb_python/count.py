@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import re
 from urllib.parse import urlparse
@@ -45,6 +44,7 @@ from .constants import (
     UNFILTERED_COUNTS_DIR,
     WHITELIST_FILENAME,
 )
+from .logging import logger
 from .report import render_report
 from .utils import (
     copy_map,
@@ -65,8 +65,6 @@ from .utils import (
 )
 from .stats import STATS
 from .validate import validate_files
-
-logger = logging.getLogger(__name__)
 
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
@@ -1014,6 +1012,7 @@ def convert_transcripts_to_genes(txnames_path, t2g_path, genes_path):
     return genes_path
 
 
+@logger.namespaced('count')
 def count(
     index_paths,
     t2g_path,
@@ -1302,6 +1301,7 @@ def count(
     return results
 
 
+@logger.namespaced('count_smartseq')
 def count_smartseq(
     index_paths,
     t2g_path,
@@ -1397,6 +1397,7 @@ def count_smartseq(
     return results
 
 
+@logger.namespaced('count_lamanno')
 def count_velocity(
     index_paths,
     t2g_path,

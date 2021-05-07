@@ -1,4 +1,3 @@
-import logging
 import os
 
 import nbformat
@@ -12,8 +11,6 @@ from . import __version__
 from .config import PACKAGE_PATH
 from .dry import dryable
 from .utils import get_temporary_filename
-
-logger = logging.getLogger(__name__)
 
 REPORT_DIR = os.path.join(PACKAGE_PATH, 'report')
 BASIC_TEMPLATE_PATH = os.path.join(REPORT_DIR, 'report_basic.ipynb')

@@ -30,9 +30,8 @@ from .config import (
 )
 from .dry import dryable
 from .dry import utils as dry_utils
+from .logging import logger
 from .stats import STATS
-
-logger = logging.getLogger(__name__)
 
 TECHNOLOGY_PARSER = re.compile(r'^(?P<name>\S+)')
 VERSION_PARSER = re.compile(r'^\S*? ([0-9]+).([0-9]+).([0-9]+)')
