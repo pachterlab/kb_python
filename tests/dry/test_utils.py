@@ -69,7 +69,7 @@ class TestUtils(TestCase):
     def test_copy_whitelist(self):
         with mock.patch('kb_python.dry.utils.print') as p:
             self.assertEquals(
-                'path/10xv2_whitelist.txt',
+                'path/10x_version2_whitelist.txt',
                 utils.copy_whitelist('10xv2', 'path')
             )
             p.assert_called()
@@ -77,7 +77,7 @@ class TestUtils(TestCase):
     def test_copy_map(self):
         with mock.patch('kb_python.dry.utils.print') as p:
             self.assertEqual(
-                'path/10xv3_feature_barcode_map.txt',
+                'path/10x_version3_feature_map.txt',
                 utils.copy_map('10xv3', 'path')
             )
             p.assert_called()

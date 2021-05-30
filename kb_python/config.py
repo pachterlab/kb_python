@@ -3,6 +3,8 @@ import platform
 import shutil
 from collections import namedtuple
 
+import ngs_tools as ngs
+
 PACKAGE_PATH = os.path.abspath(os.path.dirname(__file__))
 PLATFORM = platform.system().lower()
 BINS_DIR = 'bins'
@@ -50,128 +52,36 @@ KALLISTO_PATH = get_provided_kallisto_path()
 BUSTOOLS_PATH = get_provided_bustools_path()
 
 # Technology to file position mapping
-Technology = namedtuple(
-    'Technology', [
-        'name', 'description', 'nfiles', 'reads_file', 'umi_positions',
-        'barcode_positions', 'whitelist_archive', 'map_archive'
-    ]
-)
-WHITELIST_DIR = 'whitelists'
-MAP_DIR = 'maps'
+Technology = namedtuple('Technology', ['name', 'description', 'chemistry'])
 TECHNOLOGIES = [
+    Technology('10XV1', '10x version 1', ngs.chemistry.get_chemistry('10xv1')),
+    Technology('10XV2', '10x version 2', ngs.chemistry.get_chemistry('10xv2')),
+    Technology('10XV3', '10x version 3', ngs.chemistry.get_chemistry('10xv3')),
+    Technology('CELSEQ', 'CEL-Seq', ngs.chemistry.get_chemistry('celseq')),
     Technology(
-        '10XV1',
-        '10x version 1',
-        3,
-        2,
-        [(1, 0, 10)],
-        [(0, 0, 14)],
-        '10xv1_whitelist.txt.gz',
-        None,
+        'CELSEQ2', 'CEL-SEQ version 2', ngs.chemistry.get_chemistry('celseq2')
+    ),
+    Technology('DROPSEQ', 'DropSeq', ngs.chemistry.get_chemistry('dropseq')),
+    Technology(
+        'INDROPSV1', 'inDrops version 1',
+        ngs.chemistry.get_chemistry('indropsv1')
     ),
     Technology(
-        '10XV2',
-        '10x version 2',
-        2,
-        1,
-        [(0, 16, 26)],
-        [(0, 0, 16)],
-        '10xv2_whitelist.txt.gz',
-        None,
+        'INDROPSV2', 'inDrops version 2',
+        ngs.chemistry.get_chemistry('indropsv2')
     ),
     Technology(
-        '10XV3',
-        '10x version 3',
-        2,
-        1,
-        [(0, 16, 28)],
-        [(0, 0, 16)],
-        '10xv3_whitelist.txt.gz',
-        '10xv3_feature_barcode_map.txt.gz',
+        'INDROPSV3', 'inDrops version 3',
+        ngs.chemistry.get_chemistry('indropsv3')
+    ),
+    Technology('SCRUBSEQ', 'SCRB-Seq', ngs.chemistry.get_chemistry('scrbseq')),
+    Technology(
+        'SURECELL', 'SureCell for ddSEQ',
+        ngs.chemistry.get_chemistry('surecell')
     ),
     Technology(
-        'CELSEQ',
-        'CEL-Seq',
-        2,
-        1,
-        [(0, 8, 12)],
-        [(0, 0, 8)],
-        None,
-        None,
+        'SMARTSEQ', 'Smart-seq2', ngs.chemistry.get_chemistry('smartseq2')
     ),
-    Technology(
-        'CELSEQ2',
-        'CEL-SEQ version 2',
-        2,
-        1,
-        [(0, 0, 6)],
-        [(0, 6, 12)],
-        None,
-        None,
-    ),
-    Technology(
-        'DROPSEQ',
-        'DropSeq',
-        2,
-        1,
-        [(0, 12, 20)],
-        [(0, 0, 12)],
-        None,
-        None,
-    ),
-    Technology(
-        'INDROPSV1',
-        'inDrops version 1',
-        2,
-        1,
-        [(0, 42, 48)],
-        [(0, 0, 11), (0, 30, 38)],
-        None,
-        None,
-    ),
-    Technology(
-        'INDROPSV2',
-        'inDrops version 2',
-        2,
-        0,
-        [(1, 42, 48)],
-        [(1, 0, 11), (1, 30, 38)],
-        None,
-        None,
-    ),
-    Technology(
-        'INDROPSV3',
-        'inDrops version 3',
-        3,
-        2,
-        [(1, 8, 14)],
-        [(0, 0, 8), (1, 0, 8)],
-        'inDropsv3_whitelist.txt.gz',
-        None,
-    ),
-    Technology(
-        'SCRUBSEQ',
-        'SCRB-Seq',
-        2,
-        1,
-        [(0, 6, 16)],
-        [(0, 0, 6)],
-        None,
-        None,
-    ),
-    Technology(
-        'SURECELL',
-        'SureCell for ddSEQ',
-        2,
-        1,
-        [(0, 51, 59)],
-        [(0, 0, 6), (0, 21, 27), (0, 42, 48)],
-        None,
-        None,
-    ),
-    Technology(
-        'SMARTSEQ', 'Smart-seq2', 2, '0, 1 (paired)', [], [], None, None
-    )
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 

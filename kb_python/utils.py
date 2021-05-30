@@ -21,11 +21,8 @@ from .config import (
     CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
-    MAP_DIR,
-    PACKAGE_PATH,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
-    WHITELIST_DIR,
     UnsupportedOSException,
 )
 from .dry import dryable
@@ -321,7 +318,7 @@ def whitelist_provided(technology):
     """
     upper = technology.upper()
     return upper in TECHNOLOGIES_MAPPING and TECHNOLOGIES_MAPPING[
-        upper].whitelist_archive
+        upper].chemistry.has_whitelist
 
 
 @dryable(dry_utils.move_file)
@@ -354,12 +351,10 @@ def copy_whitelist(technology, out_dir):
     :rtype: str
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = os.path.join(
-        PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
-    )
+    archive_path = technology.chemistry.whitelist_path
     whitelist_path = os.path.join(
         out_dir,
-        os.path.splitext(technology.whitelist_archive)[0]
+        os.path.splitext(os.path.basename(archive_path))[0]
     )
     with open_as_text(archive_path, 'r') as f, open(whitelist_path, 'w') as out:
         out.write(f.read())
@@ -379,10 +374,10 @@ def copy_map(technology, out_dir):
     :rtype: str
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = os.path.join(PACKAGE_PATH, MAP_DIR, technology.map_archive)
+    archive_path = technology.chemistry.whitelist_path
     map_path = os.path.join(
         out_dir,
-        os.path.splitext(technology.map_archive)[0]
+        os.path.splitext(os.path.basename(archive_path))[0]
     )
     with open_as_text(archive_path, 'r') as f, open(map_path, 'w') as out:
         out.write(f.read())

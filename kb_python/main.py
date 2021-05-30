@@ -60,20 +60,26 @@ def display_technologies():
     """Displays a list of supported technologies along with whether kb provides
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
-    headers = [
-        'name', 'whitelist provided', 'barcode (file #, start, stop)',
-        'umi (file #, start, stop)', 'read file #'
-    ]
+    headers = ['name', 'whitelist', 'barcode', 'umi', 'cDNA']
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
+    print('Positions syntax: `input file index, start position, end position`')
+    print('When start & end positions are None, refers to the entire file')
+    print(
+        'Custom technologies may be defined by providing a kallisto-supported '
+        'technology string\n(see https://pachterlab.github.io/kallisto/manual)\n'
+    )
     for t in TECHNOLOGIES:
+        chem = t.chemistry
         row = [
             t.name,
-            'yes' if t.whitelist_archive else '',
-            ' '.join(str(tup) for tup in t.barcode_positions),
-            ' '.join(str(tup) for tup in t.umi_positions),
-            str(t.reads_file),
+            'yes' if chem.has_whitelist else '',
+            ' '.join(str(_def) for _def in chem.cell_barcode_parser)
+            if chem.has_cell_barcode else '',
+            ' '.join(str(_def)
+                     for _def in chem.umi_parser) if chem.has_umi else '',
+            ' '.join(str(_def) for _def in chem.cdna_parser),
         ]
         rows.append(row)
 
