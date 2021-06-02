@@ -40,16 +40,17 @@ class Stats:
         self.commands = []
         self.workdir = os.getcwd()
 
-        # Import here to prevent circular imports
-        from .utils import get_bustools_version, get_kallisto_version
-        self.kallisto = {
-            'path': get_kallisto_binary_path(),
-            'version': '.'.join(str(i) for i in get_kallisto_version())
-        }
-        self.bustools = {
-            'path': get_bustools_binary_path(),
-            'version': '.'.join(str(i) for i in get_bustools_version())
-        }
+        if not is_dry():
+            # Import here to prevent circular imports
+            from .utils import get_bustools_version, get_kallisto_version
+            self.kallisto = {
+                'path': get_kallisto_binary_path(),
+                'version': '.'.join(str(i) for i in get_kallisto_version())
+            }
+            self.bustools = {
+                'path': get_bustools_binary_path(),
+                'version': '.'.join(str(i) for i in get_bustools_version())
+            }
 
     def command(self, command, runtime=None):
         """Report a shell command was run.

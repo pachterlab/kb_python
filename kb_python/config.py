@@ -12,7 +12,6 @@ BINS_DIR = 'bins'
 TEMP_DIR = 'tmp'
 DRY = False
 VALIDATE = True
-CHUNK_SIZE = 1024 * 1024 * 4  # Download files in chunks of 4 Mb
 
 
 def get_provided_kallisto_path():

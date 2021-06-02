@@ -1,6 +1,5 @@
 import glob
 import itertools
-import logging
 import os
 import tarfile
 
@@ -267,6 +266,7 @@ def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
     return {'indices': built}
 
 
+@logger.namespaced('download')
 def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     """Downloads a provided reference file from a static url.
 
@@ -289,7 +289,7 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     :rtype: dict
     """
     results = {}
-    if not any(os.path.exists(file) for file in files) or overwrite:
+    if not ngs.utils.all_exists(*list(files.values())) or overwrite:
         # Make sure all the required file paths are there.
         diff = set(reference.files.keys()) - set(files.keys())
         if diff:
@@ -300,14 +300,14 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
 
         url = reference.url
         path = os.path.join(temp_dir, os.path.basename(url))
-        logging.info(
+        logger.info(
             'Downloading files for {} from {} to {}'.format(
                 reference.name, url, path
             )
         )
         local_path = download_file(url, path)
 
-        logging.info('Extracting files from {}'.format(local_path))
+        logger.info('Extracting files from {}'.format(local_path))
         with tarfile.open(local_path, 'r:gz') as f:
             f.extractall(temp_dir)
 

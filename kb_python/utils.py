@@ -1,24 +1,21 @@
 import concurrent.futures
-import gzip
 import logging
 import os
 import re
-import requests
 import shutil
 import subprocess as sp
-import tempfile
 import threading
 import time
 from urllib.request import urlretrieve
 
 import anndata
+import ngs_tools as ngs
 import pandas as pd
 import scipy.io
 from scipy import sparse
 from tqdm import tqdm
 
 from .config import (
-    CHUNK_SIZE,
     get_bustools_binary_path,
     get_kallisto_binary_path,
     PLATFORM,
@@ -32,6 +29,18 @@ from .stats import STATS
 
 TECHNOLOGY_PARSER = re.compile(r'^(?P<name>\S+)')
 VERSION_PARSER = re.compile(r'^\S*? ([0-9]+).([0-9]+).([0-9]+)')
+
+# These functions have been moved as of 0.26.1 to the ngs_tools library but are
+# imported from this file in other places. For now, let's keep these here.
+# TODO: remove these
+open_as_text = ngs.utils.open_as_text
+decompress_gzip = ngs.utils.decompress_gzip
+compress_gzip = ngs.utils.compress_gzip
+concatenate_files = ngs.utils.concatenate_files_as_text
+download_file = ngs.utils.download_file
+get_temporary_filename = dryable(dry_utils.get_temporary_filename)(
+    ngs.utils.mkstemp
+)
 
 
 class NotImplementedException(Exception):
@@ -76,53 +85,6 @@ def update_filename(filename, code):
     """
     name, extension = os.path.splitext(filename)
     return f'{name}.{code}{extension}'
-
-
-def open_as_text(path, mode):
-    """Open a textfile or gzip file in text mode.
-
-    :param path: path to textfile or gzip
-    :type path: str
-    :param mode: mode to open the file, either `w` for write or `r` for read
-    :type mode: str
-
-    :return: file object
-    :rtype: file object
-    """
-    return gzip.open(path, mode +
-                     't') if path.endswith('.gz') else open(path, mode)
-
-
-def decompress_gzip(gzip_path, out_path):
-    """Decompress a gzip file to provided file path.
-
-    :param gzip_path: path to gzip file
-    :type gzip_path: str
-    :param out_path: path to decompressed file
-    :type out_path: str
-
-    :return: path to decompressed file
-    :rtype: str
-    """
-    with gzip.open(gzip_path, 'rb') as f, open(out_path, 'wb') as out:
-        shutil.copyfileobj(f, out)
-    return out_path
-
-
-def compress_gzip(file_path, out_path):
-    """Compress a file into gzip.
-
-    :param file_path: path to file
-    :type file_path: str
-    :param out_dir: path to compressed file
-    :type out_dir: str
-
-    :return: path to compressed file
-    :rtype: str
-    """
-    with open(file_path, 'rb') as f, gzip.open(out_path, 'wb') as out:
-        shutil.copyfileobj(f, out)
-    return out_path
 
 
 @dryable(dry_utils.make_directory)
@@ -384,60 +346,6 @@ def copy_map(technology, out_dir):
     return map_path
 
 
-def concatenate_files(*paths, out_path, temp_dir='tmp'):
-    """Concatenates an arbitrary number of files into one TEXT file.
-
-    Only supports text and gzip files.
-
-    :param paths: an arbitrary number of paths to files
-    :type paths: str
-    :param out_path: path to place concatenated file
-    :type out_path: str
-    :param temp_dir: temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-
-    :return: path to concatenated file
-    :rtype: str
-    """
-    with open(out_path, 'w') as out:
-        for path in paths:
-            with open_as_text(path, 'r') as f:
-                for line in f:
-                    if not line.isspace():
-                        out.write(line.strip() + '\n')
-
-    return out_path
-
-
-def download_file(url, path):
-    """Download a remote file to the provided path while displaying a progress bar.
-
-    :param url: remote url
-    :type url: str
-    :param path: local path to download the file to
-    :type path: str
-
-    :return: path to downloaded file
-    :rtype: str
-    """
-    logger.addHandler(TqdmLoggingHandler())
-    r = requests.get(url, stream=True)
-    with open(path, 'wb') as f:
-        t = tqdm(
-            unit='B',
-            total=int(r.headers['Content-Length']),
-            unit_divisor=1024,
-            unit_scale=True,
-            ascii=True,
-        )
-        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
-            if chunk:
-                t.update(len(chunk))
-                f.write(chunk)
-        t.close()
-    return path
-
-
 @dryable(dry_utils.stream_file)
 def stream_file(url, path):
     """Creates a FIFO file to use for piping remote files into processes.
@@ -466,24 +374,6 @@ def stream_file(url, path):
         os.mkfifo(path)
         t = threading.Thread(target=urlretrieve, args=(url, path), daemon=True)
         t.start()
-    return path
-
-
-@dryable(dry_utils.get_temporary_filename)
-def get_temporary_filename(temp_dir=None):
-    """Create a temporary file in the provided temprorary directory.
-
-    The caller is responsible for deleting the file.
-
-    :param temp_dir: path to temporary directory, defaults to `None`
-    :type temp_dir: str, optional
-
-    :return: temporary filename
-    :rtype: str
-    """
-    fp, path = tempfile.mkstemp(dir=temp_dir)
-    os.close(fp)
-
     return path
 
 
