@@ -22,6 +22,7 @@ from .config import (
 )
 from .constants import INFO_FILENAME
 from .count import count, count_smartseq, count_velocity
+from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
     get_bustools_version,
@@ -30,8 +31,6 @@ from .utils import (
     open_as_text,
     remove_directory,
 )
-
-logger = logging.getLogger(__name__)
 
 
 def display_info():
@@ -61,20 +60,26 @@ def display_technologies():
     """Displays a list of supported technologies along with whether kb provides
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
-    headers = [
-        'name', 'whitelist provided', 'barcode (file #, start, stop)',
-        'umi (file #, start, stop)', 'read file #'
-    ]
+    headers = ['name', 'whitelist', 'barcode', 'umi', 'cDNA']
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
+    print('Positions syntax: `input file index, start position, end position`')
+    print('When start & end positions are None, refers to the entire file')
+    print(
+        'Custom technologies may be defined by providing a kallisto-supported '
+        'technology string\n(see https://pachterlab.github.io/kallisto/manual)\n'
+    )
     for t in TECHNOLOGIES:
+        chem = t.chemistry
         row = [
             t.name,
-            'yes' if t.whitelist_archive else '',
-            ' '.join(str(tup) for tup in t.barcode_positions),
-            ' '.join(str(tup) for tup in t.umi_positions),
-            str(t.reads_file),
+            'yes' if chem.has_whitelist else '',
+            ' '.join(str(_def) for _def in chem.cell_barcode_parser)
+            if chem.has_cell_barcode else '',
+            ' '.join(str(_def)
+                     for _def in chem.umi_parser) if chem.has_umi else '',
+            ' '.join(str(_def) for _def in chem.cdna_parser),
         ]
         rows.append(row)
 
@@ -179,7 +184,6 @@ def parse_count(parser, args, temp_dir='tmp'):
     :param args: Command-line arguments dictionary, as parsed by argparse
     :type args: dict
     """
-    logger = logging.getLogger(__name__)
     if args.report:
         logger.warning((
             'Using `--report` may cause `kb` to exceed maximum memory specified '
@@ -725,6 +729,7 @@ def setup_count_args(parser, parent):
     return parser_count
 
 
+@logger.namespaced('main')
 def main():
     """Command-line entrypoint.
     """
@@ -803,10 +808,7 @@ def main():
 
     args = parser.parse_args()
 
-    logging.basicConfig(
-        format='[%(asctime)s] %(levelname)7s %(message)s',
-        level=logging.DEBUG if args.verbose else logging.INFO,
-    )
+    logger.setLevel(logging.DEBUG if args.verbose else logging.INFO)
 
     # Validation
     if 'no_validate' in args and args.no_validate:
@@ -827,17 +829,6 @@ def main():
             logging.disable(level=logging.CRITICAL)
             set_dry()
 
-    # Turn off logging from other packages.
-    try:
-        anndata_logger = logging.getLogger('anndata')
-        h5py_logger = logging.getLogger('h5py')
-        anndata_logger.setLevel(logging.CRITICAL + 10)
-        anndata_logger.propagate = False
-        h5py_logger.setLevel(logging.CRITICAL + 10)
-        h5py_logger.propagate = False
-    except Exception:
-        pass
-
     if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
         logger.warning((
             'The `--lamanno` and `-`-n`ucleus` flags are deprecated. '
@@ -854,10 +845,20 @@ def main():
     logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
     logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
 
-    temp_dir = args.tmp or os.path.join(
-        args.o, TEMP_DIR
-    ) if 'o' in args else TEMP_DIR
-    logger.debug(f'Creating {temp_dir} directory')
+    temp_dir = args.tmp or (
+        os.path.join(args.o, TEMP_DIR) if 'o' in args else TEMP_DIR
+    )
+    # Check if temp_dir exists and exit if it does.
+    # This is so that kb doesn't accidently use an existing directory and
+    # delete it afterwards.
+    if os.path.exists(temp_dir):
+        parser.error(
+            f'Temporary directory `{temp_dir}` exists! Is another instance running? '
+            'Either remove the existing directory or use `--tmp` to specify a '
+            'different temporary directory.'
+        )
+
+    logger.debug(f'Creating `{temp_dir}` directory')
     make_directory(temp_dir)
     try:
         logger.debug(args)
@@ -871,5 +872,5 @@ def main():
     finally:
         # Always clean temp dir
         if not args.keep_tmp:
-            logger.debug(f'Removing {temp_dir} directory')
+            logger.debug(f'Removing `{temp_dir}` directory')
             remove_directory(temp_dir)

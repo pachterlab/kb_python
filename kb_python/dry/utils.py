@@ -2,11 +2,8 @@ import os
 import tempfile
 
 from ..config import (
-    MAP_DIR,
-    PACKAGE_PATH,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
-    WHITELIST_DIR,
     UnsupportedOSException,
 )
 
@@ -66,12 +63,10 @@ def copy_whitelist(technology, out_dir):
     """Dry version of `utils.copy_whitelist`.
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = os.path.join(
-        PACKAGE_PATH, WHITELIST_DIR, technology.whitelist_archive
-    )
+    archive_path = technology.chemistry.whitelist_path
     whitelist_path = os.path.join(
         out_dir,
-        os.path.splitext(technology.whitelist_archive)[0]
+        os.path.splitext(os.path.basename(archive_path))[0]
     )
     print('gzip -dc {} > {}'.format(archive_path, whitelist_path))
     return whitelist_path
@@ -81,10 +76,10 @@ def copy_map(technology, out_dir):
     """Dry version of `utils.copy_map`.
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = os.path.join(PACKAGE_PATH, MAP_DIR, technology.map_archive)
+    archive_path = technology.chemistry.feature_map_path
     map_path = os.path.join(
         out_dir,
-        os.path.splitext(technology.map_archive)[0]
+        os.path.splitext(os.path.basename(archive_path))[0]
     )
     print('gzip -dc {} > {}'.format(archive_path, map_path))
     return map_path

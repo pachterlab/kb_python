@@ -1,16 +1,13 @@
 import glob
-import logging
+import itertools
 import os
 import tarfile
 
+import ngs_tools as ngs
+import pandas as pd
+
 from .config import get_kallisto_binary_path
-from .fasta import (
-    FASTA,
-    generate_cdna_fasta,
-    generate_intron_fasta,
-    generate_kite_fasta,
-)
-from .gtf import GTF
+from .logging import logger
 from .utils import (
     concatenate_files,
     decompress_gzip,
@@ -20,66 +17,117 @@ from .utils import (
     run_executable,
 )
 
-logger = logging.getLogger(__name__)
 
+def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
+    """Generate a FASTA file for feature barcoding with the KITE workflow.
 
-def sort_gtf(gtf_path, out_path):
-    """Sorts a GTF file based on its chromosome, start position, line number.
+    This FASTA contains all sequences that are 1 hamming distance from the
+    provided barcodes. The file of barcodes must be a 2-column TSV containing
+    the barcode sequences in the first column and their corresponding feature
+    name in the second column. If hamming distance 1 variants collide for any
+    pair of barcodes, the hamming distance 1 variants for those barcodes are
+    not generated.
 
-    :param gtf_path: path to GTF file
-    :type gtf_path: str
+    :param feature_path: path to TSV containing barcodes and feature names
+    :type feature_path: str
+    :param out_path: path to FASTA to generate
+    :type out_path: str
+    :param no_mismatches: whether to generate hamming distance 1 variants,
+                          defaults to `False`
+    :type no_mismatches: bool, optional
 
-    :return: path to sorted GTF file, set of chromosomes in GTF file
+    :raises Exception: if there are barcodes of different lengths
+    :raises Exception: if there are duplicate barcodes
+
+    :return: (path to generated FASTA, set of barcode lengths)
     :rtype: tuple
     """
-    logger.info(f'Sorting {gtf_path} to {out_path}')
-    gtf = GTF(gtf_path)
-    return gtf.sort(out_path)
 
+    def generate_mismatches(name, sequence):
+        """Helper function to generate 1 hamming distance mismatches.
 
-def sort_fasta(fasta_path, out_path):
-    """Sorts a FASTA file based on its header.
+        :param name: name of the sequence
+        :type name: str
+        :param sequence: the sequence
+        :type sequence: str
 
-    :param fasta_path: path to FASTA file
-    :type fasta_path: str
+        :return: a generator that yields a tuple of (unique name, mismatched sequence)
+        :rtype: generator
+        """
+        sequence = sequence.upper()
+        for i in range(len(sequence)):
+            base = sequence[i]
+            before = sequence[:i]
+            after = sequence[i + 1:]
 
-    :return: path to sorted FASTA file, set of chromosomes in FASTA file
-    :rtype: tuple
-    """
-    logger.info(f'Sorting {fasta_path} to {out_path}')
-    fasta = FASTA(fasta_path)
-    return fasta.sort(out_path)
+            for j, different in enumerate([b for b in ['A', 'C', 'G', 'T']
+                                           if b != base]):
+                yield f'{name}-{i}.{j+1}', f'{before}{different}{after}'
 
+    df_features = pd.read_csv(
+        feature_path, sep='\t', header=None, names=['sequence', 'name']
+    )
 
-def check_chromosomes(fasta_chromosomes, gtf_chromosomes):
-    """Compares the two chromosome sets and outputs warnings if there are
-    unique chromosomes in either set.
+    lengths = set()
+    features = {}
+    variants = {}
+    # Generate all feature barcode variations before saving to check for collisions.
+    for i, row in df_features.iterrows():
+        # Check that the first column contains the sequence
+        # and the second column the feature name.
+        if ngs.sequence.SEQUENCE_PARSER.search(row.sequence.upper()):
+            raise Exception((
+                'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
+                'Does the first column contain the sequences and the second column the feature names?'
+            ))
 
-    :param fasta_chromosomes: set of chromosomes found in FASTA
-    :type fasta_chromosomes: set
-    :param gtf_chromosomes: set of chromosomes found in GTF
-    :type gtf_chromosomes: set
+        lengths.add(len(row.sequence))
+        features[row['name']] = row.sequence
+        variants[row['name']] = {
+            name: seq
+            for name, seq in generate_mismatches(row['name'], row.sequence)
+            if not no_mismatches
+        }
 
-    :return: intersection of the two sets
-    :rtype: set
-    """
-    fasta_unique = fasta_chromosomes - gtf_chromosomes
-    gtf_unique = gtf_chromosomes - fasta_chromosomes
-    if fasta_unique:
-        logger.warning((
-            'The following chromosomes were found in the FASTA but does not have '
-            'any "transcript" features in the GTF: {}. '
-            'No sequences will be generated for these chromosomes.'
-        ).format(', '.join(fasta_unique)))
-    if gtf_unique:
-        logger.warning((
-            'The following chromosomes were found to have "transcript" features '
-            'in the GTF but does not exist in the FASTA. '
-            'No sequences will be generated for these chromosomes.'
-        ))
-    chromosomes = set.intersection(fasta_chromosomes, gtf_chromosomes)
+    # Check duplicate barcodes.
+    duplicates = set([
+        bc for bc in features.values() if list(features.values()).count(bc) > 1
+    ])
+    if len(duplicates) > 0:
+        raise Exception(
+            'Duplicate feature barcodes: {}'.format(' '.join(duplicates))
+        )
+    if len(lengths) > 1:
+        logger.warning(
+            'Detected barcodes of different lengths: {}'.format(
+                ','.join(str(l) for l in lengths)  # noqa
+            )
+        )
+    for f1, f2 in itertools.combinations(variants.keys(), 2):
+        v1 = variants[f1]
+        v2 = variants[f2]
+        if len(set.intersection(set(v1.values()), set(v2.values()))) > 0:
+            logger.warning((
+                f'Detected features with barcodes that are not >2 hamming distance apart: {f1}, {f2}. '
+                f'Hamming distance 1 variants for these barcodes will not be generated.'
+            ))
+            variants[f1] = {}
+            variants[f2] = {}
 
-    return chromosomes
+    # Write FASTA
+    with ngs.fasta.Fasta(out_path, 'w') as f:
+        for feature, barcode in features.items():
+            attributes = {'feature_id': feature}
+            header = ngs.fasta.FastaEntry.make_header(feature, attributes)
+            entry = ngs.fasta.FastaEntry(header, barcode)
+            f.write(entry)
+
+            for name, variant in variants[feature].items():
+                header = ngs.fasta.FastaEntry.make_header(name, attributes)
+                entry = ngs.fasta.FastaEntry(header, variant)
+                f.write(entry)
+
+    return out_path, min(lengths)
 
 
 def create_t2g_from_fasta(fasta_path, t2g_path):
@@ -93,81 +141,34 @@ def create_t2g_from_fasta(fasta_path, t2g_path):
     :return: dictionary containing path to generated t2g mapping
     :rtype: dict
     """
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
-    with open_as_text(t2g_path, 'w') as f:
-        fasta = FASTA(fasta_path)
-        for info, _ in fasta.entries():
-            if 'feature_id' in info['group']:
-                row = [
-                    info['sequence_id'],
-                    info['group']['feature_id'],
-                    info['group']['feature_id'],
-                ]
+    logger.info(f'Creating transcript-to-gene mapping at {t2g_path}')
+    with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
+                                                                'w') as f_out:
+        for entry in f_in:
+            attributes = entry.attributes
+
+            if 'feature_id' in attributes:
+                feature_id = attributes['feature_id']
+                row = [entry.name, feature_id, feature_id]
             else:
+                gene_id = attributes['gene_id']
+                gene_name = attributes.get('gene_name', '')
+                transcript_name = attributes.get('transcript_name', '')
+                chromosome = attributes['chr']
+                start = attributes['start']
+                end = attributes['end']
+                strand = attributes['strand']
                 row = [
-                    info['sequence_id'], info['group']['gene_id'],
-                    info['group'].get('gene_name', ''),
-                    info['group'].get('transcript_name',
-                                      ''), info['group'].get('chr', ''),
-                    info['group'].get('start',
-                                      ''), info['group'].get('end', ''),
-                    info['group'].get('strand', '')
+                    entry.name,
+                    gene_id,
+                    gene_name,
+                    transcript_name,
+                    chromosome,
+                    start,
+                    end,
+                    strand,
                 ]
-            f.write('\t'.join(str(item) for item in row) + '\n')
-    return {'t2g': t2g_path}
-
-
-def create_t2g_from_gtf(gtf_path, t2g_path, intron=False):
-    """Creates a transcript-to-gene mapping from a GTF file.
-
-    GTF entries that have `transcript` as its feature are parsed for
-    the `transcript_id`, `gene_id` and `gene_name`.
-
-    :param gtf_path: path to GTF file
-    :type gtf_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
-    :param intron: whether or not to include intron transcript ids (with the
-                   `-I` prefix), defaults to `False`
-    :type intron: bool, optional
-
-    :return: dictionary containing path to generated t2g mapping
-    :rtype: dict
-    """
-    logger.info('Creating transcript-to-gene mapping at {}'.format(t2g_path))
-    gtf = GTF(gtf_path)
-    with open_as_text(t2g_path, 'w') as f:
-        for entry in gtf.entries():
-            if entry['feature'] == 'transcript':
-                transcript_id = entry['group']['transcript_id']
-                transcript_version = entry['group'].get(
-                    'transcript_version', None
-                )
-                transcript = '{}.{}'.format(
-                    transcript_id, transcript_version
-                ) if transcript_version else transcript_id
-                gene_id = entry['group']['gene_id']
-                gene_version = entry['group'].get('gene_version', None)
-                gene = '{}.{}'.format(
-                    gene_id, gene_version
-                ) if gene_version else gene_id
-
-                row = [
-                    transcript,
-                    gene,
-                    entry['group'].get('gene_name', ''),
-                    entry['group'].get('transcript_name', ''),
-                    entry.get('seqname', ''),
-                    entry.get('start', ''),
-                    entry.get('end', ''),
-                    entry.get('strand', ''),
-                ]
-                f.write('\t'.join(str(item) for item in row) + '\n')
-
-                if intron:
-                    intron_row = row.copy()
-                    intron_row[0] = intron_row[0] + '-I'
-                    f.write('\t'.join(str(item) for item in intron_row) + '\n')
+            f_out.write('\t'.join(str(item) for item in row) + '\n')
 
     return {'t2g': t2g_path}
 
@@ -183,11 +184,10 @@ def create_t2c(fasta_path, t2c_path):
     :return: dictionary containing path to generated t2c list
     :rtype: dict
     """
-    fasta = FASTA(fasta_path)
-    with open_as_text(t2c_path, 'w') as f:
-        for info, _ in fasta.entries():
-            sequence_id = info['sequence_id']
-            f.write('{}\n'.format(sequence_id))
+    with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2c_path,
+                                                                'w') as f_out:
+        for entry in f_in:
+            f_out.write(f'{entry.name}\n')
     return {'t2c': t2c_path}
 
 
@@ -236,27 +236,27 @@ def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
     logger.info(f'Splitting {fasta_path} into {n} parts')
     size = int(os.path.getsize(fasta_path) / n) + 4
 
-    fasta = FASTA(fasta_path)
-    fasta_entries = fasta.entries(parse=False)
-    finished = False
-    for i in range(n):
-        fasta_part_path = get_temporary_filename(temp_dir)
-        index_part_path = f'{index_prefix}.{i}'
-        fastas.append(fasta_part_path)
-        indices.append(index_part_path)
+    with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
+        fasta_iter = iter(f_in)
+        finished = False
+        for i in range(n):
+            fasta_part_path = get_temporary_filename(temp_dir)
+            index_part_path = f'{index_prefix}.{i}'
+            fastas.append(fasta_part_path)
+            indices.append(index_part_path)
 
-        with open(fasta_part_path, 'w') as f:
-            logger.debug(f'Writing {fasta_part_path}')
-            while f.tell() < size:
-                try:
-                    info, seq = next(fasta_entries)
-                except StopIteration:
-                    finished = True
-                    break
-                f.write(f'{info}\n{seq}\n')
+            with ngs.fasta.Fasta(fasta_part_path, 'w') as f_out:
+                logger.debug(f'Writing {fasta_part_path}')
+                while f_out.tell() < size:
+                    try:
+                        entry = next(fasta_iter)
+                    except StopIteration:
+                        finished = True
+                        break
+                    f_out.write(entry)
 
-        if finished:
-            break
+            if finished:
+                break
 
     built = []
     for fasta_part_path, index_part_path in zip(fastas, indices):
@@ -266,6 +266,7 @@ def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
     return {'indices': built}
 
 
+@logger.namespaced('download')
 def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     """Downloads a provided reference file from a static url.
 
@@ -288,7 +289,7 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     :rtype: dict
     """
     results = {}
-    if not any(os.path.exists(file) for file in files) or overwrite:
+    if not ngs.utils.all_exists(*list(files.values())) or overwrite:
         # Make sure all the required file paths are there.
         diff = set(reference.files.keys()) - set(files.keys())
         if diff:
@@ -299,14 +300,14 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
 
         url = reference.url
         path = os.path.join(temp_dir, os.path.basename(url))
-        logging.info(
+        logger.info(
             'Downloading files for {} from {} to {}'.format(
                 reference.name, url, path
             )
         )
         local_path = download_file(url, path)
 
-        logging.info('Extracting files from {}'.format(local_path))
+        logger.info('Extracting files from {}'.format(local_path))
         with tarfile.open(local_path, 'r:gz') as f:
             f.extractall(temp_dir)
 
@@ -344,6 +345,7 @@ def decompress_file(path, temp_dir='tmp'):
         return path
 
 
+@logger.namespaced('ref')
 def ref(
     fasta_paths,
     gtf_paths,
@@ -383,60 +385,47 @@ def ref(
         gtf_paths = [gtf_paths]
 
     results = {}
-    t2gs = []
     cdnas = []
-    for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
-        logger.info(f'Preparing {fasta_path}, {gtf_path}')
-        gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
-        t2g_result = create_t2g_from_gtf(
-            gtf_path, get_temporary_filename(temp_dir)
-        )
-        t2gs.append(t2g_result['t2g'])
-
-        if not glob.glob(f'{index_path}*') or overwrite:
-            fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-            sorted_fasta_path, fasta_chromosomes = sort_fasta(
-                fasta_path, get_temporary_filename(temp_dir)
-            )
-            sorted_gtf_path, gtf_chromosomes = sort_gtf(
-                gtf_path, get_temporary_filename(temp_dir)
+    if (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
+        for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
+            logger.info(f'Preparing {fasta_path}, {gtf_path}')
+            # Parse GTF for gene and transcripts
+            gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
+                gtf_path, use_version=True
             )
 
+            # Split
             cdna_temp_path = get_temporary_filename(temp_dir)
             logger.info(
                 f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
             )
-            chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
-            cdna_fasta_path = generate_cdna_fasta(
-                sorted_fasta_path,
-                sorted_gtf_path,
-                cdna_temp_path,
-                chromosomes=chromosomes
+            cdna_temp_path = ngs.fasta.split_genomic_fasta_to_cdna(
+                fasta_path, cdna_temp_path, gene_infos, transcript_infos
             )
-            cdnas.append(cdna_fasta_path)
+            cdnas.append(cdna_temp_path)
 
-    # Concatenate t2gs
-    logger.info(
-        f'Concatenating {len(t2gs)} transcript-to-gene mappings to {t2g_path}'
-    )
-    t2g_path = concatenate_files(*t2gs, out_path=t2g_path, temp_dir=temp_dir)
-    results.update({'t2g': t2g_path})
-
-    # Concatenate cdnas and index
-    if not glob.glob(f'{index_path}*') or overwrite:
         logger.info(f'Concatenating {len(cdnas)} cDNAs to {cdna_path}')
-        cdna_fasta_path = concatenate_files(
+        cdna_path = concatenate_files(
             *cdnas, out_path=cdna_path, temp_dir=temp_dir
         )
+        results.update({'cdna_fasta': cdna_path})
+    else:
+        logger.info(
+            f'Skipping cDNA FASTA generation because {cdna_path} already exists. Use --overwrite flag to overwrite'
+        )
+
+    if not glob.glob(f'{index_path}*') or overwrite:
+        t2g_result = create_t2g_from_fasta(cdna_path, t2g_path)
+        results.update(t2g_result)
 
         if k and k != 31:
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'
             )
         index_result = split_and_index(
-            cdna_fasta_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
+            cdna_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            cdna_fasta_path, index_path, k=k or 31
+            cdna_path, index_path, k=k or 31
         )
         results.update(index_result)
     else:
@@ -448,6 +437,7 @@ def ref(
     return results
 
 
+@logger.namespaced('ref_kite')
 def ref_kite(
     feature_path,
     fasta_path,
@@ -514,6 +504,7 @@ def ref_kite(
     return results
 
 
+@logger.namespaced('ref_lamanno')
 def ref_lamanno(
     fasta_paths,
     gtf_paths,
@@ -571,53 +562,53 @@ def ref_lamanno(
     introns = []
     cdna_t2cs = []
     intron_t2cs = []
-    if not glob.glob(f'{index_path}*') or overwrite:
+    if (not ngs.utils.all_exists(cdna_path, intron_path, t2g_path,
+                                 cdna_t2c_path, intron_t2c_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
+            # Parse GTF for gene and transcripts
+            gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
+                gtf_path, use_version=True
+            )
 
-            fasta_path = decompress_file(fasta_path, temp_dir=temp_dir)
-            sorted_fasta_path, fasta_chromosomes = sort_fasta(
-                fasta_path, get_temporary_filename(temp_dir)
-            )
-            gtf_path = decompress_file(gtf_path, temp_dir=temp_dir)
-            sorted_gtf_path, gtf_chromosomes = sort_gtf(
-                gtf_path, get_temporary_filename(temp_dir)
-            )
+            # Split cDNA
             cdna_temp_path = get_temporary_filename(temp_dir)
             logger.info(
                 f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
             )
-            chromosomes = check_chromosomes(fasta_chromosomes, gtf_chromosomes)
-            cdna_fasta_path = generate_cdna_fasta(
-                sorted_fasta_path,
-                sorted_gtf_path,
-                cdna_temp_path,
-                chromosomes=chromosomes
+            cdna_temp_path = ngs.fasta.split_genomic_fasta_to_cdna(
+                fasta_path, cdna_temp_path, gene_infos, transcript_infos
             )
-            cdnas.append(cdna_fasta_path)
+            cdnas.append(cdna_temp_path)
+
+            # cDNA t2c
             cdna_t2c_temp_path = get_temporary_filename(temp_dir)
             logger.info(
                 f'Creating cDNA transcripts-to-capture at {cdna_t2c_temp_path}'
             )
-            cdna_t2c_result = create_t2c(cdna_fasta_path, cdna_t2c_temp_path)
+            cdna_t2c_result = create_t2c(cdna_temp_path, cdna_t2c_temp_path)
             cdna_t2cs.append(cdna_t2c_result['t2c'])
+
+            # Split intron
             intron_temp_path = get_temporary_filename(temp_dir)
             logger.info(f'Splitting genome into introns at {intron_temp_path}')
-            intron_fasta_path = generate_intron_fasta(
-                sorted_fasta_path,
-                sorted_gtf_path,
+            intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
+                fasta_path,
                 intron_temp_path,
-                chromosomes=chromosomes,
+                gene_infos,
+                transcript_infos,
                 flank=flank if flank is not None else k -
                 1 if k is not None else 30
             )
-            introns.append(intron_fasta_path)
+            introns.append(intron_temp_path)
+
+            # intron t2c
             intron_t2c_temp_path = get_temporary_filename(temp_dir)
             logger.info(
                 f'Creating intron transcripts-to-capture at {intron_t2c_temp_path}'
             )
             intron_t2c_result = create_t2c(
-                intron_fasta_path, intron_t2c_temp_path
+                intron_temp_path, intron_t2c_temp_path
             )
             intron_t2cs.append(intron_t2c_result['t2c'])
 
@@ -651,6 +642,12 @@ def ref_lamanno(
             'intron_t2c': intron_t2c_path
         })
 
+    else:
+        logger.info(
+            'Skipping cDNA and intron FASTA generation because files already exist. Use --overwrite flag to overwrite'
+        )
+
+    if not glob.glob(f'{index_path}*') or overwrite:
         # Concatenate cDNA and intron fastas to generate T2G and build index
         combined_path = get_temporary_filename(temp_dir)
         logger.info(f'Concatenating cDNA and intron FASTAs to {combined_path}')
@@ -659,6 +656,7 @@ def ref_lamanno(
         )
         t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
         results.update(t2g_result)
+
         if k and k != 31:
             logger.warning(
                 f'Using provided k-mer length {k} instead of optimal length 31'

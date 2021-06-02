@@ -1,7 +1,5 @@
-import gzip
 import os
 import subprocess as sp
-import uuid
 from unittest import mock, TestCase
 from unittest.mock import call
 from unittest.mock import ANY
@@ -9,7 +7,7 @@ from unittest.mock import ANY
 import anndata
 
 import kb_python.utils as utils
-from kb_python.config import CHUNK_SIZE, UnsupportedOSException
+from kb_python.config import UnsupportedOSException
 from tests.mixins import TestMixin
 
 
@@ -19,44 +17,6 @@ class TestUtils(TestMixin, TestCase):
         self.assertEqual(
             'output.s.c.bus', utils.update_filename('output.s.bus', 'c')
         )
-
-    def test_open_as_text_textfile(self):
-        path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
-        with utils.open_as_text(path, 'w') as f:
-            f.write('TESTING')
-        self.assertTrue(os.path.exists(path))
-        with utils.open_as_text(path, 'r') as f:
-            self.assertEqual(f.read(), 'TESTING')
-
-    def test_open_as_text_gzip(self):
-        path = os.path.join(self.temp_dir, '{}.gz'.format(uuid.uuid4()))
-        with utils.open_as_text(path, 'w') as f:
-            f.write('TESTING')
-        self.assertTrue(os.path.exists(path))
-        with utils.open_as_text(path, 'r') as f:
-            self.assertEqual(f.read(), 'TESTING')
-
-    def test_decompress_gzip(self):
-        filename = str(uuid.uuid4())
-        gzip_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
-        out_path = os.path.join(self.temp_dir, filename)
-        with gzip.open(gzip_path, 'wt') as f:
-            f.write('TESTING\nTEST')
-        self.assertEqual(out_path, utils.decompress_gzip(gzip_path, out_path))
-        self.assertTrue(os.path.exists(out_path))
-        with open(out_path, 'r') as f:
-            self.assertEqual('TESTING\nTEST', f.read())
-
-    def test_compress_gzip(self):
-        filename = str(uuid.uuid4())
-        file_path = os.path.join(self.temp_dir, filename)
-        out_path = os.path.join(self.temp_dir, '{}.gz'.format(filename))
-        with open(file_path, 'w') as f:
-            f.write('TESTING\nTEST')
-        self.assertEqual(out_path, utils.compress_gzip(file_path, out_path))
-        self.assertTrue(os.path.exists(out_path))
-        with gzip.open(out_path, 'rt') as f:
-            self.assertEqual('TESTING\nTEST', f.read())
 
     def test_make_directory(self):
         with mock.patch('kb_python.utils.os.makedirs') as makedirs:
@@ -122,33 +82,6 @@ class TestUtils(TestMixin, TestCase):
         self.assertTrue(utils.whitelist_provided('10xv2'))
         self.assertFalse(utils.whitelist_provided('UNSUPPORTED'))
 
-    def test_download_file(self):
-        with mock.patch('kb_python.utils.requests.get') as get,\
-            mock.patch('kb_python.utils.tqdm') as tqdm:
-            path = os.path.join(self.temp_dir, str(uuid.uuid4()))
-            get.return_value.headers = {'Content-Length': str(1024 * 2)}
-            get.return_value.iter_content.return_value = [
-                b'1' * 1024, b'2' * 1024
-            ]
-            self.assertEqual(path, utils.download_file('remote/path', path))
-            get.assert_called_once_with('remote/path', stream=True)
-            tqdm.assert_called_once_with(
-                unit='B',
-                total=1024 * 2,
-                unit_divisor=1024,
-                unit_scale=True,
-                ascii=True
-            )
-            get.return_value.iter_content.assert_called_once_with(
-                chunk_size=CHUNK_SIZE
-            )
-            self.assertEqual(2, tqdm.return_value.update.call_count)
-            tqdm.return_value.update.assert_has_calls([call(1024), call(1024)])
-            tqdm.return_value.close.assert_called_once_with()
-
-            with open(path, 'r') as f:
-                self.assertEqual(('1' * 1024) + ('2' * 1024), f.read())
-
     def test_stream_file(self):
         with mock.patch('kb_python.utils.PLATFORM', 'linux'),\
             mock.patch('kb_python.utils.os') as os,\
@@ -175,10 +108,6 @@ class TestUtils(TestMixin, TestCase):
             os.mkfifo.assert_not_called()
             threading.thread.assert_not_called()
             urlretrieve.assert_not_called()
-
-    def test_get_temporary_filename(self):
-        path = utils.get_temporary_filename()
-        self.assertTrue(os.path.exists(path))
 
     def test_read_t2g(self):
         t2g = utils.read_t2g(self.t2g_path)
@@ -289,23 +218,3 @@ class TestUtils(TestMixin, TestCase):
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
-
-    def test_concatenate_files(self):
-        temp_dir = self.temp_dir
-        file1_path = os.path.join(temp_dir, str(uuid.uuid4()))
-        file2_path = os.path.join(temp_dir, '{}.gz'.format(uuid.uuid4()))
-
-        with open(file1_path, 'w') as f:
-            f.write('TEST1')
-        with gzip.open(file2_path, 'wt') as f:
-            f.write('TEST2')
-
-        out_path = utils.concatenate_files(
-            file1_path,
-            file2_path,
-            out_path=os.path.join(temp_dir, str(uuid.uuid4())),
-            temp_dir=self.temp_dir
-        )
-
-        with open(out_path, 'r') as f:
-            self.assertEqual(f.read(), 'TEST1\nTEST2\n')
