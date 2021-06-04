@@ -127,7 +127,7 @@ def parse_ref(parser, args, temp_dir='tmp'):
         download_reference(
             reference, files, overwrite=args.overwrite, temp_dir=temp_dir
         )
-    elif args.workflow in {'lamanno', 'nucleus'} or args.lamanno:
+    elif args.workflow in {'lamanno', 'nucleus'}:
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -202,7 +202,7 @@ def parse_count(parser, args, temp_dir='tmp'):
     if args.w and args.w.lower() == 'none':
         args.w = None
 
-    if args.workflow in {'lamanno', 'nucleus'} or args.lamanno or args.nucleus:
+    if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
         if args.x.upper() == 'SMARTSEQ':
             parser.error(
@@ -229,7 +229,7 @@ def parse_count(parser, args, temp_dir='tmp'):
             cellranger=args.cellranger,
             report=args.report,
             inspect=not args.no_inspect,
-            nucleus=args.workflow == 'nucleus' or args.nucleus,
+            nucleus=args.workflow == 'nucleus',
             temp_dir=temp_dir
         )
     else:
@@ -377,8 +377,14 @@ def setup_ref_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
-    workflow = sys.argv[sys.argv.index('--workflow') +
-                        1] if '--workflow' in sys.argv else 'standard'
+    workflow = 'standard'
+    for i, arg in enumerate(sys.argv):
+        if arg.startswith('--workflow'):
+            if '=' in arg:
+                workflow = arg[arg.index('=') + 1:].strip('\'\"')
+            else:
+                workflow = sys.argv[i + 1]
+            break
 
     parser_ref = parser.add_parser(
         'ref',
@@ -425,7 +431,6 @@ def setup_ref_args(parser, parent):
         help='Path to the intron FASTA to be generated',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
-        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c1',
@@ -433,7 +438,6 @@ def setup_ref_args(parser, parent):
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
-        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c2',
@@ -441,7 +445,6 @@ def setup_ref_args(parser, parent):
         help='Path to generate intron transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
-        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
 
     parser_ref.add_argument(
@@ -494,11 +497,6 @@ def setup_ref_args(parser, parent):
         choices=['standard', 'lamanno', 'nucleus', 'kite']
     )
     parser_ref.add_argument(
-        '--lamanno',
-        help='Deprecated. Use `--workflow lamanno` instead.',
-        action='store_true'
-    )
-    parser_ref.add_argument(
         '--overwrite',
         help='Overwrite existing kallisto index',
         action='store_true'
@@ -544,8 +542,14 @@ def setup_count_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
-    workflow = sys.argv[sys.argv.index('--workflow') +
-                        1] if '--workflow' in sys.argv else 'standard'
+    workflow = 'standard'
+    for i, arg in enumerate(sys.argv):
+        if arg.startswith('--workflow'):
+            if '=' in arg:
+                workflow = arg[arg.index('=') + 1:].strip('\'\"')
+            else:
+                workflow = sys.argv[i + 1]
+            break
 
     # count
     parser_count = parser.add_parser(
@@ -672,17 +676,6 @@ def setup_count_args(parser, parent):
     )
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
 
-    velocity_group = parser_count.add_mutually_exclusive_group()
-    velocity_group.add_argument(
-        '--lamanno',
-        help='Deprecated. Use `--workflow lamanno` instead.',
-        action='store_true'
-    )
-    velocity_group.add_argument(
-        '--nucleus',
-        help='Deprecated. Use `--workflow nucleus` instead.',
-        action='store_true'
-    )
     conversion_group = parser_count.add_mutually_exclusive_group()
     conversion_group.add_argument(
         '--loom',
@@ -828,13 +821,6 @@ def main():
         if args.dry_run:
             logging.disable(level=logging.CRITICAL)
             set_dry()
-
-    if any(arg in sys.argv for arg in {'--lamanno', '--nucleus'}):
-        logger.warning((
-            'The `--lamanno` and `-`-n`ucleus` flags are deprecated. '
-            'These options will be removed in a future release. '
-            'Please use `--workflow lamanno` or `--workflow nucleus` instead.'
-        ))
 
     logger.debug('Printing verbose output')
 
