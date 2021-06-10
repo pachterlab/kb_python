@@ -243,11 +243,14 @@ def parse_count(parser, args, temp_dir='tmp'):
             if args.dry_run:
                 parser.error(f'Technology `{args.x}` does not support dry run.')
 
+            if args.workflow != 'standard':
+                parser.error(
+                    f'TECHNOLOGY `{args.x}` only supports `standard` workflow.'
+                )
+
             # Check for ignored arguments. (i.e. arguments either not supported or
             # not yet implemented)
-            ignored = [
-                'w', 'tcc', 'mm', 'filter', 'cellranger', 'report', 'nucleus'
-            ]
+            ignored = ['w', 'tcc', 'mm', 'filter', 'cellranger', 'report']
             for arg in ignored:
                 if getattr(args, arg):
                     logger.warning(
