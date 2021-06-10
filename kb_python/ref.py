@@ -405,9 +405,7 @@ def ref(
             cdnas.append(cdna_temp_path)
 
         logger.info(f'Concatenating {len(cdnas)} cDNAs to {cdna_path}')
-        cdna_path = concatenate_files(
-            *cdnas, out_path=cdna_path, temp_dir=temp_dir
-        )
+        cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
         results.update({'cdna_fasta': cdna_path})
     else:
         logger.info(
@@ -614,26 +612,20 @@ def ref_lamanno(
 
         # Concatenate
         logger.info(f'Concatenating {len(cdnas)} cDNA FASTAs to {cdna_path}')
-        cdna_path = concatenate_files(
-            *cdnas, out_path=cdna_path, temp_dir=temp_dir
-        )
+        cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
         logger.info(
             f'Concatenating {len(cdna_t2cs)} cDNA transcripts-to-captures to {cdna_t2c_path}'
         )
-        cdna_t2c_path = concatenate_files(
-            *cdna_t2cs, out_path=cdna_t2c_path, temp_dir=temp_dir
-        )
+        cdna_t2c_path = concatenate_files(*cdna_t2cs, out_path=cdna_t2c_path)
         logger.info(
             f'Concatenating {len(introns)} intron FASTAs to {intron_path}'
         )
-        intron_path = concatenate_files(
-            *introns, out_path=intron_path, temp_dir=temp_dir
-        )
+        intron_path = concatenate_files(*introns, out_path=intron_path)
         logger.info(
             f'Concatenating {len(intron_t2cs)} intron transcripts-to-captures to {intron_t2c_path}'
         )
         intron_t2c_path = concatenate_files(
-            *intron_t2cs, out_path=intron_t2c_path, temp_dir=temp_dir
+            *intron_t2cs, out_path=intron_t2c_path
         )
         results.update({
             'cdna_fasta': cdna_path,
@@ -652,7 +644,7 @@ def ref_lamanno(
         combined_path = get_temporary_filename(temp_dir)
         logger.info(f'Concatenating cDNA and intron FASTAs to {combined_path}')
         combined_path = concatenate_files(
-            cdna_path, intron_path, out_path=combined_path, temp_dir=temp_dir
+            cdna_path, intron_path, out_path=combined_path
         )
         t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
         results.update(t2g_result)

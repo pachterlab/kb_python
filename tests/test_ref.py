@@ -298,7 +298,7 @@ class TestRef(TestMixin, TestCase):
                 transcript_infos,
             )
             concatenate_files.assert_called_once_with(
-                cdna_fasta_path, out_path=cdna_fasta_path, temp_dir=temp_dir
+                cdna_fasta_path, out_path=cdna_fasta_path
             )
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=31
@@ -356,7 +356,7 @@ class TestRef(TestMixin, TestCase):
                 transcript_infos,
             )
             concatenate_files.assert_called_once_with(
-                cdna_fasta_path, out_path=cdna_fasta_path, temp_dir=temp_dir
+                cdna_fasta_path, out_path=cdna_fasta_path
             )
             kallisto_index.assert_not_called()
             split_and_index.assert_called_once_with(
@@ -415,7 +415,7 @@ class TestRef(TestMixin, TestCase):
                 transcript_infos,
             )
             concatenate_files.assert_called_once_with(
-                cdna_fasta_path, out_path=cdna_fasta_path, temp_dir=temp_dir
+                cdna_fasta_path, out_path=cdna_fasta_path
             )
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=k
@@ -560,7 +560,7 @@ class TestRef(TestMixin, TestCase):
                 transcript_infos,
             )
             concatenate_files.assert_called_once_with(
-                cdna_fasta_path, out_path=cdna_fasta_path, temp_dir=temp_dir
+                cdna_fasta_path, out_path=cdna_fasta_path
             )
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=31
@@ -886,15 +886,14 @@ class TestRef(TestMixin, TestCase):
             ])
             self.assertEqual(5, concatenate_files.call_count)
             concatenate_files.assert_has_calls([
-                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
-                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
-                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
-                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path),
+                call('cdna_t2c', out_path=cdna_t2c_path),
+                call('intron', out_path=intron_fasta_path),
+                call('intron_t2c', out_path=intron_t2c_path),
                 call(
                     cdna_fasta_path,
                     intron_fasta_path,
                     out_path='combined',
-                    temp_dir=temp_dir
                 )
             ])
             kallisto_index.assert_called_once_with(
@@ -990,15 +989,14 @@ class TestRef(TestMixin, TestCase):
             ])
             self.assertEqual(5, concatenate_files.call_count)
             concatenate_files.assert_has_calls([
-                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
-                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
-                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
-                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path),
+                call('cdna_t2c', out_path=cdna_t2c_path),
+                call('intron', out_path=intron_fasta_path),
+                call('intron_t2c', out_path=intron_t2c_path),
                 call(
                     cdna_fasta_path,
                     intron_fasta_path,
                     out_path='combined',
-                    temp_dir=temp_dir
                 )
             ])
             self.assertEqual(2, kallisto_index.call_count)
@@ -1095,15 +1093,14 @@ class TestRef(TestMixin, TestCase):
             ])
             self.assertEqual(5, concatenate_files.call_count)
             concatenate_files.assert_has_calls([
-                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
-                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
-                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
-                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path),
+                call('cdna_t2c', out_path=cdna_t2c_path),
+                call('intron', out_path=intron_fasta_path),
+                call('intron_t2c', out_path=intron_t2c_path),
                 call(
                     cdna_fasta_path,
                     intron_fasta_path,
                     out_path='combined',
-                    temp_dir=temp_dir
                 )
             ])
             kallisto_index.assert_called_once_with(
@@ -1198,15 +1195,14 @@ class TestRef(TestMixin, TestCase):
             ])
             self.assertEqual(5, concatenate_files.call_count)
             concatenate_files.assert_has_calls([
-                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
-                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
-                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
-                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path),
+                call('cdna_t2c', out_path=cdna_t2c_path),
+                call('intron', out_path=intron_fasta_path),
+                call('intron_t2c', out_path=intron_t2c_path),
                 call(
                     cdna_fasta_path,
                     intron_fasta_path,
                     out_path='combined',
-                    temp_dir=temp_dir
                 )
             ])
             kallisto_index.assert_called_once_with(
@@ -1276,7 +1272,6 @@ class TestRef(TestMixin, TestCase):
                 cdna_fasta_path,
                 intron_fasta_path,
                 out_path='combined',
-                temp_dir=temp_dir
             )
             kallisto_index.assert_called_once_with(
                 combined_path, index_path, k=31
@@ -1424,15 +1419,14 @@ class TestRef(TestMixin, TestCase):
             ])
             self.assertEqual(5, concatenate_files.call_count)
             concatenate_files.assert_has_calls([
-                call('cdna', out_path=cdna_fasta_path, temp_dir=temp_dir),
-                call('cdna_t2c', out_path=cdna_t2c_path, temp_dir=temp_dir),
-                call('intron', out_path=intron_fasta_path, temp_dir=temp_dir),
-                call('intron_t2c', out_path=intron_t2c_path, temp_dir=temp_dir),
+                call('cdna', out_path=cdna_fasta_path),
+                call('cdna_t2c', out_path=cdna_t2c_path),
+                call('intron', out_path=intron_fasta_path),
+                call('intron_t2c', out_path=intron_t2c_path),
                 call(
                     cdna_fasta_path,
                     intron_fasta_path,
                     out_path='combined',
-                    temp_dir=temp_dir
                 )
             ])
             kallisto_index.assert_called_once_with(
