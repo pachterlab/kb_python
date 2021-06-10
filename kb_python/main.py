@@ -292,6 +292,9 @@ def parse_count(parser, args, temp_dir='tmp'):
                         fastqs[i + 1] if i + 1 < len(fastqs) else ''
                     )
                     cells[cell_id] = (fastq_1, fastq_2)
+            if not cells:
+                parser.error('No FASTQs found.')
+
             logger.info('Found the following FASTQs:')
             fastq_pairs = []
             cell_ids = []
