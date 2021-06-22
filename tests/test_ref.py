@@ -56,10 +56,10 @@ class TestRef(TestMixin, TestCase):
 
     def test_generate_kite_fasta_collision(self):
         out_path = os.path.join(self.temp_dir, '{}.fa'.format(uuid.uuid4()))
-        self.assertEqual((out_path, 15),
-                         ref.generate_kite_fasta(
-                             self.kite_collision_feature_path, out_path
-                         ))
+        self.assertEqual(
+            (out_path, 15),
+            ref.generate_kite_fasta(self.kite_collision_feature_path, out_path)
+        )
         with open(out_path, 'r') as f, open(self.kite_collision_fasta_path,
                                             'r') as fa:
             self.assertEqual(fa.read(), f.read())

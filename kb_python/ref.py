@@ -113,7 +113,11 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
                 f'Colision detected between variants of feature barcode {feature} '
                 'and feature barcode(s). These variants will be removed.'
             )
-            variants[feature] = {name: seq for name, seq in _variants.items() if seq not in collisions}
+            variants[feature] = {
+                name: seq
+                for name, seq in _variants.items()
+                if seq not in collisions
+            }
 
     # Find & remove collisions between variants
     for f1, f2 in itertools.combinations(variants.keys(), 2):
@@ -128,8 +132,16 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
             )
 
             # Remove collisions
-            variants[f1] = {name: seq for name, seq in v1.items() if seq not in collisions}
-            variants[f2] = {name: seq for name, seq in v2.items() if seq not in collisions}
+            variants[f1] = {
+                name: seq
+                for name, seq in v1.items()
+                if seq not in collisions
+            }
+            variants[f2] = {
+                name: seq
+                for name, seq in v2.items()
+                if seq not in collisions
+            }
 
     # Write FASTA
     with ngs.fasta.Fasta(out_path, 'w') as f:
