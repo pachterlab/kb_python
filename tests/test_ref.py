@@ -55,16 +55,14 @@ class TestRef(TestMixin, TestCase):
             ref.generate_kite_fasta(self.kite_order_feature_path, out_path)
 
     def test_generate_kite_fasta_collision(self):
-        with mock.patch('kb_python.ref.logger.warning') as warning:
-            out_path = os.path.join(self.temp_dir, '{}.fa'.format(uuid.uuid4()))
-            self.assertEqual((out_path, 15),
-                             ref.generate_kite_fasta(
-                                 self.kite_collision_feature_path, out_path
-                             ))
-            warning.assert_called_once()
-            with open(out_path, 'r') as f, open(self.kite_collision_fasta_path,
-                                                'r') as fa:
-                self.assertEqual(fa.read(), f.read())
+        out_path = os.path.join(self.temp_dir, '{}.fa'.format(uuid.uuid4()))
+        self.assertEqual((out_path, 15),
+                         ref.generate_kite_fasta(
+                             self.kite_collision_feature_path, out_path
+                         ))
+        with open(out_path, 'r') as f, open(self.kite_collision_fasta_path,
+                                            'r') as fa:
+            self.assertEqual(fa.read(), f.read())
 
     def test_kallisto_index(self):
         index_path = os.path.join(self.temp_dir, '{}.idx'.format(uuid.uuid4()))
