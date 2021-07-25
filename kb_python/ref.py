@@ -77,7 +77,7 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
         # and the second column the feature name.
         if ngs.sequence.SEQUENCE_PARSER.search(row.sequence.upper()):
             raise Exception((
-                'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
+                f'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
                 'Does the first column contain the sequences and the second column the feature names?'
             ))
 
@@ -103,16 +103,45 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
                 ','.join(str(l) for l in lengths)  # noqa
             )
         )
+    # Find & remove collisions between barcode and variants
+    for feature in variants.keys():
+        _variants = variants[feature]
+        collisions = set(_variants.values()) & set(features.values())
+        if collisions:
+            # Remove collisions
+            logger.warning(
+                f'Colision detected between variants of feature barcode {feature} '
+                'and feature barcode(s). These variants will be removed.'
+            )
+            variants[feature] = {
+                name: seq
+                for name, seq in _variants.items()
+                if seq not in collisions
+            }
+
+    # Find & remove collisions between variants
     for f1, f2 in itertools.combinations(variants.keys(), 2):
         v1 = variants[f1]
         v2 = variants[f2]
-        if len(set.intersection(set(v1.values()), set(v2.values()))) > 0:
-            logger.warning((
-                f'Detected features with barcodes that are not >2 hamming distance apart: {f1}, {f2}. '
-                f'Hamming distance 1 variants for these barcodes will not be generated.'
-            ))
-            variants[f1] = {}
-            variants[f2] = {}
+
+        collisions = set(v1.values()) & set(v2.values())
+        if collisions:
+            logger.warning(
+                f'Collision(s) detected between variants of feature barcodes {f1} and {f2}: '
+                f'{",".join(collisions)}. These variants will be removed.'
+            )
+
+            # Remove collisions
+            variants[f1] = {
+                name: seq
+                for name, seq in v1.items()
+                if seq not in collisions
+            }
+            variants[f2] = {
+                name: seq
+                for name, seq in v2.items()
+                if seq not in collisions
+            }
 
     # Write FASTA
     with ngs.fasta.Fasta(out_path, 'w') as f:
