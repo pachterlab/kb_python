@@ -8,6 +8,9 @@ import scipy.io
 from .config import get_bustools_binary_path, get_kallisto_binary_path, is_dry
 from .constants import (
     ABUNDANCE_FILENAME,
+    ABUNDANCE_GENE_FILENAME,
+    ABUNDANCE_GENE_TPM_FILENAME,
+    ABUNDANCE_TPM_FILENAME,
     ADATA_PREFIX,
     BATCH_FILENAME,
     BUS_CDNA_PREFIX,
@@ -29,6 +32,8 @@ from .constants import (
     FILTER_WHITELIST_FILENAME,
     FILTERED_CODE,
     FILTERED_COUNTS_DIR,
+    FLD_FILENAME,
+    FLENS_FILENAME,
     GENE_NAME,
     GENES_FILENAME,
     INSPECT_FILENAME,
@@ -37,13 +42,18 @@ from .constants import (
     PROJECT_CODE,
     REPORT_HTML_FILENAME,
     REPORT_NOTEBOOK_FILENAME,
+    SAVED_INDEX_FILENAME,
     SORT_CODE,
     TCC_PREFIX,
+    TRANSCRIPT_NAME,
     TXNAMES_FILENAME,
     UNFILTERED_CODE,
     UNFILTERED_COUNTS_DIR,
+    UNFILTERED_QUANT_DIR,
     WHITELIST_FILENAME,
 )
+from .dry import dryable
+from .dry import count as dry_count
 from .logging import logger
 from .report import render_report
 from .utils import (
@@ -105,12 +115,20 @@ def kallisto_pseudo(batch_path, index_path, out_dir, threads=8):
 
 @validate_files()
 def kallisto_bus(
-    fastqs, index_path, technology, out_dir, threads=8, n=False, k=False
+    fastqs,
+    index_path,
+    technology,
+    out_dir,
+    threads=8,
+    n=False,
+    k=False,
+    paired=False,
+    strand=None,
 ):
     """Runs `kallisto bus`.
 
-    :param fastqs: list of FASTQ file paths
-    :type fastqs: list
+    :param fastqs: list of FASTQ file paths, or a single path to a batch file
+    :type fastqs: list or str
     :param index_path: path to kallisto index
     :type index_path: str
     :param technology: single-cell technology used
@@ -125,6 +143,9 @@ def kallisto_bus(
     :param k: alignment is done per k-mer (used when splitting indices),
               defaults to `False`
     :type k: bool, optional
+    :param paired: Whether or not to supply the `--paired` flag, only used for
+        bulk and smartseq2 samples, defaults to `False`
+    :type paired: bool, optional
 
     :return: dictionary containing paths to generated files
     :rtype: dict
@@ -132,26 +153,44 @@ def kallisto_bus(
     logger.info(
         f'Using index {index_path} to generate BUS file to {out_dir} from'
     )
-    for fastq in fastqs:
-        logger.info((' ' * 8) + fastq)
-    command = [get_kallisto_binary_path(), 'bus']
-    command += ['-i', index_path]
-    command += ['-o', out_dir]
-    command += ['-x', technology]
-    command += ['-t', threads]
-    if n:
-        command += ['--num']
-    if k:
-        command += ['--kmer']
-    command += fastqs
-    run_executable(command)
-
-    return {
+    results = {
         'bus': os.path.join(out_dir, BUS_FILENAME),
         'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
+    is_batch = isinstance(fastqs, str)
+
+    for fastq in [fastqs] if is_batch else fastqs:
+        logger.info((' ' * 8) + fastq)
+    command = [get_kallisto_binary_path(), 'bus']
+    command += ['-i', index_path]
+    command += ['-o', out_dir]
+    if not is_batch:
+        command += ['-x', technology]
+    command += ['-t', threads]
+    if n:
+        command += ['--num']
+    if k:
+        command += ['--kmer']
+    if paired:
+        command += ['--paired']
+        results['flens'] = os.path.join(out_dir, FLENS_FILENAME)
+    if strand == 'unstranded':
+        command += ['--unstranded']
+    elif strand == 'forward':
+        command += ['--fr-stranded']
+    elif strand == 'reverse':
+        command += ['--rf-stranded']
+    if is_batch:
+        command += ['--batch', fastqs]
+    else:
+        command += fastqs
+    run_executable(command)
+
+    if technology.upper() == 'BULK':
+        results['saved_index'] = os.path.join(out_dir, SAVED_INDEX_FILENAME)
+    return results
 
 
 def kallisto_bus_split(
@@ -161,7 +200,9 @@ def kallisto_bus_split(
     out_dir,
     temp_dir='tmp',
     threads=8,
-    memory='4G'
+    memory='4G',
+    paired=False,
+    strand=None,
 ):
     """Runs `kallisto bus` with split indices.
 
@@ -179,6 +220,11 @@ def kallisto_bus_split(
     :type threads: int, optional
     :param memory: amount of memory to use, defaults to `4G`
     :type memory: str, optional
+    :param paired: whether the fastqs are paired. Has no effect when a single
+        batch file is provided. Defaults to `False`
+    :type paired: bool, optional
+    :param strand: strandedness, defaults to `None`
+    :type strand: str, optional
 
     :return: dictionary containing paths to generated files
     :rtype: dict
@@ -195,7 +241,9 @@ def kallisto_bus_split(
             bus_part_dir,
             threads=threads,
             n=True,
-            k=True
+            k=True,
+            paired=paired,
+            strand=strand,
         )
         part_dirs.append(bus_part_dir)
 
@@ -241,6 +289,71 @@ def kallisto_bus_split(
         'ecmap': ecmap_path,
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+    }
+
+
+@validate_files(pre=False)
+def kallisto_quant_tcc(
+    mtx_path,
+    saved_index_path,
+    ecmap_path,
+    t2g_path,
+    out_dir,
+    flens_path=None,
+    l=None,
+    s=None,
+    threads=8
+):
+    """Runs `kallisto quant-tcc`.
+
+    :param mtx_path: path to counts matrix
+    :type mtx_path: str
+    :param saved_index_path: path to index.saved
+    :type saved_index_path: str
+    :param ecmap_path: Path to ecmap
+    :type ecmap_path: str
+    :param t2g_path: path to T2G
+    :type t2g_path: str
+    :param out_dir: output directory path
+    :type out_dir: str
+    :param flens_path: path to flens.txt, defaults to `None`
+    :type flens_path: str, optional
+    :param l: mean fragment length, defaults to `None`
+    :type l: int, optional
+    :param s: standard deviation of fragment length, defaults to `None`
+    :type s: int, optional
+    :param threads: number of threads to use, defaults to `8`
+    :type threads: int, optional
+
+    :return: dictionary containing path to output files
+    :rtype dict:
+    """
+    logger.info(
+        f'Quantifying transcript abundances to {out_dir} from mtx file {mtx_path}'
+    )
+
+    command = [get_kallisto_binary_path(), 'quant-tcc']
+    command += ['-o', out_dir]
+    command += ['-i', saved_index_path]
+    command += ['-e', ecmap_path]
+    command += ['-g', t2g_path]
+    command += ['-t', threads]
+    if flens_path:
+        command += ['-f', flens_path]
+    if l:
+        command += ['-l', l]
+    if s:
+        command += ['-s', s]
+    command += [mtx_path]
+    run_executable(command)
+    return {
+        'genes': os.path.join(out_dir, GENES_FILENAME),
+        'gene_mtx': os.path.join(out_dir, ABUNDANCE_GENE_FILENAME),
+        'gene_tpm_mtx': os.path.join(out_dir, ABUNDANCE_GENE_TPM_FILENAME),
+        'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
+        'tpm_mtx': os.path.join(out_dir, ABUNDANCE_TPM_FILENAME),
+        'fld': os.path.join(out_dir, FLD_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
     }
 
 
@@ -386,7 +499,7 @@ def bustools_sort(
 
 
 @validate_files(pre=False)
-def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
+def bustools_inspect(bus_path, out_path, whitelist_path=None, ecmap_path=None):
     """Runs `bustools inspect`.
 
     :param bus_path: path to BUS file to sort
@@ -404,8 +517,10 @@ def bustools_inspect(bus_path, out_path, whitelist_path, ecmap_path):
     logger.info('Inspecting BUS file {}'.format(bus_path))
     command = [get_bustools_binary_path(), 'inspect']
     command += ['-o', out_path]
-    command += ['-w', whitelist_path]
-    command += ['-e', ecmap_path]
+    if whitelist_path:
+        command += ['-w', whitelist_path]
+    if ecmap_path:
+        command += ['-e', ecmap_path]
     command += [bus_path]
     run_executable(command)
     return {'inspect': out_path}
@@ -446,7 +561,8 @@ def bustools_count(
     ecmap_path,
     txnames_path,
     tcc=False,
-    mm=False
+    mm=False,
+    cm=False,
 ):
     """Runs `bustools count`.
 
@@ -466,14 +582,15 @@ def bustools_count(
     :param mm: whether to include BUS records that pseudoalign to multiple genes,
                defaults to `False`
     :type mm: bool, optional
+    :param cm: count multiplicities instead of UMIs. Used for chemitries
+        without UMIs, such as bulk and Smartseq2, defaults to `False`
+    :type cm: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
     """
     logger.info(
-        'Generating count matrix {} from BUS file {}'.format(
-            out_prefix, bus_path
-        )
+        f'Generating count matrix {out_prefix} from BUS file {bus_path}'
     )
     command = [get_bustools_binary_path(), 'count']
     command += ['-o', out_prefix]
@@ -484,16 +601,17 @@ def bustools_count(
         command += ['--genecounts']
     if mm:
         command += ['--multimapping']
+    if cm:
+        command += ['--cm']
     command += [bus_path]
     run_executable(command)
     return {
         'mtx':
-            '{}.mtx'.format(out_prefix),
+            f'{out_prefix}.mtx',
         'ec' if tcc else 'genes':
-            '{}.ec.txt'.format(out_prefix)
-            if tcc else '{}.genes.txt'.format(out_prefix),
+            f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
         'barcodes':
-            '{}.barcodes.txt'.format(out_prefix),
+            f'{out_prefix}.barcodes.txt',
     }
 
 
@@ -543,13 +661,15 @@ def bustools_capture(
 
 
 @validate_files(pre=False)
-def bustools_whitelist(bus_path, out_path):
+def bustools_whitelist(bus_path, out_path, threshold=None):
     """Runs `bustools whitelist`.
 
     :param bus_path: path to BUS file generate the whitelist from
     :type bus_path: str
     :param out_path: path to output whitelist
     :type out_path: str
+    :param threshold: barcode threshold to be included in whitelist
+    :type threshold: int, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -557,9 +677,11 @@ def bustools_whitelist(bus_path, out_path):
     logger.info(
         'Generating whitelist {} from BUS file {}'.format(out_path, bus_path)
     )
-    command = [
-        get_bustools_binary_path(), 'whitelist', '-o', out_path, bus_path
-    ]
+    command = [get_bustools_binary_path(), 'whitelist']
+    command += ['-o', out_path]
+    if threshold:
+        command += ['--threshold', threshold]
+    command += [bus_path]
     run_executable(command)
     return {'whitelist': out_path}
 
@@ -809,6 +931,7 @@ def filter_with_bustools(
     t2g_path,
     whitelist_path,
     filtered_bus_path,
+    filter_threshold=None,
     counts_prefix=None,
     tcc=False,
     mm=False,
@@ -835,6 +958,9 @@ def filter_with_bustools(
     :type whitelist_path: str
     :param filtered_bus_path: path to filtered BUS file to generate
     :type filtered_bus_path: str
+    :param filter_threshold: barcode filter threshold for bustools, defaults
+        to `None`
+    :type: filter_threshold: int, optional
     :param counts_prefix: prefix of count matrix, defaults to `None`
     :type counts_prefix: str, optional
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
@@ -866,7 +992,9 @@ def filter_with_bustools(
     """
     logger.info('Filtering with bustools')
     results = {}
-    whitelist_result = bustools_whitelist(bus_path, whitelist_path)
+    whitelist_result = bustools_whitelist(
+        bus_path, whitelist_path, threshold=filter_threshold
+    )
     results.update(whitelist_result)
     correct_result = bustools_correct(
         bus_path,
@@ -950,6 +1078,32 @@ def stream_fastqs(fastqs, temp_dir='tmp'):
     ]
 
 
+@dryable(dry_count.stream_batch)
+def stream_batch(batch_path, temp_dir='tmp'):
+    """Given a path to a batch file, produce a new batch file where all the
+    remote FASTQs are being streamed.
+
+    :param fastqs: list of (remote or local) fastq paths
+    :type fastqs: list
+    :param temp_dir: temporary directory
+    :type temp_dir: str
+
+    :return: new batch file with all remote paths substituted with a local path
+    :rtype: str
+    """
+    new_batch_path = get_temporary_filename(temp_dir)
+    with open(batch_path, 'r') as f_in, open(new_batch_path, 'w') as f_out:
+        for line in f_in:
+            if line.isspace() or line.startswith('#'):
+                continue
+            sep = '\t' if '\t' in line else ' '
+            split = line.strip().split(sep)
+            name = split[0]
+            fastqs = stream_fastqs(split[1:])
+            f_out.write(f'{name}\t' + '\t'.join(fastqs) + '\n')
+    return new_batch_path
+
+
 def copy_or_create_whitelist(technology, bus_path, out_dir):
     """Copies a pre-packaged whitelist if it is provided. Otherwise, runs
     `bustools whitelist` to generate a whitelist.
@@ -1023,6 +1177,7 @@ def count(
     tcc=False,
     mm=False,
     filter=None,
+    filter_threshold=None,
     kite=False,
     FB=False,
     temp_dir='tmp',
@@ -1034,6 +1189,10 @@ def count(
     cellranger=False,
     inspect=True,
     report=False,
+    fragment_l=None,
+    fragment_s=None,
+    paired=False,
+    strand=None,
 ):
     """Generates count matrices for single-cell RNA seq.
 
@@ -1045,8 +1204,8 @@ def count(
     :type technology: str
     :param out_dir: path to output directory
     :type out_dir: str
-    :param fastqs: list of FASTQ file paths
-    :type fastqs: list
+    :param fastqs: list of FASTQ file paths or a single batch definition file
+    :type fastqs: list or str
     :param whitelist_path: path to whitelist, defaults to `None`
     :type whitelist_path: str, optional
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
@@ -1058,6 +1217,9 @@ def count(
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
+    :param filter_threshold: barcode filter threshold for bustools, defaults
+        to `None`
+    :type: filter_threshold: int, optional
     :param kite: Whether this is a KITE workflow
     :type kite: bool, optional
     :param FB: whether 10x Genomics Feature Barcoding technology was used,
@@ -1085,6 +1247,15 @@ def count(
     :type inspect: bool, optional
     :param report: generate an HTMl report, defaults to `False`
     :type report: bool, optional
+    :param fragment_l: mean length of fragments, defaults to `None`
+    :type fragment_l: int, optional
+    :param fragment_s: standard deviation of fragment lengths, defaults to `None`
+    :type fragment_s: int, optional
+    :param paired: whether the fastqs are paired. Has no effect when a single
+        batch file is provided. Defaults to `False`
+    :type paired: bool, optional
+    :param strand: strandedness, defaults to `None`
+    :type strand: str, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -1092,6 +1263,7 @@ def count(
     STATS.start()
     if not isinstance(index_paths, list):
         index_paths = [index_paths]
+    is_batch = isinstance(fastqs, str)
 
     results = {}
 
@@ -1104,23 +1276,39 @@ def count(
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
+    if technology.upper() in ('BULK', 'SMARTSEQ2'):
+        bus_result['saved_index'] = os.path.join(out_dir, SAVED_INDEX_FILENAME)
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
+        _technology = 'BULK' if technology.upper(
+        ) == 'SMARTSEQ2' else technology
         if len(index_paths) > 1:
             bus_result = kallisto_bus_split(
                 fastqs,
                 index_paths,
-                technology,
+                _technology,
                 out_dir,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                paired=paired,
+                strand=strand,
             )
         else:
             # Pipe any remote files.
-            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            fastqs = stream_batch(
+                fastqs, temp_dir=temp_dir
+            ) if is_batch else stream_fastqs(
+                fastqs, temp_dir=temp_dir
+            )
             bus_result = kallisto_bus(
-                fastqs, index_paths[0], technology, out_dir, threads=threads
+                fastqs,
+                index_paths[0],
+                _technology,
+                out_dir,
+                threads=threads,
+                paired=paired,
+                strand=strand,
             )
     else:
         logger.info(
@@ -1138,7 +1326,7 @@ def count(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path:
+    if not whitelist_path and not is_batch:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
@@ -1175,25 +1363,30 @@ def count(
 
     if inspect:
         inspect_result = bustools_inspect(
-            prev_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-            whitelist_path, bus_result['ecmap']
+            prev_result['bus'],
+            os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path=whitelist_path,
+            ecmap_path=bus_result['ecmap']
         )
         unfiltered_results.update(inspect_result)
-    correct_result = bustools_correct(
-        prev_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(prev_result['bus']), CORRECT_CODE)
-        ), whitelist_path
-    )
-    sort3_result = bustools_sort(
-        correct_result['bus'],
-        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory
-    )
-    unfiltered_results.update({'bus_scs': sort3_result['bus']})
+    if not is_batch:
+        prev_result = bustools_correct(
+            prev_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(prev_result['bus']), CORRECT_CODE
+                )
+            ), whitelist_path
+        )
+        prev_result = bustools_sort(
+            prev_result['bus'],
+            os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+            temp_dir=temp_dir,
+            threads=threads,
+            memory=memory
+        )
+        unfiltered_results.update({'bus_scs': prev_result['bus']})
 
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     make_directory(counts_dir)
@@ -1201,48 +1394,68 @@ def count(
         counts_dir,
         TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
     )
+    cm = technology.upper() in ('BULK', 'SMARTSEQ2')
+    quant = cm and tcc
     count_result = bustools_count(
-        sort3_result['bus'],
+        prev_result['bus'],
         counts_prefix,
         t2g_path,
         bus_result['ecmap'],
         bus_result['txnames'],
         tcc=tcc,
-        mm=mm,
+        mm=mm or tcc,
+        cm=cm
     )
     unfiltered_results.update(count_result)
+    if quant:
+        quant_dir = os.path.join(out_dir, UNFILTERED_QUANT_DIR)
+        make_directory(quant_dir)
+        quant_result = kallisto_quant_tcc(
+            count_result['mtx'],
+            bus_result['saved_index'],
+            bus_result['ecmap'],
+            t2g_path,
+            quant_dir,
+            flens_path=bus_result.get('flens'),
+            l=fragment_l,
+            s=fragment_s,
+            threads=threads,
+        )
+        unfiltered_results.update(quant_result)
 
     # Convert outputs.
     if loom or h5ad:
+        result = quant_result if quant else count_result
+        name = GENE_NAME
+        if kite:
+            name = FEATURE_NAME
+        elif quant:
+            name = TRANSCRIPT_NAME
         unfiltered_results.update(
             convert_matrix(
-                counts_dir,
-                count_result['mtx'],
+                quant_dir if quant else counts_dir,
+                result['mtx'],
                 count_result['barcodes'],
-                genes_path=count_result.get('genes'),
+                genes_path=result['txnames'] if quant else result.get('genes'),
                 t2g_path=t2g_path,
                 ec_path=count_result.get('ec'),
                 txnames_path=bus_result['txnames'],
-                name=FEATURE_NAME if kite else GENE_NAME,
+                name=name,
                 loom=loom,
                 h5ad=h5ad,
-                tcc=tcc,
+                tcc=tcc and not quant,
                 threads=threads
             )
         )
     if cellranger:
-        if not tcc:
-            cr_result = matrix_to_cellranger(
-                count_result['mtx'], count_result['barcodes'],
-                count_result['genes'], t2g_path,
-                os.path.join(counts_dir, CELLRANGER_DIR)
-            )
-            unfiltered_results.update({'cellranger': cr_result})
-        else:
-            logger.warning(
-                'TCC matrices can not be converted to cellranger-compatible format.'
-            )
+        cr_result = matrix_to_cellranger(
+            count_result['mtx'], count_result['barcodes'],
+            count_result['genes'], t2g_path,
+            os.path.join(counts_dir, CELLRANGER_DIR)
+        )
+        unfiltered_results.update({'cellranger': cr_result})
 
+    # NOTE: bulk/smartseq2 does not support filtering. should we implement?
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
             out_dir, FILTERED_COUNTS_DIR,
@@ -1253,12 +1466,13 @@ def count(
         )
         filtered_bus_path = os.path.join(out_dir, f'output.{FILTERED_CODE}.bus')
         results['filtered'] = filter_with_bustools(
-            sort3_result['bus'],
+            prev_result['bus'],
             bus_result['ecmap'],
             bus_result['txnames'],
             t2g_path,
             filtered_whitelist_path,
             filtered_bus_path,
+            filter_threshold=filter_threshold,
             counts_prefix=filtered_counts_prefix,
             kite=kite,
             tcc=tcc,
@@ -1292,11 +1506,6 @@ def count(
             temp_dir=temp_dir
         )
         unfiltered_results.update(report_result)
-
-        if tcc:
-            logger.warning(
-                'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
-            )
 
     return results
 
@@ -1410,6 +1619,7 @@ def count_velocity(
     tcc=False,
     mm=False,
     filter=None,
+    filter_threshold=None,
     temp_dir='tmp',
     threads=8,
     memory='4G',
@@ -1420,6 +1630,7 @@ def count_velocity(
     report=False,
     inspect=True,
     nucleus=False,
+    strand=None,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1435,8 +1646,8 @@ def count_velocity(
     :type technology: str
     :param out_dir: path to output directory
     :type out_dir: str
-    :param fastqs: list of FASTQ file paths
-    :type fastqs: list
+    :param fastqs: list of FASTQ file paths or a single batch definition file
+    :type fastqs: list or str
     :param whitelist_path: path to whitelist, defaults to `None`
     :type whitelist_path: str, optional
     :param tcc: whether to generate a TCC matrix instead of a gene count matrix,
@@ -1448,6 +1659,9 @@ def count_velocity(
     :param filter: filter to use to generate a filtered count matrix,
                    defaults to `None`
     :type filter: str, optional
+    :param filter_threshold: barcode filter threshold for bustools, defaults
+        to `None`
+    :type: filter_threshold: int, optional
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param threads: number of threads to use, defaults to `8`
@@ -1474,6 +1688,8 @@ def count_velocity(
                     spliced and unspliced count matrices will be summed,
                     defaults to `False`
     :type nucleus: bool, optional
+    :param strand: strandedness, defaults to `None`
+    :type strand: str, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -1502,13 +1718,19 @@ def count_velocity(
                 out_dir,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                strand=strand,
             )
         else:
             # Pipe any remote files.
             fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
             bus_result = kallisto_bus(
-                fastqs, index_paths[0], technology, out_dir, threads=threads
+                fastqs,
+                index_paths[0],
+                technology,
+                out_dir,
+                threads=threads,
+                strand=strand
             )
     else:
         logger.info(
@@ -1535,8 +1757,10 @@ def count_velocity(
 
     if inspect:
         inspect_result = bustools_inspect(
-            sort_result['bus'], os.path.join(out_dir, INSPECT_FILENAME),
-            whitelist_path, bus_result['ecmap']
+            sort_result['bus'],
+            os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path=whitelist_path,
+            ecmap_path=bus_result['ecmap']
         )
         unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
@@ -1587,7 +1811,9 @@ def count_velocity(
                 sort_result['bus'],
                 os.path.join(
                     out_dir, update_filename(INSPECT_FILENAME, prefix)
-                ), whitelist_path, bus_result['ecmap']
+                ),
+                whitelist_path=whitelist_path,
+                ecmap_path=bus_result['ecmap']
             )
             unfiltered_results[prefix].update(inspect_result)
 
@@ -1599,7 +1825,7 @@ def count_velocity(
             bus_result['ecmap'],
             bus_result['txnames'],
             tcc=tcc,
-            mm=mm,
+            mm=mm or tcc,
         )
         unfiltered_results[prefix].update(count_result)
 
@@ -1649,6 +1875,7 @@ def count_velocity(
                     t2g_path,
                     os.path.join(out_dir, FILTER_WHITELIST_FILENAME),
                     os.path.join(out_dir, f'output.{FILTERED_CODE}.bus'),
+                    filter_threshold=filter_threshold,
                     temp_dir=temp_dir,
                     memory=memory,
                     count=False
@@ -1684,7 +1911,7 @@ def count_velocity(
                     bus_result['ecmap'],
                     bus_result['txnames'],
                     tcc=tcc,
-                    mm=mm,
+                    mm=mm or tcc,
                 )
                 filtered_results[prefix].update(count_result)
 

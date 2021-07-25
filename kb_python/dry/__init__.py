@@ -35,3 +35,10 @@ def dummy_function(*args, **kwargs):
     Used for making functions dryable.
     """
     return
+
+
+def undryable_function(*args, **kwargs):
+    """A dummy function that raises an exception. For use when a particular
+    function is not dryable.
+    """
+    raise Exception('This function is not dryable.')

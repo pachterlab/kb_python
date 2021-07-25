@@ -45,12 +45,19 @@ CELLRANGER_GENES = 'genes.tsv'
 BUS_UNFILTERED_SUFFIX = '.unfiltered.bus'
 BUS_FILTERED_SUFFIX = '.filtered.bus'
 
-# Smartseq file names
+# Bulk/Smartseq2 file names
+FLENS_FILENAME = 'flens.txt'
 BATCH_FILENAME = 'batch.txt'
+ABUNDANCE_GENE_FILENAME = 'matrix.abundance.gene.mtx'
+ABUNDANCE_GENE_TPM_FILENAME = 'matrix.abundance.gene.tpm.mtx'
 ABUNDANCE_FILENAME = 'matrix.abundance.mtx'
+ABUNDANCE_TPM_FILENAME = 'matrix.abundance.tpm.mtx'
+FLD_FILENAME = 'matrix.fld.tsv'
 CELLS_FILENAME = 'matrix.cells'
 GENE_DIR = 'counts_gene'
 GENES_FILENAME = 'genes.txt'
+UNFILTERED_QUANT_DIR = 'quant_unfiltered'
+SAVED_INDEX_FILENAME = 'index.saved'
 
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of

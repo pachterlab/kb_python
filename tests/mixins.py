@@ -14,6 +14,7 @@ class TestMixin(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.maxDiff = None
         cls.technology = '10xv2'
         cls.base_dir = os.path.dirname(os.path.abspath(__file__))
         cls.fixtures_dir = os.path.join(cls.base_dir, 'fixtures')
@@ -183,6 +184,10 @@ class TestMixin(TestCase):
         cls.cr_barcodes_path = os.path.join(cls.cellranger_dir, 'barcodes.tsv')
         cls.cr_genes_path = os.path.join(cls.cellranger_dir, 'genes.tsv')
 
+        cls.ref_dir = os.path.join(cls.fixtures_dir, 'ref')
+        cls.ref_index_path = os.path.join(cls.ref_dir, 'index.idx')
+        cls.ref_t2g_path = os.path.join(cls.ref_dir, 't2g.txt')
+
         # Smartseq
         cls.smartseq_dir = os.path.join(cls.fixtures_dir, 'smartseq')
         cls.smartseq_fastqs = [
@@ -195,4 +200,49 @@ class TestMixin(TestCase):
         cls.smartseq_txnames_path = os.path.join(
             cls.smartseq_dir, 'transcripts.txt'
         )
+        cls.smartseq_batch_path = os.path.join(cls.smartseq_dir, 'batch.txt')
         cls.smartseq_out_dir = os.path.join(cls.smartseq_dir, 'out')
+
+        # Quant
+        cls.quant_dir = os.path.join(cls.fixtures_dir, 'quant')
+        cls.quant_t2g_path = os.path.join(cls.quant_dir, 't2g.txt')
+        cls.flens_path = os.path.join(cls.quant_dir, 'flens.txt')
+        cls.saved_index_path = os.path.join(cls.quant_dir, 'index.saved')
+        cls.quant_ecmap_path = os.path.join(cls.quant_dir, 'matrix.ec')
+        cls.quant_mtx_path = os.path.join(cls.quant_dir, 'cells_x_tcc.mtx')
+
+        # Smartseq3
+        cls.smartseq3_dir = os.path.join(cls.fixtures_dir, 'smartseq3')
+        cls.smartseq3_1_i1_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data.I1.fastq.gz'
+        )
+        cls.smartseq3_1_i2_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data.I2.fastq.gz'
+        )
+        cls.smartseq3_1_R1_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data.R1.fastq.gz'
+        )
+        cls.smartseq3_1_R2_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data.R2.fastq.gz'
+        )
+        cls.smartseq3_2_i1_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data2.I1.fastq.gz'
+        )
+        cls.smartseq3_2_i2_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data2.I2.fastq.gz'
+        )
+        cls.smartseq3_2_R1_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data2.R1.fastq.gz'
+        )
+        cls.smartseq3_2_R2_fastq_path = os.path.join(
+            cls.smartseq3_dir, 'data2.R2.fastq.gz'
+        )
+        cls.smartseq3_paired_batch_path = os.path.join(
+            cls.smartseq3_dir, 'batch.txt'
+        )
+        cls.smartseq3_single_batch_path = os.path.join(
+            cls.smartseq3_dir, 'batch_single.txt'
+        )
+        cls.smartseq3_remote_batch_path = os.path.join(
+            cls.smartseq3_dir, 'batch_remote.txt'
+        )

@@ -60,7 +60,7 @@ def display_technologies():
     """Displays a list of supported technologies along with whether kb provides
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
-    headers = ['name', 'whitelist', 'barcode', 'umi', 'cDNA']
+    headers = ['name', 'description', 'whitelist', 'barcode', 'umi', 'cDNA']
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
@@ -74,6 +74,7 @@ def display_technologies():
         chem = t.chemistry
         row = [
             t.name,
+            t.description,
             'yes' if chem.has_whitelist else '',
             ' '.join(str(_def) for _def in chem.cell_barcode_parser)
             if chem.has_cell_barcode else '',
@@ -202,9 +203,110 @@ def parse_count(parser, args, temp_dir='tmp'):
     if args.w and args.w.lower() == 'none':
         args.w = None
 
+    if args.filter_threshold and args.filter != 'bustools':
+        parser.error(
+            'Option `--filter-threshold` may only be used with `--filter bustools`.'
+        )
+
+    if args.tcc and args.cellranger:
+        parser.error(
+            'TCC matrices can not be converted to cellranger-compatible format.'
+        )
+    if args.tcc and args.report:
+        logger.warning(
+            'Plots for TCC matrices have not yet been implemented. '
+            'The HTML report will not contain any plots.'
+        )
+
+    # Check if batch TSV was provided.
+    batch_path = None
+    if len(args.fastqs) == 1:
+        try:
+            with open_as_text(args.fastqs[0], 'r') as f:
+                if not f.readline().startswith('@'):
+                    batch_path = args.fastqs[0]
+        except Exception:
+            pass
+
+    if args.x.upper() in ('BULK', 'SMARTSEQ2'):
+        # Check unsupported options
+        unsupported = ['filter']
+        for arg in unsupported:
+            if getattr(args, arg):
+                parser.error(
+                    f'Argument `{arg}` is not supported for technology `{args.x}`.'
+                )
+
+        if not args.parity:
+            parser.error(
+                f'`--parity` must be provided for technology `{args.x}`.'
+            )
+
+        if not batch_path:
+            logger.warning(
+                f'FASTQs were provided for technology `{args.x}`. '
+                'Assuming multiplexed samples. For demultiplexed samples, provide '
+                'a batch textfile.'
+            )
+        else:
+            # If `single`, then each row must contain 2 columns. If `paired`,
+            # each row must contain 3 columns.
+            target = 2 + (args.parity == 'paired')
+            with open(batch_path, 'r') as f:
+                for i, line in enumerate(f):
+                    if line.isspace() or line.startswith('#'):
+                        continue
+                    sep = '\t' if '\t' in line else ' '
+                    columns = len(line.split(sep))
+                    if target != columns:
+                        parser.error(
+                            f'Batch file {batch_path} line {i} contains wrong '
+                            f'number of columns. Expected {target} for '
+                            f'`--parity {args.parity} but got {columns}.'
+                        )
+
+        if args.parity == 'single':
+            if args.tcc:
+                if (args.fragment_l is None) ^ (args.fragment_s is None):
+                    parser.error(
+                        'Both or neither `--fragment-l` and `--fragment-s` must be '
+                        'provided for single-end reads with TCC output.'
+                    )
+
+                if args.fragment_l is None and args.fragment_s is None:
+                    logger.warning(
+                        '`--fragment-l` and `--fragment-s` not provided. '
+                        'Assuming all transcripts have the exact same length.'
+                    )
+            elif (args.fragment_l is not None) or (args.fragment_s is not None):
+                parser.error(
+                    '`--fragment-l` and `--fragment-s` may only be used with `--tcc`.'
+                )
+
+        elif args.parity == 'paired':
+            if args.fragment_l is not None or args.fragment_s is not None:
+                parser.error(
+                    '`--fragment-l` or `--fragment-s` may not be provided for '
+                    'paired-end reads.'
+                )
+    else:
+        # Check unsupported options
+        unsupported = ['parity', 'fragment-l', 'fragment-s']
+        for arg in unsupported:
+            if getattr(args, arg.replace('-', '_')):
+                parser.error(
+                    f'Argument `{arg}` is not supported for technology `{args.x}`.'
+                )
+
+        if args.fragment_l is not None or args.fragment_s is not None:
+            parser.error(
+                '`--fragment-l` and `--fragment-s` may only be provided with '
+                '`BULK` and `SMARTSEQ2` technologies.'
+            )
+
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() == 'SMARTSEQ':
+        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ2', 'BULK'):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
@@ -216,11 +318,12 @@ def parse_count(parser, args, temp_dir='tmp'):
             args.c2,
             args.x,
             args.o,
-            args.fastqs,
+            batch_path or args.fastqs,
             args.w,
             tcc=args.tcc,
             mm=args.mm,
             filter=args.filter,
+            filter_threshold=args.filter_threshold,
             threads=args.t,
             memory=args.m,
             overwrite=args.overwrite,
@@ -230,7 +333,8 @@ def parse_count(parser, args, temp_dir='tmp'):
             report=args.report,
             inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus',
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            strand=args.strand
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -240,6 +344,10 @@ def parse_count(parser, args, temp_dir='tmp'):
 
         # Smart-seq
         if args.x.upper() == 'SMARTSEQ':
+            logger.warning(
+                f'Technology `{args.x}` will be deprecated in the next release. '
+                'Please read the release notes on GitHub for more information. '
+            )
             if args.dry_run:
                 parser.error(f'Technology `{args.x}` does not support dry run.')
 
@@ -256,16 +364,6 @@ def parse_count(parser, args, temp_dir='tmp'):
                     logger.warning(
                         f'Argument `{arg}` is not supported for technology `{args.x}`. This argument will be ignored.'
                     )
-
-            # Check if batch TSV was provided.
-            batch_path = None
-            if len(args.fastqs) == 1:
-                try:
-                    with open_as_text(args.fastqs[0], 'r') as f:
-                        if not f.readline().startswith('@'):
-                            batch_path = args.fastqs[0]
-                except Exception:
-                    pass
 
             cells = {}
             if batch_path:
@@ -326,11 +424,12 @@ def parse_count(parser, args, temp_dir='tmp'):
                 args.g,
                 args.x,
                 args.o,
-                args.fastqs,
+                batch_path or args.fastqs,
                 args.w,
                 tcc=args.tcc,
                 mm=args.mm,
                 filter=args.filter,
+                filter_threshold=args.filter_threshold,
                 kite='kite' in args.workflow,
                 FB='10xFB' in args.workflow,
                 threads=args.t,
@@ -341,7 +440,11 @@ def parse_count(parser, args, temp_dir='tmp'):
                 cellranger=args.cellranger,
                 report=args.report,
                 inspect=not args.no_inspect,
-                temp_dir=temp_dir
+                temp_dir=temp_dir,
+                fragment_l=args.fragment_l,
+                fragment_s=args.fragment_s,
+                paired=args.parity == 'paired',
+                strand=args.strand,
             )
 
 
@@ -623,6 +726,13 @@ def setup_count_args(parser, parent):
         default='4G'
     )
     parser_count.add_argument(
+        '--strand',
+        help='Strandedness (default: see `kb --list`)',
+        type=str,
+        default=None,
+        choices=['unstranded', 'forward', 'reverse']
+    )
+    parser_count.add_argument(
         '--workflow',
         help=(
             'Type of workflow. '
@@ -640,7 +750,10 @@ def setup_count_args(parser, parent):
     count_group = parser_count.add_mutually_exclusive_group()
     count_group.add_argument(
         '--mm',
-        help='Include reads that pseudoalign to multiple genes.',
+        help=(
+            'Include reads that pseudoalign to multiple genes. '
+            'Automatically enabled when generating a TCC matrix.'
+        ),
         action='store_true'
     )
     count_group.add_argument(
@@ -655,6 +768,13 @@ def setup_count_args(parser, parent):
         const='bustools',
         nargs='?',
         choices=['bustools']
+    )
+    parser_count.add_argument(
+        '--filter-threshold',
+        metavar='THRESH',
+        help='Barcode filter threshold (default: auto)',
+        type=int,
+        default=None,
     )
     required_lamanno = parser_count.add_argument_group(
         'required arguments for `lamanno` and `nucleus` workflows'
@@ -714,6 +834,35 @@ def setup_count_args(parser, parent):
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
     )
+
+    optional_bulk = parser_count.add_argument_group(
+        'optional arguments for `BULK` and `SMARTSEQ2` technologies'
+    )
+    optional_bulk.add_argument(
+        '--parity',
+        help=(
+            'Parity of the input files. Choices are `single` for single-end '
+            'and `paired` for paired-end reads.'
+        ),
+        type=str,
+        choices=['single', 'paired'],
+        default=None
+    )
+    optional_bulk.add_argument(
+        '--fragment-l',
+        metavar='L',
+        help='Mean length of fragments. Only for single-end.',
+        type=int,
+        default=None
+    )
+    optional_bulk.add_argument(
+        '--fragment-s',
+        metavar='S',
+        help='Standard deviation of fragment lengths. Only for single-end.',
+        type=int,
+        default=None
+    )
+
     parser_count.add_argument(
         'fastqs',
         help=(

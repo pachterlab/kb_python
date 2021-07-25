@@ -1,0 +1,2 @@
+sample1 tests/fixtures/smartseq3/data.R1.fastq.gz
+sample2 tests/fixtures/smartseq3/data2.R1.fastq.gz
