@@ -21,7 +21,7 @@ from .config import (
     TEMP_DIR,
 )
 from .constants import INFO_FILENAME
-from .count import count, count_smartseq, count_velocity
+from .count import count, count_smartseq, count_smartseq3, count_velocity
 from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
@@ -230,7 +230,7 @@ def parse_count(parser, args, temp_dir='tmp'):
 
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
-        unsupported = ['filter']
+        unsupported = ['filter', 'w']
         for arg in unsupported:
             if getattr(args, arg):
                 parser.error(
@@ -289,6 +289,22 @@ def parse_count(parser, args, temp_dir='tmp'):
                     '`--fragment-l` or `--fragment-s` may not be provided for '
                     'paired-end reads.'
                 )
+    elif args.x.upper() == 'SMARTSEQ3':
+        unsupported = [
+            'filter', 'w', 'parity', 'fragment-l', 'fragment-s', 'report',
+            'cellranger'
+        ]
+        for arg in unsupported:
+            if getattr(args, arg.replace('-', '_')):
+                parser.error(
+                    f'Argument `{arg}` is not supported for technology `{args.x}`.'
+                )
+
+            # Batch file not supported
+            if batch_path:
+                parser.error(
+                    f'Technology {args.x} does not support a batch file.'
+                )
     else:
         # Check unsupported options
         unsupported = ['parity', 'fragment-l', 'fragment-s']
@@ -298,6 +314,10 @@ def parse_count(parser, args, temp_dir='tmp'):
                     f'Argument `{arg}` is not supported for technology `{args.x}`.'
                 )
 
+        # Batch file not supported
+        if batch_path:
+            parser.error(f'Technology {args.x} does not support a batch file.')
+
         if args.fragment_l is not None or args.fragment_s is not None:
             parser.error(
                 '`--fragment-l` and `--fragment-s` may only be provided with '
@@ -306,7 +326,7 @@ def parse_count(parser, args, temp_dir='tmp'):
 
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ2', 'BULK'):
+        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ2', 'BULK', 'SMARTSEQ3'):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
@@ -417,6 +437,23 @@ def parse_count(parser, args, temp_dir='tmp'):
                 loom=args.loom,
                 h5ad=args.h5ad,
                 temp_dir=temp_dir
+            )
+        elif args.x.upper() == 'SMARTSEQ3':
+            count_smartseq3(
+                args.i,
+                args.g,
+                args.o,
+                args.fastqs,
+                tcc=args.tcc,
+                mm=args.mm,
+                temp_dir=temp_dir,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                inspect=not args.no_inspect,
+                strand=args.strand,
             )
         else:
             count(

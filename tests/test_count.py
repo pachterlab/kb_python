@@ -22,6 +22,7 @@ from kb_python.constants import (
     BUS_SC_FILENAME,
     BUS_UNFILTERED_FILENAME,
     BUS_UNFILTERED_SUFFIX,
+    CAPTURE_FILENAME,
     CELLRANGER_DIR,
     CELLRANGER_BARCODES,
     CELLRANGER_GENES,
@@ -37,6 +38,7 @@ from kb_python.constants import (
     FLENS_FILENAME,
     GENES_FILENAME,
     INSPECT_FILENAME,
+    INTERNAL_SUFFIX,
     KALLISTO_INFO_FILENAME,
     KB_INFO_FILENAME,
     REPORT_HTML_FILENAME,
@@ -44,6 +46,7 @@ from kb_python.constants import (
     SAVED_INDEX_FILENAME,
     TCC_PREFIX,
     TXNAMES_FILENAME,
+    UMI_SUFFIX,
     UNFILTERED_COUNTS_DIR,
     UNFILTERED_QUANT_DIR,
     WHITELIST_FILENAME,
@@ -1157,6 +1160,14 @@ class TestCount(TestMixin, TestCase):
         with open(result['genes'], 'r') as f, open(self.cr_genes_path,
                                                    'r') as g:
             self.assertEqual(g.read(), f.read())
+
+    def test_write_smartseq3_capture(self):
+        capture_path = os.path.join(self.temp_dir, 'capture.txt')
+        self.assertEqual(
+            capture_path, count.write_smartseq3_capture(capture_path)
+        )
+        with open(capture_path, 'r') as f:
+            self.assertEqual(('T' * 32) + '\n', f.read())
 
     def test_count_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
@@ -3556,6 +3567,597 @@ class TestCount(TestMixin, TestCase):
                 threads=threads
             )
             filter_with_bustools.assert_not_called()
+
+    def test_count_smartseq3(self):
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
+            mock.patch('kb_python.count.stream_batch') as stream_batch,\
+            mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.write_smartseq3_capture') as write_smartseq3_capture,\
+            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.render_report'),\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
+            counts_internal_dir = os.path.join(
+                out_dir, f'{UNFILTERED_COUNTS_DIR}{INTERNAL_SUFFIX}'
+            )
+            counts_umi_dir = os.path.join(
+                out_dir, f'{UNFILTERED_COUNTS_DIR}{UMI_SUFFIX}'
+            )
+            counts_internal_prefix = os.path.join(
+                counts_internal_dir, COUNTS_PREFIX
+            )
+            counts_umi_prefix = os.path.join(counts_umi_dir, COUNTS_PREFIX)
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+            flens_path = os.path.join(out_dir, FLENS_FILENAME)
+            saved_index_path = os.path.join(out_dir, SAVED_INDEX_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
+            capture_path = os.path.join(out_dir, CAPTURE_FILENAME)
+            bus_internal_path = os.path.join(
+                out_dir, f'output{INTERNAL_SUFFIX}.bus'
+            )
+            bus_umi_path = os.path.join(out_dir, f'output{UMI_SUFFIX}.bus')
+            fastqs = [
+                self.smartseq3_1_i1_fastq_path, self.smartseq3_1_i2_fastq_path,
+                self.smartseq3_1_R1_fastq_path, self.smartseq3_1_R2_fastq_path,
+                self.smartseq3_2_i1_fastq_path, self.smartseq3_2_i2_fastq_path,
+                self.smartseq3_2_R1_fastq_path, self.smartseq3_2_R2_fastq_path
+            ]
+            stream_fastqs.return_value = fastqs
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'info': info_path,
+                'flens': flens_path,
+                'saved_index': saved_index_path
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            copy_or_create_whitelist.return_value = self.whitelist_path
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            write_smartseq3_capture.return_value = capture_path
+            bustools_capture.side_effect = [{
+                'bus': bus_internal_path
+            }, {
+                'bus': bus_umi_path
+            }]
+            bustools_count.side_effect = [{
+                'mtx': f'{counts_internal_prefix}.mtx',
+                'genes': f'{counts_internal_prefix}.genes.txt',
+                'barcodes': f'{counts_internal_prefix}.barcodes.txt',
+            }, {
+                'mtx': f'{counts_umi_prefix}.mtx',
+                'genes': f'{counts_umi_prefix}.genes.txt',
+                'barcodes': f'{counts_umi_prefix}.barcodes.txt',
+            }]
+            convert_matrix.side_effect = [{
+                'h5ad': os.path.join(counts_internal_dir, 'adata.h5ad')
+            }, {
+                'h5ad': os.path.join(counts_umi_dir, 'adata.h5ad')
+            }]
+            STATS.save.return_value = 'stats'
+
+            self.assertEqual({
+                'stats': 'stats',
+                'unfiltered': {
+                    'bus':
+                        bus_path,
+                    'ecmap':
+                        ecmap_path,
+                    'txnames':
+                        txnames_path,
+                    'info':
+                        info_path,
+                    'flens':
+                        flens_path,
+                    'saved_index':
+                        saved_index_path,
+                    'whitelist':
+                        self.whitelist_path,
+                    'inspect':
+                        inspect_path,
+                    'bus_scs':
+                        bus_scs_path,
+                    'bus_internal':
+                        bus_internal_path,
+                    'bus_umi':
+                        bus_umi_path,
+                    'mtx_internal':
+                        f'{counts_internal_prefix}.mtx',
+                    'genes_internal':
+                        f'{counts_internal_prefix}.genes.txt',
+                    'barcodes_internal':
+                        f'{counts_internal_prefix}.barcodes.txt',
+                    'mtx_umi':
+                        f'{counts_umi_prefix}.mtx',
+                    'genes_umi':
+                        f'{counts_umi_prefix}.genes.txt',
+                    'barcodes_umi':
+                        f'{counts_umi_prefix}.barcodes.txt',
+                    'h5ad_internal':
+                        os.path.join(counts_internal_dir, 'adata.h5ad'),
+                    'h5ad_umi':
+                        os.path.join(counts_umi_dir, 'adata.h5ad'),
+                }
+            },
+                             count.count_smartseq3(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 out_dir,
+                                 fastqs,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 h5ad=True
+                             ))
+            stream_fastqs.assert_called_once_with(fastqs, temp_dir=temp_dir)
+            kallisto_bus.assert_called_once_with(
+                fastqs,
+                self.index_path,
+                'SMARTSEQ3',
+                out_dir,
+                threads=threads,
+                paired=True,
+                strand=None
+            )
+            self.assertEqual(bustools_sort.call_count, 2)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path,
+                inspect_path,
+                whitelist_path=self.whitelist_path,
+                ecmap_path=ecmap_path
+            )
+            copy_or_create_whitelist.assert_called_once_with(
+                'SMARTSEQ3', bus_s_path, out_dir
+            )
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            self.assertEqual(2, bustools_capture.call_count)
+            bustools_capture.assert_has_calls([
+                call(
+                    bus_scs_path,
+                    bus_internal_path,
+                    capture_path,
+                    capture_type='umis',
+                    complement=False
+                ),
+                call(
+                    bus_scs_path,
+                    bus_umi_path,
+                    capture_path,
+                    capture_type='umis',
+                    complement=True
+                )
+            ])
+            self.assertEqual(2, bustools_count.call_count)
+            bustools_count.assert_has_calls([
+                call(
+                    bus_internal_path,
+                    counts_internal_prefix,
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False,
+                    mm=False,
+                    cm=True,
+                    umi_gene=False
+                ),
+                call(
+                    bus_umi_path,
+                    counts_umi_prefix,
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=False,
+                    mm=False,
+                    cm=False,
+                    umi_gene=True
+                ),
+            ])
+            self.assertEqual(2, convert_matrix.call_count)
+            convert_matrix.assert_has_calls([
+                call(
+                    counts_internal_dir,
+                    f'{counts_internal_prefix}.mtx',
+                    f'{counts_internal_prefix}.barcodes.txt',
+                    genes_path=f'{counts_internal_prefix}.genes.txt',
+                    t2g_path=self.t2g_path,
+                    ec_path=None,
+                    txnames_path=txnames_path,
+                    name='gene',
+                    loom=False,
+                    h5ad=True,
+                    tcc=False,
+                    threads=threads
+                ),
+                call(
+                    counts_umi_dir,
+                    f'{counts_umi_prefix}.mtx',
+                    f'{counts_umi_prefix}.barcodes.txt',
+                    genes_path=f'{counts_umi_prefix}.genes.txt',
+                    t2g_path=self.t2g_path,
+                    ec_path=None,
+                    txnames_path=txnames_path,
+                    name='gene',
+                    loom=False,
+                    h5ad=True,
+                    tcc=False,
+                    threads=threads
+                ),
+            ])
+            filter_with_bustools.assert_not_called()
+            stream_batch.assert_not_called()
+
+    def test_count_smartseq3_tcc(self):
+        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
+            mock.patch('kb_python.count.stream_batch') as stream_batch,\
+            mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
+            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
+            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
+            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
+            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
+            mock.patch('kb_python.count.write_smartseq3_capture') as write_smartseq3_capture,\
+            mock.patch('kb_python.count.bustools_capture') as bustools_capture,\
+            mock.patch('kb_python.count.bustools_count') as bustools_count,\
+            mock.patch('kb_python.count.kallisto_quant_tcc') as kallisto_quant_tcc,\
+            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
+            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
+            mock.patch('kb_python.count.STATS') as STATS,\
+            mock.patch('kb_python.count.render_report'),\
+            mock.patch('kb_python.count.import_matrix_as_anndata'):
+            out_dir = self.temp_dir
+            temp_dir = self.temp_dir
+            counts_internal_dir = os.path.join(
+                out_dir, f'{UNFILTERED_COUNTS_DIR}{INTERNAL_SUFFIX}'
+            )
+            counts_umi_dir = os.path.join(
+                out_dir, f'{UNFILTERED_COUNTS_DIR}{UMI_SUFFIX}'
+            )
+            counts_internal_prefix = os.path.join(
+                counts_internal_dir, TCC_PREFIX
+            )
+            counts_umi_prefix = os.path.join(counts_umi_dir, TCC_PREFIX)
+            quant_internal_dir = os.path.join(
+                out_dir, f'{UNFILTERED_QUANT_DIR}{INTERNAL_SUFFIX}'
+            )
+            quant_umi_dir = os.path.join(
+                out_dir, f'{UNFILTERED_QUANT_DIR}{UMI_SUFFIX}'
+            )
+            threads = 99999
+            memory = 'TEST'
+            bus_path = os.path.join(out_dir, BUS_FILENAME)
+            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
+            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
+            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
+            flens_path = os.path.join(out_dir, FLENS_FILENAME)
+            saved_index_path = os.path.join(out_dir, SAVED_INDEX_FILENAME)
+            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
+            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
+            capture_path = os.path.join(out_dir, CAPTURE_FILENAME)
+            bus_internal_path = os.path.join(
+                out_dir, f'output{INTERNAL_SUFFIX}.bus'
+            )
+            bus_umi_path = os.path.join(out_dir, f'output{UMI_SUFFIX}.bus')
+            fastqs = [
+                self.smartseq3_1_i1_fastq_path, self.smartseq3_1_i2_fastq_path,
+                self.smartseq3_1_R1_fastq_path, self.smartseq3_1_R2_fastq_path,
+                self.smartseq3_2_i1_fastq_path, self.smartseq3_2_i2_fastq_path,
+                self.smartseq3_2_R1_fastq_path, self.smartseq3_2_R2_fastq_path
+            ]
+            stream_fastqs.return_value = fastqs
+            kallisto_bus.return_value = {
+                'bus': bus_path,
+                'ecmap': ecmap_path,
+                'txnames': txnames_path,
+                'info': info_path,
+                'flens': flens_path,
+                'saved_index': saved_index_path
+            }
+            bustools_sort.side_effect = [{
+                'bus': bus_s_path
+            }, {
+                'bus': bus_scs_path
+            }]
+            bustools_inspect.return_value = {'inspect': inspect_path}
+            copy_or_create_whitelist.return_value = self.whitelist_path
+            bustools_correct.return_value = {'bus': bus_sc_path}
+            write_smartseq3_capture.return_value = capture_path
+            bustools_capture.side_effect = [{
+                'bus': bus_internal_path
+            }, {
+                'bus': bus_umi_path
+            }]
+            bustools_count.side_effect = [{
+                'mtx': f'{counts_internal_prefix}.mtx',
+                'ec': f'{counts_internal_prefix}.ec.txt',
+                'barcodes': f'{counts_internal_prefix}.barcodes.txt',
+            }, {
+                'mtx': f'{counts_umi_prefix}.mtx',
+                'ec': f'{counts_umi_prefix}.ec.txt',
+                'barcodes': f'{counts_umi_prefix}.barcodes.txt',
+            }]
+            kallisto_quant_tcc.side_effect = [{
+                'genes':
+                    os.path.join(quant_internal_dir, GENES_FILENAME),
+                'gene_mtx':
+                    os.path.join(quant_internal_dir, ABUNDANCE_GENE_FILENAME),
+                'gene_tpm_mtx':
+                    os.path.join(
+                        quant_internal_dir, ABUNDANCE_GENE_TPM_FILENAME
+                    ),
+                'mtx':
+                    os.path.join(quant_internal_dir, ABUNDANCE_FILENAME),
+                'tpm_mtx':
+                    os.path.join(quant_internal_dir, ABUNDANCE_TPM_FILENAME),
+                'fld':
+                    os.path.join(quant_internal_dir, FLD_FILENAME),
+                'txnames':
+                    os.path.join(quant_internal_dir, TXNAMES_FILENAME),
+            }, {
+                'genes':
+                    os.path.join(quant_umi_dir, GENES_FILENAME),
+                'gene_mtx':
+                    os.path.join(quant_umi_dir, ABUNDANCE_GENE_FILENAME),
+                'gene_tpm_mtx':
+                    os.path.join(quant_umi_dir, ABUNDANCE_GENE_TPM_FILENAME),
+                'mtx':
+                    os.path.join(quant_umi_dir, ABUNDANCE_FILENAME),
+                'tpm_mtx':
+                    os.path.join(quant_umi_dir, ABUNDANCE_TPM_FILENAME),
+                'fld':
+                    os.path.join(quant_umi_dir, FLD_FILENAME),
+                'txnames':
+                    os.path.join(quant_umi_dir, TXNAMES_FILENAME),
+            }]
+            convert_matrix.side_effect = [{
+                'h5ad': os.path.join(counts_internal_dir, 'adata.h5ad')
+            }, {
+                'h5ad': os.path.join(counts_umi_dir, 'adata.h5ad')
+            }]
+            STATS.save.return_value = 'stats'
+
+            self.assertEqual({
+                'stats': 'stats',
+                'unfiltered': {
+                    'bus':
+                        bus_path,
+                    'ecmap':
+                        ecmap_path,
+                    'txnames':
+                        txnames_path,
+                    'info':
+                        info_path,
+                    'flens':
+                        flens_path,
+                    'saved_index':
+                        saved_index_path,
+                    'whitelist':
+                        self.whitelist_path,
+                    'inspect':
+                        inspect_path,
+                    'bus_scs':
+                        bus_scs_path,
+                    'bus_internal':
+                        bus_internal_path,
+                    'bus_umi':
+                        bus_umi_path,
+                    'ec_internal':
+                        f'{counts_internal_prefix}.ec.txt',
+                    'barcodes_internal':
+                        f'{counts_internal_prefix}.barcodes.txt',
+                    'ec_umi':
+                        f'{counts_umi_prefix}.ec.txt',
+                    'barcodes_umi':
+                        f'{counts_umi_prefix}.barcodes.txt',
+                    'h5ad_internal':
+                        os.path.join(counts_internal_dir, 'adata.h5ad'),
+                    'h5ad_umi':
+                        os.path.join(counts_umi_dir, 'adata.h5ad'),
+                    'genes_internal':
+                        os.path.join(quant_internal_dir, GENES_FILENAME),
+                    'gene_mtx_internal':
+                        os.path.join(
+                            quant_internal_dir, ABUNDANCE_GENE_FILENAME
+                        ),
+                    'gene_tpm_mtx_internal':
+                        os.path.join(
+                            quant_internal_dir, ABUNDANCE_GENE_TPM_FILENAME
+                        ),
+                    'mtx_internal':
+                        os.path.join(quant_internal_dir, ABUNDANCE_FILENAME),
+                    'tpm_mtx_internal':
+                        os.path.join(
+                            quant_internal_dir, ABUNDANCE_TPM_FILENAME
+                        ),
+                    'fld_internal':
+                        os.path.join(quant_internal_dir, FLD_FILENAME),
+                    'txnames_internal':
+                        os.path.join(quant_internal_dir, TXNAMES_FILENAME),
+                    'genes_umi':
+                        os.path.join(quant_umi_dir, GENES_FILENAME),
+                    'gene_mtx_umi':
+                        os.path.join(quant_umi_dir, ABUNDANCE_GENE_FILENAME),
+                    'gene_tpm_mtx_umi':
+                        os.path.join(
+                            quant_umi_dir, ABUNDANCE_GENE_TPM_FILENAME
+                        ),
+                    'mtx_umi':
+                        os.path.join(quant_umi_dir, ABUNDANCE_FILENAME),
+                    'tpm_mtx_umi':
+                        os.path.join(quant_umi_dir, ABUNDANCE_TPM_FILENAME),
+                    'fld_umi':
+                        os.path.join(quant_umi_dir, FLD_FILENAME),
+                    'txnames_umi':
+                        os.path.join(quant_umi_dir, TXNAMES_FILENAME),
+                }
+            },
+                             count.count_smartseq3(
+                                 self.index_path,
+                                 self.t2g_path,
+                                 out_dir,
+                                 fastqs,
+                                 temp_dir=temp_dir,
+                                 threads=threads,
+                                 memory=memory,
+                                 h5ad=True,
+                                 tcc=True
+                             ))
+            stream_fastqs.assert_called_once_with(fastqs, temp_dir=temp_dir)
+            kallisto_bus.assert_called_once_with(
+                fastqs,
+                self.index_path,
+                'SMARTSEQ3',
+                out_dir,
+                threads=threads,
+                paired=True,
+                strand=None
+            )
+            self.assertEqual(bustools_sort.call_count, 2)
+            bustools_sort.assert_has_calls([
+                call(
+                    bus_path,
+                    bus_s_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                ),
+                call(
+                    bus_sc_path,
+                    bus_scs_path,
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
+                )
+            ])
+            bustools_inspect.assert_called_once_with(
+                bus_s_path,
+                inspect_path,
+                whitelist_path=self.whitelist_path,
+                ecmap_path=ecmap_path
+            )
+            copy_or_create_whitelist.assert_called_once_with(
+                'SMARTSEQ3', bus_s_path, out_dir
+            )
+            bustools_correct.assert_called_once_with(
+                bus_s_path, bus_sc_path, self.whitelist_path
+            )
+            self.assertEqual(2, bustools_capture.call_count)
+            bustools_capture.assert_has_calls([
+                call(
+                    bus_scs_path,
+                    bus_internal_path,
+                    capture_path,
+                    capture_type='umis',
+                    complement=False
+                ),
+                call(
+                    bus_scs_path,
+                    bus_umi_path,
+                    capture_path,
+                    capture_type='umis',
+                    complement=True
+                )
+            ])
+            self.assertEqual(2, bustools_count.call_count)
+            bustools_count.assert_has_calls([
+                call(
+                    bus_internal_path,
+                    counts_internal_prefix,
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=True,
+                    mm=True,
+                    cm=True,
+                    umi_gene=False
+                ),
+                call(
+                    bus_umi_path,
+                    counts_umi_prefix,
+                    self.t2g_path,
+                    ecmap_path,
+                    txnames_path,
+                    tcc=True,
+                    mm=True,
+                    cm=False,
+                    umi_gene=True
+                ),
+            ])
+            self.assertEqual(2, convert_matrix.call_count)
+            convert_matrix.assert_has_calls([
+                call(
+                    quant_internal_dir,
+                    os.path.join(quant_internal_dir, ABUNDANCE_FILENAME),
+                    f'{counts_internal_prefix}.barcodes.txt',
+                    genes_path=os.path.join(
+                        quant_internal_dir, TXNAMES_FILENAME
+                    ),
+                    t2g_path=self.t2g_path,
+                    ec_path=f'{counts_internal_prefix}.ec.txt',
+                    txnames_path=txnames_path,
+                    name='transcript',
+                    loom=False,
+                    h5ad=True,
+                    tcc=False,
+                    threads=threads
+                ),
+                call(
+                    quant_umi_dir,
+                    os.path.join(quant_umi_dir, ABUNDANCE_FILENAME),
+                    f'{counts_umi_prefix}.barcodes.txt',
+                    genes_path=os.path.join(quant_umi_dir, TXNAMES_FILENAME),
+                    t2g_path=self.t2g_path,
+                    ec_path=f'{counts_umi_prefix}.ec.txt',
+                    txnames_path=txnames_path,
+                    name='transcript',
+                    loom=False,
+                    h5ad=True,
+                    tcc=False,
+                    threads=threads
+                ),
+            ])
+            filter_with_bustools.assert_not_called()
+            stream_batch.assert_not_called()
 
     def test_count_strand(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\

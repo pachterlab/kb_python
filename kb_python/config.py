@@ -86,6 +86,9 @@ TECHNOLOGIES = [
         'SMARTSEQ2', 'Smart-seq2', ngs.chemistry.get_chemistry('smartseq2')
     ),
     Technology('BULK', 'Bulk', ngs.chemistry.get_chemistry('smartseq2')),
+    Technology(
+        'SMARTSEQ3', 'Smart-seq3', ngs.chemistry.get_chemistry('smartseq3')
+    ),
 ]
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 

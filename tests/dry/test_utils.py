@@ -44,7 +44,7 @@ class TestUtils(TestCase):
     def test_stream_file(self):
         with mock.patch('kb_python.dry.utils.print') as p,\
             mock.patch('kb_python.dry.utils.PLATFORM', 'darwin'):
-            self.assertIsNone(utils.stream_file('url', 'path'))
+            self.assertEqual('path', utils.stream_file('url', 'path'))
             p.assert_called()
 
     def test_stream_file_windows(self):
@@ -57,13 +57,17 @@ class TestUtils(TestCase):
     def test_move_file(self):
         with mock.patch('kb_python.dry.utils.print') as p,\
             mock.patch('kb_python.dry.utils.PLATFORM', 'darwin'):
-            utils.move_file('source', 'destination')
+            self.assertEqual(
+                'destination', utils.move_file('source', 'destination')
+            )
             p.assert_called()
 
     def test_move_file_windows(self):
         with mock.patch('kb_python.dry.utils.print') as p,\
             mock.patch('kb_python.dry.utils.PLATFORM', 'windows'):
-            utils.move_file('source', 'destination')
+            self.assertEqual(
+                'destination', utils.move_file('source', 'destination')
+            )
             p.assert_called()
 
     def test_copy_whitelist(self):

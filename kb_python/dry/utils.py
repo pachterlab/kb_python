@@ -48,6 +48,7 @@ def stream_file(url, path):
     else:
         print('mkfifo {}'.format(path))
         print('wget -bq {} -O {}'.format(url, path))
+        return path
 
 
 def move_file(source, destination):
@@ -57,6 +58,7 @@ def move_file(source, destination):
         print(f'move {source} {destination}')
     else:
         print(f'mv {source} {destination}')
+    return destination
 
 
 def copy_whitelist(technology, out_dir):

@@ -59,6 +59,11 @@ GENES_FILENAME = 'genes.txt'
 UNFILTERED_QUANT_DIR = 'quant_unfiltered'
 SAVED_INDEX_FILENAME = 'index.saved'
 
+# Smartseq3
+INTERNAL_SUFFIX = '_internal'
+UMI_SUFFIX = '_umi'
+CAPTURE_FILENAME = 'capture_nonUMI.txt'
+
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of
 # transformation.
