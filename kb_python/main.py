@@ -2,12 +2,14 @@ import argparse
 import glob
 import logging
 import os
+import shutil
 import sys
 import textwrap
 import warnings
 
 from . import __version__
 from .config import (
+    COMPILED_DIR,
     get_bustools_binary_path,
     get_kallisto_binary_path,
     is_dry,
@@ -19,7 +21,9 @@ from .config import (
     set_kallisto_binary_path,
     TECHNOLOGIES,
     TEMP_DIR,
+    UnsupportedOSException,
 )
+from .compile import compile
 from .constants import INFO_FILENAME
 from .count import count, count_smartseq, count_smartseq3, count_velocity
 from .logging import logger
@@ -33,16 +37,22 @@ from .utils import (
 )
 
 
+def get_binary_info():
+    """Get information on the binaries that will be used for commands.
+    """
+    kallisto_version = '.'.join(str(i) for i in get_kallisto_version())
+    bustools_version = '.'.join(str(i) for i in get_bustools_version())
+    return (
+        f'kallisto: {kallisto_version} ({get_kallisto_binary_path()})\n'
+        f'bustools: {bustools_version} ({get_bustools_binary_path()})'
+    )
+
+
 def display_info():
     """Displays kb, kallisto and bustools version + citation information, along
     with a brief description and examples.
     """
-    kallisto_version = '.'.join(str(i) for i in get_kallisto_version())
-    bustools_version = '.'.join(str(i) for i in get_bustools_version())
-    info = '''kb_python {}
-    kallisto: {}
-    bustools: {}
-    '''.format(__version__, kallisto_version, bustools_version)
+    info = f'kb_python {__version__}\n{get_binary_info()}'
     with open(os.path.join(PACKAGE_PATH, INFO_FILENAME), 'r') as f:
         print(
             '{}\n{}'.format(
@@ -96,6 +106,46 @@ def display_technologies():
             print(col.ljust(l + 4), end='')
         print()
     sys.exit(1)
+
+
+def parse_compile(parser, args, temp_dir='tmp'):
+    """Parser for the `compile` command.
+
+    :param args: Command-line arguments dictionary, as parsed by argparse
+    :type args: dict
+    """
+    # target must be all when --view is used
+    if args.view and args.target != 'all':
+        parser.error('`target` must be `all` when `--view` is provided.')
+
+    # target must not be all when --url is provided
+    if args.url and args.target == 'all':
+        parser.error('`target` must not be `all` when `--url` is provided.')
+
+    # --view or --remove may not be specified with -o
+    if args.o and (args.view or args.remove):
+        parser.error('`-o` may not be used with `--view` or `--remove`')
+
+    if args.remove:
+        if args.target in ('kallisto', 'all'):
+            shutil.rmtree(
+                os.path.join(COMPILED_DIR, 'kallisto'), ignore_errors=True
+            )
+        if args.target in ('bustools', 'all'):
+            shutil.rmtree(
+                os.path.join(COMPILED_DIR, 'bustools'), ignore_errors=True
+            )
+    elif args.view:
+        print(get_binary_info())
+        sys.exit(1)
+    else:
+        compile(
+            args.target,
+            out_dir=args.o,
+            url=args.url,
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
+        )
 
 
 def parse_ref(parser, args, temp_dir='tmp'):
@@ -486,6 +536,7 @@ def parse_count(parser, args, temp_dir='tmp'):
 
 
 COMMAND_TO_FUNCTION = {
+    'compile': parse_compile,
     'ref': parse_ref,
     'count': parse_count,
 }
@@ -512,6 +563,83 @@ def setup_info_args(parser, parent):
     return parser_info
 
 
+def setup_compile_args(parser, parent):
+    """Helper function to set up a subparser for the `compile` command.
+
+    :param parser: argparse parser to add the `compile` command to
+    :type args: argparse.ArgumentParser
+    :param parent: argparse parser parent of the newly added subcommand.
+                   used to inherit shared commands/flags
+    :type args: argparse.ArgumentParser
+    :return: the newly added parser
+    :rtype: argparse.ArgumentParser
+    """
+    parser_compile = parser.add_parser(
+        'compile',
+        description='Compile `kallisto` and `bustools` binaries from source',
+        help='Compile `kallisto` and `bustools` binaries from source',
+        parents=[parent],
+        add_help=False,
+    )
+
+    parser_compile.add_argument(
+        'target',
+        metavar='target',
+        help=(
+            'Which binaries to compile. If not provided, both `kallisto` and '
+            '`bustools` binaries will be compiled from source. (default: all)'
+        ),
+        choices=['kallisto', 'bustools', 'all'],
+        default='all',
+        nargs='?',
+    )
+    compile_group = parser_compile.add_mutually_exclusive_group()
+    compile_group.add_argument(
+        '--view',
+        help=(
+            'See information about the current binaries, which are what will be '
+            'used for `ref` and `count`.'
+        ),
+        action='store_true',
+    )
+    compile_group.add_argument(
+        '--remove',
+        help=(
+            'Remove the existing compiled binaries. Binaries that are provided '
+            'with kb are never removed.'
+        ),
+        action='store_true',
+    )
+    compile_group.add_argument(
+        '--overwrite',
+        help='Overwrite the existing compiled binaries, if they exist.',
+        action='store_true',
+    )
+
+    parser_compile.add_argument(
+        '-o',
+        metavar='OUT',
+        help=(
+            'Save the compiled binaries to a different directory. Note that if this '
+            'option is specified, the binaries will have to be manually specified '
+            'with `--kallisto` or `--bustools` when running `ref` or `count`.'
+        ),
+        type=str,
+        default=None,
+    )
+    parser_compile.add_argument(
+        '--url',
+        metavar='URL',
+        help=(
+            'Use a custom URL to a ZIP or tarball file containing the source code '
+            'of the specified binary. May only be used with a single `target`.'
+        ),
+        type=str
+    )
+
+    return parser_compile
+
+
 def setup_ref_args(parser, parent):
     """Helper function to set up a subparser for the `ref` command.
 
@@ -523,6 +651,9 @@ def setup_ref_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
     workflow = 'standard'
     for i, arg in enumerate(sys.argv):
         if arg.startswith('--workflow'):
@@ -648,6 +779,18 @@ def setup_ref_args(parser, parent):
         action='store_true'
     )
     parser_ref.add_argument(
+        '--kallisto',
+        help=f'Path to kallisto binary to use (default: {kallisto_path})',
+        type=str,
+        default=kallisto_path
+    )
+    parser_ref.add_argument(
+        '--bustools',
+        help=f'Path to bustools binary to use (default: {bustools_path})',
+        type=str,
+        default=bustools_path
+    )
+    parser_ref.add_argument(
         'fasta',
         help='Genomic FASTA file(s), comma-delimited',
         type=str,
@@ -688,6 +831,9 @@ def setup_count_args(parser, parent):
     :return: the newly added parser
     :rtype: argparse.ArgumentParser
     """
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
     workflow = 'standard'
     for i, arg in enumerate(sys.argv):
         if arg.startswith('--workflow'):
@@ -855,6 +1001,7 @@ def setup_count_args(parser, parent):
         help='Convert count matrices to cellranger-compatible format',
         action='store_true'
     )
+
     report_group = parser_count.add_mutually_exclusive_group()
     report_group.add_argument(
         '--report',
@@ -867,6 +1014,18 @@ def setup_count_args(parser, parent):
     )
     report_group.add_argument(
         '--no-inspect', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--kallisto',
+        help=f'Path to kallisto binary to use (default: {kallisto_path})',
+        type=str,
+        default=kallisto_path
+    )
+    parser_count.add_argument(
+        '--bustools',
+        help=f'Path to bustools binary to use (default: {bustools_path})',
+        type=str,
+        default=bustools_path
     )
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
@@ -918,10 +1077,6 @@ def setup_count_args(parser, parent):
 def main():
     """Command-line entrypoint.
     """
-    # Get prepackaged kallisto and bustools paths.
-    kallisto_path = get_kallisto_binary_path()
-    bustools_path = get_bustools_binary_path()
-
     # Main parser
     parser = argparse.ArgumentParser(
         description='kb_python {}'.format(__version__)
@@ -953,25 +1108,15 @@ def main():
     parent.add_argument(
         '--verbose', help='Print debugging information', action='store_true'
     )
-    parent.add_argument(
-        '--kallisto',
-        help=f'Path to kallisto binary to use (default: {kallisto_path})',
-        type=str,
-        default=kallisto_path
-    )
-    parent.add_argument(
-        '--bustools',
-        help=f'Path to bustools binary to use (default: {bustools_path})',
-        type=str,
-        default=bustools_path
-    )
 
     # Command parsers
     setup_info_args(subparsers, argparse.ArgumentParser(add_help=False))
+    parser_compile = setup_compile_args(subparsers, parent)
     parser_ref = setup_ref_args(subparsers, parent)
     parser_count = setup_count_args(subparsers, parent)
 
     command_to_parser = {
+        'compile': parser_compile,
         'ref': parser_ref,
         'count': parser_count,
     }
@@ -1017,14 +1162,34 @@ def main():
     logger.debug('Printing verbose output')
 
     # Set binary paths
-    set_kallisto_binary_path(args.kallisto)
-    set_bustools_binary_path(args.bustools)
+    if args.command in ('ref', 'count'):
+        if args.kallisto:
+            set_kallisto_binary_path(args.kallisto)
+        if args.bustools:
+            set_bustools_binary_path(args.bustools)
 
-    logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
-    logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
+        # Check
+        kallisto_path = get_kallisto_binary_path()
+        if not kallisto_path:
+            raise UnsupportedOSException(
+                'Failed to find compatible kallisto binary. '
+                'Provide a compatible binary with the `--kallisto` option or '
+                'run `kb compile`.'
+            )
+        bustools_path = get_bustools_binary_path()
+        if not bustools_path:
+            raise UnsupportedOSException(
+                'Failed to find compatible bustools binary. '
+                'Provide a compatible binary with the `--bustools` option or '
+                'run `kb compile`.'
+            )
+
+        logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
+        logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
 
     temp_dir = args.tmp or (
-        os.path.join(args.o, TEMP_DIR) if 'o' in args else TEMP_DIR
+        os.path.join(args.o, TEMP_DIR)
+        if 'o' in args and args.o is not None else TEMP_DIR
     )
     # Check if temp_dir exists and exit if it does.
     # This is so that kb doesn't accidently use an existing directory and

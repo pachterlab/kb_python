@@ -1,4 +1,5 @@
 import concurrent.futures
+import functools
 import logging
 import os
 import re
@@ -579,3 +580,21 @@ def sum_anndatas(adata_spliced, adata_unspliced):
         obs=df_obs,
         var=df_var
     )
+
+
+def restore_cwd(func):
+    """Function decorator to decorate functions that change the current working
+    directory. When such a function is decorated with this function, the
+    current working directory is restored to its previous state when the
+    function exits.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        old_cwd = os.path.abspath(os.getcwd())
+        try:
+            return func(*args, **kwargs)
+        finally:
+            os.chdir(old_cwd)
+
+    return wrapper

@@ -2,16 +2,26 @@ import os
 import platform
 import shutil
 from collections import namedtuple
+from urllib.parse import urljoin
 
 import ngs_tools as ngs
 
 PACKAGE_PATH = os.path.abspath(os.path.dirname(__file__))
 PLATFORM = platform.system().lower()
-BINS_DIR = 'bins'
+BINS_DIR = os.path.join(PACKAGE_PATH, 'bins')
+COMPILED_DIR = os.path.join(BINS_DIR, 'compiled')
 
 TEMP_DIR = 'tmp'
 DRY = False
 VALIDATE = True
+
+GITHUB_API_URL = 'https://api.github.com'
+KALLISTO_REPO_URL = urljoin(GITHUB_API_URL, 'repos/pachterlab/kallisto/')
+BUSTOOLS_REPO_URL = urljoin(GITHUB_API_URL, 'repos/BUStools/bustools/')
+KALLISTO_RELEASES_URL = urljoin(KALLISTO_REPO_URL, 'releases')
+BUSTOOLS_RELEASES_URL = urljoin(BUSTOOLS_REPO_URL, 'releases')
+KALLISTO_TARBALL_URL = urljoin(KALLISTO_REPO_URL, 'tarball/')
+BUSTOOLS_TARBALL_URL = urljoin(BUSTOOLS_REPO_URL, 'tarball/')
 
 
 def get_provided_kallisto_path():
@@ -21,9 +31,7 @@ def get_provided_kallisto_path():
     :rtype: str
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
-    )
+    path = os.path.join(BINS_DIR, PLATFORM, 'kallisto', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
@@ -36,9 +44,33 @@ def get_provided_bustools_path():
     :rtype: str
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
-    )
+    path = os.path.join(BINS_DIR, PLATFORM, 'bustools', bin_filename)
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+def get_compiled_kallisto_path():
+    """Finds platform-dependent kallisto binary compiled with `compile`.
+
+    :return: path to the binary, `None` if not found
+    :rtype: str
+    """
+    bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
+    path = os.path.join(COMPILED_DIR, 'kallisto', bin_filename)
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+def get_compiled_bustools_path():
+    """Finds platform-dependent bustools binary compiled with `compile`.
+
+    :return: path to the binary, `None` if not found
+    :rtype: str
+    """
+    bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
+    path = os.path.join(COMPILED_DIR, 'bustools', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
@@ -47,8 +79,8 @@ def get_provided_bustools_path():
 # Binary paths. These should hold the full path to the binaries that should
 # be called throughout the execution of the program. Therefore, this
 # usually needs to be set only once. Defaults to provided binaries.
-KALLISTO_PATH = get_provided_kallisto_path()
-BUSTOOLS_PATH = get_provided_bustools_path()
+KALLISTO_PATH = get_compiled_kallisto_path() or get_provided_kallisto_path()
+BUSTOOLS_PATH = get_compiled_bustools_path() or get_provided_bustools_path()
 
 # Technology to file position mapping
 Technology = namedtuple('Technology', ['name', 'description', 'chemistry'])

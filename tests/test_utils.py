@@ -11,6 +11,13 @@ from kb_python.config import UnsupportedOSException
 from tests.mixins import TestMixin
 
 
+@utils.restore_cwd
+def change_cwd_func(temp_dir):
+    path = os.path.join(temp_dir, 'test')
+    os.makedirs(path)
+    os.chdir(path)
+
+
 class TestUtils(TestMixin, TestCase):
 
     def test_update_filename(self):
@@ -218,3 +225,8 @@ class TestUtils(TestMixin, TestCase):
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
+
+    def test_restore_cwd(self):
+        cwd = os.path.abspath(os.getcwd())
+        change_cwd_func(self.temp_dir)
+        self.assertEqual(cwd, os.path.abspath(os.getcwd()))
