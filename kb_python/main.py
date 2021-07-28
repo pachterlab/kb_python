@@ -166,6 +166,22 @@ def parse_ref(parser, args, temp_dir='tmp'):
             'There must be the same number of FASTAs as there are GTFs.'
         )
 
+    # Parse include/exclude KEY:VALUE pairs
+    include = []
+    exclude = []
+    if args.include_attribute:
+        for kv in args.include_attribute:
+            key, value = kv.split(':')
+            if kv.count(':') != 1 or not key or not value:
+                parser.error(f'Malformed KEY:VALUE pair `{kv}`')
+            include.append({key: value})
+    if args.exclude_attribute:
+        for kv in args.exclude_attribute:
+            key, value = kv.split(':')
+            if kv.count(':') != 1 or not key or not value:
+                parser.error(f'Malformed KEY:VALUE pair `{kv}`')
+            exclude.append({key: value})
+
     if args.d is not None:
         # Options that are files.
         options = ['i', 'g', 'c1', 'c2']
@@ -191,6 +207,8 @@ def parse_ref(parser, args, temp_dir='tmp'):
             n=args.n,
             k=args.k,
             flank=args.flank,
+            include=include,
+            exclude=exclude,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -204,6 +222,12 @@ def parse_ref(parser, args, temp_dir='tmp'):
                 )
 
         if args.workflow == 'kite':
+            if args.include_attribute or args.exclude_attribute:
+                parser.error(
+                    '`--include-attribute` or `--exclude-attribute` may not be used '
+                    f'for workflow `{args.workflow}`'
+                )
+
             ref_kite(
                 args.feature,
                 args.f1,
@@ -224,6 +248,8 @@ def parse_ref(parser, args, temp_dir='tmp'):
                 args.g,
                 n=args.n,
                 k=args.k,
+                include=include,
+                exclude=exclude,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
@@ -699,6 +725,28 @@ def setup_ref_args(parser, parent):
         type=str,
         required='-d' not in sys.argv
     )
+    filter_group = parser_ref.add_mutually_exclusive_group()
+    filter_group.add_argument(
+        '--include-attribute',
+        metavar='KEY:VALUE',
+        help=(
+            'Only process GTF entries that have the provided KEY:VALUE attribute. '
+            'May be specified multiple times.'
+        ),
+        type=str,
+        action='append',
+    )
+    filter_group.add_argument(
+        '--exclude-attribute',
+        metavar='KEY:VALUE',
+        help=(
+            'Only process GTF entires that do not have the provided KEY:VALUE attribute. '
+            'May be specified multiple times.'
+        ),
+        type=str,
+        action='append',
+    )
+
     required_lamanno = parser_ref.add_argument_group(
         'required arguments for `lamanno` and `nucleus` workflows'
     )

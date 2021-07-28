@@ -246,6 +246,48 @@ class TestRef(TestMixin, TestCase):
                 'textfile.txt.gz', os.path.join(temp_dir, 'textfile.txt')
             )
 
+    def test_get_gtf_attribute_include_func(self):
+        func = ref.get_gtf_attribute_include_func([{
+            'a': 'b',
+            'c': 'd'
+        }, {
+            'e': 'f'
+        }])
+        entry1 = mock.MagicMock()
+        entry1.attributes = {'a': 'b', 'c': 'd'}
+        entry2 = mock.MagicMock()
+        entry2.attributes = {'a': 'b'}
+        entry3 = mock.MagicMock()
+        entry3.attributes = {'e': 'f'}
+        entry4 = mock.MagicMock()
+        entry4.attributes = {'e': 'g'}
+
+        self.assertTrue(func(entry1))
+        self.assertFalse(func(entry2))
+        self.assertTrue(func(entry3))
+        self.assertFalse(func(entry4))
+
+    def test_get_gtf_attribute_exclude_func(self):
+        func = ref.get_gtf_attribute_exclude_func([{
+            'a': 'b',
+            'c': 'd'
+        }, {
+            'e': 'f'
+        }])
+        entry1 = mock.MagicMock()
+        entry1.attributes = {'a': 'b', 'c': 'd'}
+        entry2 = mock.MagicMock()
+        entry2.attributes = {'a': 'b'}
+        entry3 = mock.MagicMock()
+        entry3.attributes = {'e': 'f'}
+        entry4 = mock.MagicMock()
+        entry4.attributes = {'e': 'g'}
+
+        self.assertFalse(func(entry1))
+        self.assertTrue(func(entry2))
+        self.assertFalse(func(entry3))
+        self.assertTrue(func(entry4))
+
     def test_ref(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.ngs.gtf.genes_and_transcripts_from_gtf') as genes_and_transcripts_from_gtf,\
@@ -284,7 +326,7 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 cdna_fasta_path, t2g_path
@@ -342,7 +384,7 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 cdna_fasta_path, t2g_path
@@ -401,7 +443,7 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 cdna_fasta_path, t2g_path
@@ -546,7 +588,7 @@ class TestRef(TestMixin, TestCase):
                                  overwrite=True
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 cdna_fasta_path, t2g_path
@@ -862,7 +904,7 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
@@ -965,7 +1007,7 @@ class TestRef(TestMixin, TestCase):
                                  n=2
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
@@ -1069,7 +1111,7 @@ class TestRef(TestMixin, TestCase):
                                  n=3
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
@@ -1171,7 +1213,7 @@ class TestRef(TestMixin, TestCase):
                                  temp_dir=temp_dir
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path
@@ -1395,7 +1437,7 @@ class TestRef(TestMixin, TestCase):
                                  overwrite=True
                              ))
             genes_and_transcripts_from_gtf.assert_called_once_with(
-                self.gtf_path, use_version=True
+                self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
                 combined_path, t2g_path

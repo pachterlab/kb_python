@@ -374,6 +374,54 @@ def decompress_file(path, temp_dir='tmp'):
         return path
 
 
+def get_gtf_attribute_include_func(include):
+    """Helper function to create a filtering function to include certain GTF
+    entries while processing. The returned function returns `True` if the
+    entry should be included.
+
+    :param include: list of dictionaries representing key-value pairs of
+        attributes to include
+    :type include: list
+
+    :return: filter function
+    :rtype: function
+    """
+
+    def include_func(entry):
+        attributes = entry.attributes
+        return any(
+            all(attributes.get(key) == value
+                for key, value in d.items())
+            for d in include
+        )
+
+    return include_func
+
+
+def get_gtf_attribute_exclude_func(exclude):
+    """Helper function to create a filtering function to exclude certain GTF
+    entries while processing. The returned function returns `False` if the
+    entry should be excluded.
+
+    :param exclude: list of dictionaries representing key-value pairs of
+        attributes to exclude
+    :type exclude: list
+
+    :return: filter function
+    :rtype: function
+    """
+
+    def exclude_func(entry):
+        attributes = entry.attributes
+        return all(
+            any(attributes.get(key) != value
+                for key, value in d.items())
+            for d in exclude
+        )
+
+    return exclude_func
+
+
 @logger.namespaced('ref')
 def ref(
     fasta_paths,
@@ -383,6 +431,8 @@ def ref(
     t2g_path,
     n=1,
     k=None,
+    include=None,
+    exclude=None,
     temp_dir='tmp',
     overwrite=False
 ):
@@ -400,6 +450,12 @@ def ref(
     :type n: int
     :param k: override default kmer length 31, defaults to `None`
     :type k: int, optional
+    :param include: list of dictionaries representing key-value pairs of
+        attributes to include
+    :type include: list
+    :param exclude: list of dictionaries representing key-value pairs of
+        attributes to exclude
+    :type exclude: list
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -412,6 +468,13 @@ def ref(
         fasta_paths = [fasta_paths]
     if not isinstance(gtf_paths, list):
         gtf_paths = [gtf_paths]
+    include_func = get_gtf_attribute_include_func(
+        include
+    ) if include else lambda entry: True
+    exclude_func = get_gtf_attribute_exclude_func(
+        exclude
+    ) if exclude else lambda entry: True
+    filter_func = lambda entry: include_func(entry) and exclude_func(entry)
 
     results = {}
     cdnas = []
@@ -420,7 +483,7 @@ def ref(
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
             # Parse GTF for gene and transcripts
             gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
-                gtf_path, use_version=True
+                gtf_path, use_version=True, filter_func=filter_func
             )
 
             # Split
@@ -544,6 +607,8 @@ def ref_lamanno(
     n=1,
     k=None,
     flank=None,
+    include=None,
+    exclude=None,
     temp_dir='tmp',
     overwrite=False,
 ):
@@ -571,6 +636,12 @@ def ref_lamanno(
                   when generating the intron FASTA, defaults to `None`, which
                   sets the flanking region to be k - 1 bases.
     :type flank: int, optional
+    :param include: list of dictionaries representing key-value pairs of
+        attributes to include
+    :type include: list
+    :param exclude: list of dictionaries representing key-value pairs of
+        attributes to exclude
+    :type exclude: list
     :param temp_dir: path to temporary directory, defaults to `tmp`
     :type temp_dir: str, optional
     :param overwrite: overwrite an existing index file, defaults to `False`
@@ -583,6 +654,13 @@ def ref_lamanno(
         fasta_paths = [fasta_paths]
     if not isinstance(gtf_paths, list):
         gtf_paths = [gtf_paths]
+    include_func = get_gtf_attribute_include_func(
+        include
+    ) if include else lambda entry: True
+    exclude_func = get_gtf_attribute_exclude_func(
+        exclude
+    ) if exclude else lambda entry: True
+    filter_func = lambda entry: include_func(entry) and exclude_func(entry)
 
     results = {}
     cdnas = []
@@ -595,7 +673,7 @@ def ref_lamanno(
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
             # Parse GTF for gene and transcripts
             gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
-                gtf_path, use_version=True
+                gtf_path, use_version=True, filter_func=filter_func
             )
 
             # Split cDNA
