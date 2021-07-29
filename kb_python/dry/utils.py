@@ -8,14 +8,12 @@ from ..config import (
 )
 
 
-def run_executable(command, quiet=False, alias=True, *args, **kwargs):
+def run_executable(command, quiet=False, *args, **kwargs):
     """Dry version of `utils.run_executable`.
     """
     command = [str(c) for c in command]
     if not quiet:
         c = command.copy()
-        if alias:
-            c[0] = os.path.basename(c[0])
         print(' '.join(c))
 
 
