@@ -81,13 +81,15 @@ def find_git_root(path):
 
 
 @restore_cwd
-def compile_kallisto(source_dir, binary_path):
+def compile_kallisto(source_dir, binary_path, cmake_arguments=None):
     """Compile `kallisto` from source.
 
     :param source_dir: path to directory containing root of kallisto git repo
     :type source_dir: str
     :param binary_path: path to place compiled binary
     :type binary_path: str
+    :param cmake_arguments: additional arguments to pass to the cmake command
+    :type cmake_arguments: str, optional
 
     :return: path to compiled binary
     :rtype: str
@@ -114,7 +116,10 @@ def compile_kallisto(source_dir, binary_path):
     os.chdir(os.path.join('..', '..'))
     os.makedirs('build', exist_ok=True)
     os.chdir('build')
-    run_executable(['cmake', '..'])
+    cmake_command = ['cmake', '..']
+    if cmake_arguments:
+        cmake_command.append(cmake_arguments)
+    run_executable(cmake_command)
     run_executable(['make'])
     os.makedirs(os.path.dirname(binary_path), exist_ok=True)
     shutil.copy2(
@@ -126,13 +131,15 @@ def compile_kallisto(source_dir, binary_path):
 
 
 @restore_cwd
-def compile_bustools(source_dir, binary_path):
+def compile_bustools(source_dir, binary_path, cmake_arguments=None):
     """Compile `bustools` from source.
 
     :param source_dir: path to directory containing root of bustools git repo
     :type source_dir: str
     :param binary_path: path to place compiled binary
     :type binary_path: str
+    :param cmake_arguments: additional arguments to pass to the cmake command
+    :type cmake_arguments: str, optional
 
     :return: path to compiled binary
     :rtype: str
@@ -153,7 +160,10 @@ def compile_bustools(source_dir, binary_path):
 
     os.makedirs('build', exist_ok=True)
     os.chdir('build')
-    run_executable(['cmake', '..'])
+    cmake_command = ['cmake', '..']
+    if cmake_arguments:
+        cmake_command.append(cmake_arguments)
+    run_executable(cmake_command)
     run_executable(['make'])
     shutil.copy2(
         os.path.join(
@@ -164,7 +174,14 @@ def compile_bustools(source_dir, binary_path):
 
 
 @logger.namespaced('compile')
-def compile(target, out_dir=None, url=None, overwrite=False, temp_dir='tmp'):
+def compile(
+    target,
+    out_dir=None,
+    cmake_arguments=None,
+    url=None,
+    overwrite=False,
+    temp_dir='tmp',
+):
     """Compile `kallisto` and/or `bustools` binaries by downloading and compiling
     a source archive.
 
@@ -173,6 +190,8 @@ def compile(target, out_dir=None, url=None, overwrite=False, temp_dir='tmp'):
     :type target: str
     :param out_dir: path to output directory, defaults to `None`
     :type out_dir: str, optional
+    :param cmake_arguments: additional arguments to pass to the cmake command
+    :type cmake_arguments: str, optional
     :param url: download the source archive from this url instead, defaults to
         `None`
     :type url: str, optional
@@ -203,7 +222,9 @@ def compile(target, out_dir=None, url=None, overwrite=False, temp_dir='tmp'):
         source_dir = tempfile.mkdtemp(dir=temp_dir)
         shutil.unpack_archive(archive_path, source_dir)
         source_dir = find_git_root(source_dir)
-        binary_path = compile_kallisto(source_dir, binary_path)
+        binary_path = compile_kallisto(
+            source_dir, binary_path, cmake_arguments=cmake_arguments
+        )
         results['kallisto'] = binary_path
     if target in ('bustools', 'all'):
         binary_path = os.path.join(
@@ -223,6 +244,8 @@ def compile(target, out_dir=None, url=None, overwrite=False, temp_dir='tmp'):
         source_dir = tempfile.mkdtemp(dir=temp_dir)
         shutil.unpack_archive(archive_path, source_dir)
         source_dir = find_git_root(source_dir)
-        binary_path = compile_bustools(source_dir, binary_path)
+        binary_path = compile_bustools(
+            source_dir, binary_path, cmake_arguments=cmake_arguments
+        )
         results['bustools'] = binary_path
     return results

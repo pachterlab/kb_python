@@ -146,7 +146,9 @@ class TestCompile(TestMixin, TestCase):
             )
             find_git_root.assert_called_once_with(mock.ANY)
             compile_kallisto.assert_called_once_with(
-                find_git_root.return_value, os.path.join(out_dir, 'kallisto')
+                find_git_root.return_value,
+                os.path.join(out_dir, 'kallisto'),
+                cmake_arguments=None
             )
             compile_bustools.assert_not_called()
 
@@ -171,7 +173,9 @@ class TestCompile(TestMixin, TestCase):
             )
             find_git_root.assert_called_once_with(mock.ANY)
             compile_bustools.assert_called_once_with(
-                find_git_root.return_value, os.path.join(out_dir, 'bustools')
+                find_git_root.return_value,
+                os.path.join(out_dir, 'bustools'),
+                cmake_arguments=None
             )
             compile_kallisto.assert_not_called()
 
@@ -199,10 +203,14 @@ class TestCompile(TestMixin, TestCase):
             ])
             find_git_root.assert_has_calls([call(mock.ANY), call(mock.ANY)])
             compile_kallisto.assert_called_once_with(
-                'root1', os.path.join(out_dir, 'kallisto')
+                'root1',
+                os.path.join(out_dir, 'kallisto'),
+                cmake_arguments=None
             )
             compile_bustools.assert_called_once_with(
-                'root2', os.path.join(out_dir, 'bustools')
+                'root2',
+                os.path.join(out_dir, 'bustools'),
+                cmake_arguments=None
             )
 
     def test_compile_full_with_url(self):
@@ -230,6 +238,8 @@ class TestCompile(TestMixin, TestCase):
             )
             find_git_root.assert_called_once_with(mock.ANY)
             compile_kallisto.assert_called_once_with(
-                find_git_root.return_value, os.path.join(out_dir, 'kallisto')
+                find_git_root.return_value,
+                os.path.join(out_dir, 'kallisto'),
+                cmake_arguments=None
             )
             compile_bustools.assert_not_called()

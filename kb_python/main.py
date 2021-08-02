@@ -127,6 +127,10 @@ def parse_compile(parser, args, temp_dir='tmp'):
     # --view or --remove may not be specified with -o
     if args.o and (args.view or args.remove):
         parser.error('`-o` may not be used with `--view` or `--remove`')
+    if args.cmake_arguments and (args.view or args.remove):
+        parser.error(
+            '`--cmake-arguments` may not be used with `--view` or `--remove`'
+        )
 
     if args.remove:
         if args.target in ('kallisto', 'all'):
@@ -141,9 +145,14 @@ def parse_compile(parser, args, temp_dir='tmp'):
         print(get_binary_info())
         sys.exit(1)
     else:
+        if args.target not in ('kallisto', 'bustools', 'all'):
+            parser.error(
+                '`target` must be one of `kallisto`, `bustools`, `all`'
+            )
         compile(
             args.target,
             out_dir=args.o,
+            cmake_arguments=args.cmake_arguments,
             url=args.url,
             overwrite=args.overwrite,
             temp_dir=temp_dir
@@ -663,6 +672,16 @@ def setup_compile_args(parser, parent):
             'of the specified binary. May only be used with a single `target`.'
         ),
         type=str
+    )
+    parser_compile.add_argument(
+        '--cmake-arguments',
+        metavar='URL',
+        help=(
+            'Additional arguments to pass to the cmake command. For example, to '
+            'pass additional include directories, '
+            '`--cmake-arguments="-DCMAKE_CXX_FLAGS=\'-I /usr/include\'"`'
+        ),
+        type=str,
     )
 
     return parser_compile
