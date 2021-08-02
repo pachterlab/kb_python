@@ -32,13 +32,13 @@ class TestValidate(TestMixin, TestCase):
 
     def test_validate_bus_failed_parse(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = ''
+            run_executable.return_value = None, '', None
             with self.assertRaises(validate.FileVerificationFailed):
                 validate.validate_bus('path')
 
     def test_validate_bus_no_records(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'Read in 0 BUS records'
+            run_executable.return_value = None, 'Read in 0 BUS records', None
             with self.assertRaises(validate.FileVerificationFailed):
                 validate.validate_bus('path')
 

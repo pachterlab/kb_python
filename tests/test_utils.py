@@ -37,8 +37,9 @@ class TestUtils(TestMixin, TestCase):
 
     def test_run_executable(self):
         with mock.patch('kb_python.utils.STATS') as STATS:
-            p = utils.run_executable(['echo', 'TEST'], stream=False)
-            self.assertEqual(p.stdout.read(), 'TEST\n')
+            p, stdout, stderr = utils.run_executable(['echo', 'TEST'],
+                                                     stream=False)
+            self.assertEqual(stdout, 'TEST\n')
             STATS.command.assert_called_once_with(['echo', 'TEST'], runtime=ANY)
 
     def test_run_exectuable_raises_exception(self):
@@ -61,12 +62,12 @@ class TestUtils(TestMixin, TestCase):
 
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'kallisto 1.2.3'
+            run_executable.return_value = None, 'kallisto 1.2.3', None
             self.assertEqual((1, 2, 3), utils.get_kallisto_version())
 
     def test_get_bustools_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'bustools 1.2.3'
+            run_executable.return_value = None, 'bustools 1.2.3', None
             self.assertEqual((1, 2, 3), utils.get_bustools_version())
 
     def test_parse_technologies(self):
@@ -81,7 +82,7 @@ class TestUtils(TestMixin, TestCase):
     def test_get_supported_technologies(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable,\
            mock.patch('kb_python.utils.parse_technologies') as parse_technologies:
-            run_executable().stdout = 'TEST'
+            run_executable.return_value = None, 'TEST', None
             utils.get_supported_technologies()
             parse_technologies.assert_called_once_with('TEST')
 

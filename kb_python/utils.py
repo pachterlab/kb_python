@@ -2,6 +2,7 @@ import concurrent.futures
 import functools
 import logging
 import os
+import queue
 import re
 import shutil
 import subprocess as sp
@@ -156,8 +157,10 @@ def run_executable(
     :param record: whether to record the call statistics, defaults to `True`
     :type record: bool, optional
 
-    :return: the spawned process
-    :rtype: subprocess.Process
+    :return: (the spawned process, list of strings printed to stdout,
+        list of strings printed to stderr) if `wait=True`.
+        Otherwise, the spawned process
+    :rtype: tuple or subprocess.Process
     """
     command = [str(c) for c in command]
     c = command.copy()
@@ -177,17 +180,58 @@ def run_executable(
         bufsize=1 if wait else -1,
     )
 
+    # Helper function to read from a pipe and put the output to a queue.
+    def reader(pipe, qu, stop_event, name):
+        while not stop_event.is_set():
+            for _line in pipe:
+                line = _line.strip()
+                qu.put((name, line))
+
     # Wait if desired.
     if wait:
+        stdout = ''
+        stderr = ''
         out = []
+        out_queue = queue.Queue()
+        stop_event = threading.Event()
+        stdout_reader = threading.Thread(
+            target=reader,
+            args=(p.stdout, out_queue, stop_event, 'stdout'),
+            daemon=True
+        )
+        stderr_reader = threading.Thread(
+            target=reader,
+            args=(p.stderr, out_queue, stop_event, 'stderr'),
+            daemon=True
+        )
+        stdout_reader.start()
+        stderr_reader.start()
+
         while p.poll() is None:
+            while not out_queue.empty():
+                name, line = out_queue.get()
+                if stream and not quiet:
+                    logger.debug(line)
+                out.append(line)
+                if name == 'stdout':
+                    stdout += f'{line}\n'
+                elif name == 'stderr':
+                    stderr += f'{line}\n'
+            else:
+                time.sleep(0.1)
+
+        # Stop readers & flush queue
+        stop_event.set()
+        time.sleep(1)
+        while not out_queue.empty():
+            name, line = out_queue.get()
             if stream and not quiet:
-                for line in p.stdout:
-                    out.append(line.strip())
-                    logger.debug(line.strip())
-                for line in p.stderr:
-                    out.append(line.strip())
-                    logger.debug(line.strip())
+                logger.debug(line)
+            out.append(line)
+            if name == 'stdout':
+                stdout += f'{line}\n'
+            elif name == 'stderr':
+                stderr += f'{line}\n'
         if record:
             STATS.command(c, runtime=time.time() - start)
 
@@ -195,7 +239,7 @@ def run_executable(
             logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
 
-    return p
+    return (p, stdout, stderr) if wait else p
 
 
 def get_kallisto_version():
@@ -206,11 +250,11 @@ def get_kallisto_version():
     :return: tuple of major, minor, patch versions
     :rtype: tuple
     """
-    p = run_executable([get_kallisto_binary_path()],
-                       quiet=True,
-                       returncode=1,
-                       record=False)
-    match = VERSION_PARSER.match(p.stdout.read())
+    p, stdout, stderr = run_executable([get_kallisto_binary_path()],
+                                       quiet=True,
+                                       returncode=1,
+                                       record=False)
+    match = VERSION_PARSER.match(stdout)
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
@@ -222,11 +266,11 @@ def get_bustools_version():
     :return: tuple of major, minor, patch versions
     :rtype: tuple
     """
-    p = run_executable([get_bustools_binary_path()],
-                       quiet=True,
-                       returncode=1,
-                       record=False)
-    match = VERSION_PARSER.match(p.stdout.read())
+    p, stdout, stderr = run_executable([get_bustools_binary_path()],
+                                       quiet=True,
+                                       returncode=1,
+                                       record=False)
+    match = VERSION_PARSER.match(stdout)
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
@@ -263,11 +307,13 @@ def get_supported_technologies():
     :return: list of technologies
     :rtype: list
     """
-    p = run_executable([get_kallisto_binary_path(), 'bus', '--list'],
-                       quiet=True,
-                       returncode=1,
-                       record=False)
-    return parse_technologies(p.stdout)
+    p, stdout, stderr = run_executable([
+        get_kallisto_binary_path(), 'bus', '--list'
+    ],
+                                       quiet=True,
+                                       returncode=1,
+                                       record=False)
+    return parse_technologies(stdout)
 
 
 def whitelist_provided(technology):

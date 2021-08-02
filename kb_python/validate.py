@@ -28,8 +28,8 @@ def validate_bus(path):
     :raises subprocess.CalledProcessError: if the bustools command failed
     """
     command = [get_bustools_binary_path(), 'inspect', path]
-    p = run_executable(command, quiet=True)
-    match = BUSTOOLS_INSPECT_PARSER.match(p.stdout.read())
+    p, stdout, stderr = run_executable(command, quiet=True)
+    match = BUSTOOLS_INSPECT_PARSER.match(stdout)
     if not match:
         raise FileVerificationFailed(
             ('bustools inspect output could not be parsed for {}'.format(path))
