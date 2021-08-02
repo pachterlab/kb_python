@@ -115,8 +115,10 @@ def parse_compile(parser, args, temp_dir='tmp'):
     :type args: dict
     """
     # target must be all when --view is used
-    if args.view and args.target != 'all':
-        parser.error('`target` must be `all` when `--view` is provided.')
+    if args.view and args.target is not None:
+        parser.error(
+            '`target` must not be be provided when `--view` is provided.'
+        )
 
     # target must not be all when --url is provided
     if args.url and args.target == 'all':
@@ -612,11 +614,11 @@ def setup_compile_args(parser, parent):
         'target',
         metavar='target',
         help=(
-            'Which binaries to compile. If not provided, both `kallisto` and '
-            '`bustools` binaries will be compiled from source. (default: all)'
+            'Which binaries to compile. May be one of `kallisto`, `bustools` or '
+            '`all`.'
         ),
         choices=['kallisto', 'bustools', 'all'],
-        default='all',
+        default=None,
         nargs='?',
     )
     compile_group = parser_compile.add_mutually_exclusive_group()
