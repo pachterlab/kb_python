@@ -1393,7 +1393,6 @@ def count(
             prev_result['bus'],
             os.path.join(out_dir, INSPECT_FILENAME),
             whitelist_path=whitelist_path,
-            ecmap_path=bus_result['ecmap']
         )
         unfiltered_results.update(inspect_result)
     if not is_batch:
@@ -1630,7 +1629,6 @@ def count_smartseq3(
             prev_result['bus'],
             os.path.join(out_dir, INSPECT_FILENAME),
             whitelist_path=whitelist_path,
-            ecmap_path=bus_result['ecmap']
         )
         unfiltered_results.update(inspect_result)
     prev_result = bustools_correct(
@@ -2060,7 +2058,6 @@ def count_velocity(
             sort_result['bus'],
             os.path.join(out_dir, INSPECT_FILENAME),
             whitelist_path=whitelist_path,
-            ecmap_path=bus_result['ecmap']
         )
         unfiltered_results.update(inspect_result)
     correct_result = bustools_correct(
@@ -2113,7 +2110,6 @@ def count_velocity(
                     out_dir, update_filename(INSPECT_FILENAME, prefix)
                 ),
                 whitelist_path=whitelist_path,
-                ecmap_path=bus_result['ecmap']
             )
             unfiltered_results[prefix].update(inspect_result)
 

@@ -1277,7 +1277,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -1421,7 +1420,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -1561,7 +1559,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -1691,7 +1688,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -1849,7 +1845,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -2020,7 +2015,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -2166,7 +2160,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_called_once_with(
                 self.technology, bus_s_path, out_dir
@@ -2299,7 +2292,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -2472,7 +2464,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -2639,7 +2630,6 @@ class TestCount(TestMixin, TestCase):
                 bus_sps_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -2778,7 +2768,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ2', bus_s_path, out_dir
@@ -2935,7 +2924,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ2', bus_s_path, out_dir
@@ -3065,7 +3053,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=None,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_not_called()
@@ -3188,7 +3175,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=None,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_not_called()
@@ -3352,7 +3338,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=None,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_not_called()
@@ -3527,7 +3512,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=None,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_not_called()
@@ -3742,7 +3726,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ3', bus_s_path, out_dir
@@ -4073,7 +4056,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ3', bus_s_path, out_dir
@@ -4268,7 +4250,6 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
-                ecmap_path=ecmap_path
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
@@ -4681,19 +4662,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -4993,19 +4971,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -5294,19 +5269,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -5598,19 +5570,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -5859,19 +5828,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -6144,19 +6110,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_called_once_with(
@@ -6536,19 +6499,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -6958,19 +6918,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
@@ -7319,19 +7276,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     inspect_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     cdna_s_path,
                     inspect_cdna_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 ),
                 call(
                     intron_s_path,
                     inspect_intron_path,
                     whitelist_path=self.whitelist_path,
-                    ecmap_path=ecmap_path
                 )
             ])
             copy_or_create_whitelist.assert_not_called()
