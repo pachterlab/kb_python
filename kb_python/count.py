@@ -567,6 +567,7 @@ def bustools_count(
     mm=False,
     cm=False,
     umi_gene=False,
+    em=False,
 ):
     """Runs `bustools count`.
 
@@ -591,6 +592,9 @@ def bustools_count(
     :type cm: bool, optional
     :param umi_gene: whether to use genes to deduplicate umis, defaults to `False`
     :type umi_gene: bool, optional
+    :param em: whether to estimate gene abundances using EM algorithm, defaults
+        to `False`
+    :type em: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -611,6 +615,8 @@ def bustools_count(
         command += ['--cm']
     if umi_gene:
         command += ['--umi-gene']
+    if em:
+        command += ['--em']
     command += [bus_path]
     run_executable(command)
     return {
@@ -954,7 +960,9 @@ def filter_with_bustools(
     count=True,
     loom=False,
     h5ad=False,
-    cellranger=False
+    cellranger=False,
+    umi_gene=False,
+    em=False,
 ):
     """Generate filtered count matrices with bustools.
 
@@ -989,6 +997,8 @@ def filter_with_bustools(
     :type threads: int, optional
     :param memory: amount of memory to use, defaults to `4G`
     :type memory: str, optional
+    :param count: whether to run `bustools count`, defaults to `True`
+    :type count: bool, optional
     :param loom: whether to convert the final count matrix into a loom file,
                  defaults to `False`
     :type loom: bool, optional
@@ -998,6 +1008,12 @@ def filter_with_bustools(
     :param cellranger: whether to convert the final count matrix into a
                        cellranger-compatible matrix, defaults to `False`
     :type cellranger: bool, optional
+    :param umi_gene: whether to perform gene-level UMI collapsing, defaults to
+        `False`
+    :type umi_gene: bool, optional
+    :param em: whether to estimate gene abundances using EM algorithm,
+        defaults to `False`
+    :type em: bool, optional
 
     :return: dictionary of generated files
     :rtype: dict
@@ -1035,6 +1051,8 @@ def filter_with_bustools(
             txnames_path,
             tcc=tcc,
             mm=mm,
+            umi_gene=umi_gene,
+            em=em,
         )
         results.update(count_result)
 
@@ -1220,6 +1238,8 @@ def count(
     fragment_s=None,
     paired=False,
     strand=None,
+    umi_gene=False,
+    em=False,
 ):
     """Generates count matrices for single-cell RNA seq.
 
@@ -1283,8 +1303,14 @@ def count(
     :type paired: bool, optional
     :param strand: strandedness, defaults to `None`
     :type strand: str, optional
+    :param umi_gene: whether to perform gene-level UMI collapsing, defaults to
+        `False`
+    :type umi_gene: bool, optional
+    :param em: whether to estimate gene abundances using EM algorithm,
+        defaults to `False`
+    :type em: bool, optional
 
-    :return: dictionary containing path to generated index
+    :return: dictionary containing paths to generated files
     :rtype: dict
     """
     STATS.start()
@@ -1430,7 +1456,9 @@ def count(
         bus_result['txnames'],
         tcc=tcc,
         mm=mm or tcc,
-        cm=cm
+        cm=cm,
+        umi_gene=umi_gene,
+        em=em,
     )
     unfiltered_results.update(count_result)
     if quant:
@@ -1506,7 +1534,9 @@ def count(
             threads=threads,
             memory=memory,
             loom=loom,
-            h5ad=h5ad
+            h5ad=h5ad,
+            umi_gene=umi_gene,
+            em=em,
         )
 
     # Generate report.
@@ -1929,6 +1959,8 @@ def count_velocity(
     inspect=True,
     nucleus=False,
     strand=None,
+    umi_gene=False,
+    em=False,
 ):
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1988,6 +2020,12 @@ def count_velocity(
     :type nucleus: bool, optional
     :param strand: strandedness, defaults to `None`
     :type strand: str, optional
+    :param umi_gene: whether to perform gene-level UMI collapsing, defaults to
+        `False`
+    :type umi_gene: bool, optional
+    :param em: whether to estimate gene abundances using EM algorithm,
+        defaults to `False`
+    :type em: bool, optional
 
     :return: dictionary containing path to generated index
     :rtype: dict
@@ -2122,6 +2160,8 @@ def count_velocity(
             bus_result['txnames'],
             tcc=tcc,
             mm=mm or tcc,
+            umi_gene=umi_gene,
+            em=em,
         )
         unfiltered_results[prefix].update(count_result)
 
@@ -2174,7 +2214,9 @@ def count_velocity(
                     filter_threshold=filter_threshold,
                     temp_dir=temp_dir,
                     memory=memory,
-                    count=False
+                    count=False,
+                    umi_gene=umi_gene,
+                    em=em,
                 )
             )
 
@@ -2208,6 +2250,8 @@ def count_velocity(
                     bus_result['txnames'],
                     tcc=tcc,
                     mm=mm or tcc,
+                    umi_gene=umi_gene,
+                    em=em,
                 )
                 filtered_results[prefix].update(count_result)
 

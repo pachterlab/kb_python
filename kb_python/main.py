@@ -304,6 +304,8 @@ def parse_count(parser, args, temp_dir='tmp'):
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
+    if args.tcc and args.em:
+        parser.error('`--tcc` may not be used with `--em`.')
 
     # Check if batch TSV was provided.
     batch_path = None
@@ -315,6 +317,11 @@ def parse_count(parser, args, temp_dir='tmp'):
         except Exception:
             pass
 
+    if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and (args.umi_gene
+                                                                 or args.em):
+        parser.error(
+            f'`--umi-gene` or `--em` may not be used for technology {args.x}'
+        )
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
         unsupported = ['filter', 'w']
@@ -441,7 +448,9 @@ def parse_count(parser, args, temp_dir='tmp'):
             inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus',
             temp_dir=temp_dir,
-            strand=args.strand
+            strand=args.strand,
+            umi_gene=args.umi_gene,
+            em=args.em,
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -569,6 +578,8 @@ def parse_count(parser, args, temp_dir='tmp'):
                 fragment_s=args.fragment_s,
                 paired=args.parity == 'paired',
                 strand=args.strand,
+                umi_gene=args.umi_gene,
+                em=args.em,
             )
 
 
@@ -997,6 +1008,16 @@ def setup_count_args(parser, parent):
         type=str,
         default='standard',
         choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB']
+    )
+    parser_count.add_argument(
+        '--em',
+        help='Estimate gene abundances using an EM algorithm.',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--umi-gene',
+        help='Perform gene-level collapsing of UMIs.',
+        action='store_true'
     )
 
     count_group = parser_count.add_mutually_exclusive_group()

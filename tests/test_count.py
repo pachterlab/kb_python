@@ -729,7 +729,9 @@ class TestCount(TestMixin, TestCase):
                 ecmap_path,
                 txnames_path,
                 tcc=False,
-                mm=False
+                mm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
 
@@ -808,7 +810,9 @@ class TestCount(TestMixin, TestCase):
                 ecmap_path,
                 txnames_path,
                 tcc=False,
-                mm=False
+                mm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -964,7 +968,9 @@ class TestCount(TestMixin, TestCase):
                 ecmap_path,
                 txnames_path,
                 tcc=True,
-                mm=False
+                mm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
 
@@ -1055,7 +1061,9 @@ class TestCount(TestMixin, TestCase):
                 ecmap_path,
                 txnames_path,
                 tcc=False,
-                mm=False
+                mm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             matrix_to_cellranger.assert_called_once_with(
@@ -1290,7 +1298,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1433,7 +1443,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1572,7 +1584,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -1701,7 +1715,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 os.path.join(out_dir, UNFILTERED_COUNTS_DIR),
@@ -1858,7 +1874,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -2029,7 +2047,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             filter_with_bustools.assert_called_once_with(
                 bus_scs_path,
@@ -2049,6 +2069,8 @@ class TestCount(TestMixin, TestCase):
                 loom=False,
                 h5ad=False,
                 tcc=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
 
@@ -2175,7 +2197,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -2305,7 +2329,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 os.path.join(out_dir, UNFILTERED_COUNTS_DIR),
@@ -2478,7 +2504,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             filter_with_bustools.assert_called_once_with(
                 bus_scs_path,
@@ -2498,6 +2526,8 @@ class TestCount(TestMixin, TestCase):
                 loom=False,
                 h5ad=False,
                 tcc=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
 
@@ -2643,7 +2673,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -2783,7 +2815,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -2939,7 +2973,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -3064,7 +3100,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -3186,7 +3224,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_called_once_with(
                 counts_dir,
@@ -3349,7 +3389,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=True,
                 mm=True,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             kallisto_quant_tcc.assert_called_once_with(
                 f'{counts_prefix}.mtx',
@@ -3523,7 +3565,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=True,
                 mm=True,
-                cm=True
+                cm=True,
+                umi_gene=False,
+                em=False,
             )
             kallisto_quant_tcc.assert_called_once_with(
                 f'{counts_prefix}.mtx',
@@ -4263,7 +4307,9 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                cm=False
+                cm=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrix.assert_not_called()
             filter_with_bustools.assert_not_called()
@@ -4687,7 +4733,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -4696,7 +4744,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -4996,7 +5046,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -5005,7 +5057,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -5294,7 +5348,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -5303,7 +5359,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -5595,7 +5653,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -5604,7 +5664,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -5853,7 +5915,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -5862,7 +5926,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -6137,7 +6203,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -6146,7 +6214,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
@@ -6524,7 +6594,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -6533,7 +6605,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     cdna_filtered_path,
@@ -6542,7 +6616,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_filtered_path,
@@ -6553,7 +6629,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_called_once_with(
@@ -6567,6 +6645,8 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 memory=memory,
                 count=False,
+                umi_gene=False,
+                em=False,
             )
             convert_matrices.assert_not_called()
 
@@ -6943,7 +7023,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -6952,7 +7034,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     cdna_filtered_path,
@@ -6961,7 +7045,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_filtered_path,
@@ -6972,7 +7058,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_called_once_with(
@@ -6986,6 +7074,8 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 memory=memory,
                 count=False,
+                umi_gene=False,
+                em=False,
             )
             self.assertEqual(2, convert_matrices.call_count)
             args = [
@@ -7301,7 +7391,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 ),
                 call(
                     intron_s_path,
@@ -7310,7 +7402,9 @@ class TestCount(TestMixin, TestCase):
                     ecmap_path,
                     txnames_path,
                     tcc=False,
-                    mm=False
+                    mm=False,
+                    umi_gene=False,
+                    em=False,
                 )
             ])
             filter_with_bustools.assert_not_called()
