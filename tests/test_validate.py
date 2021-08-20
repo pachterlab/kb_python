@@ -33,13 +33,13 @@ class TestValidate(TestMixin, TestCase):
     def test_validate_bus_failed_parse(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
             run_executable.return_value = None, '', None
-            with self.assertRaises(validate.FileVerificationFailed):
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_bus('path')
 
     def test_validate_bus_no_records(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
             run_executable.return_value = None, 'Read in 0 BUS records', None
-            with self.assertRaises(validate.FileVerificationFailed):
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_bus('path')
 
     def test_validate_mtx(self):
@@ -48,7 +48,7 @@ class TestValidate(TestMixin, TestCase):
     def test_validate_mtx_raises_on_error(self):
         with mock.patch('kb_python.validate.scipy.io.mmread') as mmread:
             mmread.side_effect = ValueError('test')
-            with self.assertRaises(validate.FileVerificationFailed):
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_mtx('path')
 
     def test_validate(self):

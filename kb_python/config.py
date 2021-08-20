@@ -2,6 +2,7 @@ import os
 import platform
 import shutil
 from collections import namedtuple
+from typing import Optional
 from urllib.parse import urljoin
 
 import ngs_tools as ngs
@@ -24,11 +25,11 @@ KALLISTO_TARBALL_URL = urljoin(KALLISTO_REPO_URL, 'tarball/')
 BUSTOOLS_TARBALL_URL = urljoin(BUSTOOLS_REPO_URL, 'tarball/')
 
 
-def get_provided_kallisto_path():
+def get_provided_kallisto_path() -> Optional[str]:
     """Finds platform-dependent kallisto binary included with the installation.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
     path = os.path.join(BINS_DIR, PLATFORM, 'kallisto', bin_filename)
@@ -37,11 +38,11 @@ def get_provided_kallisto_path():
     return path
 
 
-def get_provided_bustools_path():
+def get_provided_bustools_path() -> Optional[str]:
     """Finds platform-dependent bustools binary included with the installation.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
     path = os.path.join(BINS_DIR, PLATFORM, 'bustools', bin_filename)
@@ -50,11 +51,11 @@ def get_provided_bustools_path():
     return path
 
 
-def get_compiled_kallisto_path():
+def get_compiled_kallisto_path() -> Optional[str]:
     """Finds platform-dependent kallisto binary compiled with `compile`.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
     path = os.path.join(COMPILED_DIR, 'kallisto', bin_filename)
@@ -63,11 +64,11 @@ def get_compiled_kallisto_path():
     return path
 
 
-def get_compiled_bustools_path():
+def get_compiled_bustools_path() -> Optional[str]:
     """Finds platform-dependent bustools binary compiled with `compile`.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
     path = os.path.join(COMPILED_DIR, 'bustools', bin_filename)
@@ -161,29 +162,36 @@ REFERENCES = [
 REFERENCES_MAPPING = {r.name: r for r in REFERENCES}
 
 
-class UnsupportedOSException(Exception):
+class UnsupportedOSError(Exception):
     pass
 
 
-class NotExecutableException(Exception):
+class ConfigError(Exception):
     pass
 
 
-def get_kallisto_binary_path():
-    """Dummy function that simply returns the current value of KALLISTO_PATH.
+def get_kallisto_binary_path() -> str:
+    """Dummy function that simply returns the current value of :data:`KALLISTO_PATH`.
     """
     return KALLISTO_PATH
 
 
-def get_bustools_binary_path():
-    """Dummy function that simply returns the current value of BUSTOOLS_PATH.
+def get_bustools_binary_path() -> str:
+    """Dummy function that simply returns the current value of :data:`BUSTOOLS_PATH`.
     """
     return BUSTOOLS_PATH
 
 
-def set_kallisto_binary_path(path):
-    """Helper function to set the KALLISTO_PATH variable. Automatically finds the
-    full path to the executable and sets that as KALLISTO_PATH.
+def set_kallisto_binary_path(path: str):
+    """Helper function to set the :data:`KALLISTO_PATH` variable. Automatically
+    finds the full path to the executable and sets that as :data:`KALLISTO_PATH`.
+
+    Args:
+        path: Path to the kallisto binary
+
+    Raises:
+        ConfigError: If `path` could not be resolved or if the executable is
+            not executable.
     """
     global KALLISTO_PATH
 
@@ -196,18 +204,25 @@ def set_kallisto_binary_path(path):
     elif os.path.isfile(path):
         actual_path = os.path.abspath(path)
     else:
-        raise Exception(f'Unable to resolve path {path}')
+        raise ConfigError(f'Unable to resolve path {path}')
 
     # Check that it is executable
     if not os.access(actual_path, os.X_OK):
-        raise NotExecutableException(f'{actual_path} is not executable')
+        raise ConfigError(f'{actual_path} is not executable')
 
     KALLISTO_PATH = actual_path
 
 
-def set_bustools_binary_path(path):
-    """Helper function to set the BUSTOOLS_PATH variable. Automatically finds the
-    full path to the executable and sets that as BUSTOOLS_PATH.
+def set_bustools_binary_path(path: str):
+    """Helper function to set the :data:`BUSTOOLS_PATH` variable. Automatically
+    finds the full path to the executable and sets that as :data:`BUSTOOLS_PATH`.
+
+    Args:
+        path: Path to the bustools binary
+
+    Raises:
+        ConfigError: If `path` could not be resolved or if the executable is
+            not executable.
     """
     global BUSTOOLS_PATH
 
@@ -220,11 +235,11 @@ def set_bustools_binary_path(path):
     elif os.path.isfile(path):
         actual_path = os.path.abspath(path)
     else:
-        raise Exception(f'Unable to resolve path {path}')
+        raise ConfigError(f'Unable to resolve path {path}')
 
     # Check that it is executable
     if not os.access(actual_path, os.X_OK):
-        raise NotExecutableException(f'{actual_path} is not executable')
+        raise ConfigError(f'{actual_path} is not executable')
 
     BUSTOOLS_PATH = actual_path
 
@@ -236,11 +251,11 @@ def set_dry():
     DRY = True
 
 
-def is_dry():
+def is_dry() -> bool:
     """Return whether the current run is a dry run.
 
-    :return: whether the current run is a dry run
-    :rtype: bool
+    Returns:
+        Whether the current run is a dry run
     """
     return DRY
 
@@ -252,10 +267,10 @@ def no_validate():
     VALIDATE = False
 
 
-def is_validate():
+def is_validate() -> bool:
     """Return whether validation is turned on.
 
-    :return: whether validation is on
-    :rtype: bool
+    Returns:
+        Whether validation is on
     """
     return VALIDATE

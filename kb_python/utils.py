@@ -1,6 +1,5 @@
 import concurrent.futures
 import functools
-import logging
 import os
 import queue
 import re
@@ -8,6 +7,7 @@ import shutil
 import subprocess as sp
 import threading
 import time
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union
 from urllib.request import urlretrieve
 
 import anndata
@@ -15,14 +15,13 @@ import ngs_tools as ngs
 import pandas as pd
 import scipy.io
 from scipy import sparse
-from tqdm import tqdm
 
 from .config import (
     get_bustools_binary_path,
     get_kallisto_binary_path,
     PLATFORM,
     TECHNOLOGIES_MAPPING,
-    UnsupportedOSException,
+    UnsupportedOSError,
 )
 from .dry import dryable
 from .dry import utils as dry_utils
@@ -45,122 +44,86 @@ get_temporary_filename = dryable(dry_utils.get_temporary_filename)(
 )
 
 
-class NotImplementedException(Exception):
-    pass
-
-
-class UnmetDependencyException(Exception):
-    pass
-
-
-class TqdmLoggingHandler(logging.Handler):
-    """Custom logging handler so that logging does not affect progress bars.
-    """
-
-    def __init__(self, level=logging.NOTSET):
-        super().__init__(level)
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            tqdm.write(msg)
-            self.flush()
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except Exception:
-            self.handleError(record)
-
-
-def update_filename(filename, code):
+def update_filename(filename: str, code: str) -> str:
     """Update the provided path with the specified code.
 
     For instance, if the `path` is 'output.bus' and `code` is `s` (for sort),
     this function returns `output.s.bus`.
 
-    :param filename: filename (NOT path)
-    :type filename: str
-    :param code: code to append to filename
-    :type code: str
+    Args:
+        filename: filename (NOT path)
+        code: code to append to filename
 
-    :return: path updated with provided code
-    :rtype: str
+    Returns:
+        Path updated with provided code
     """
     name, extension = os.path.splitext(filename)
     return f'{name}.{code}{extension}'
 
 
 @dryable(dry_utils.make_directory)
-def make_directory(path):
+def make_directory(path: str):
     """Quietly make the specified directory (and any subdirectories).
 
     This function is a wrapper around os.makedirs. It is used so that
     the appropriate mkdir command can be printed for dry runs.
 
-    :param path: path to directory to make
-    :type path: str
+    Args:
+        path: Path to directory to make
     """
     os.makedirs(path, exist_ok=True)
 
 
 @dryable(dry_utils.remove_directory)
-def remove_directory(path):
+def remove_directory(path: str):
     """Quietly make the specified directory (and any subdirectories).
 
     This function is a wrapper around shutil.rmtree. It is used so that
     the appropriate rm command can be printed for dry runs.
 
-    :param path: path to directory to remove
-    :type path: str
+    Args:
+        path: Path to directory to remove
     """
     shutil.rmtree(path, ignore_errors=True)
 
 
 @dryable(dry_utils.run_executable)
 def run_executable(
-    command,
-    stdin=None,
-    stdout=sp.PIPE,
-    stderr=sp.PIPE,
-    wait=True,
-    stream=True,
-    quiet=False,
-    returncode=0,
-    alias=True,
-    record=True,
-):
+    command: List[str],
+    stdin: Optional[int] = None,
+    stdout: int = sp.PIPE,
+    stderr: int = sp.PIPE,
+    wait: bool = True,
+    stream: bool = True,
+    quiet: bool = False,
+    returncode: int = 0,
+    alias: bool = True,
+    record: bool = True,
+) -> Union[Tuple[sp.Popen, str, str], sp.Popen]:
     """Execute a single shell command.
 
-    :param command: a list representing a single shell command
-    :type command: list
-    :param stdin: object to pass into the `stdin` argument for `subprocess.Popen`,
-                  defaults to `None`
-    :type stdin: stream, optional
-    :param stdout: object to pass into the `stdout` argument for `subprocess.Popen`,
-                  defaults to `subprocess.PIPE`
-    :type stdout: stream, optional
-    :param stderr: object to pass into the `stderr` argument for `subprocess.Popen`,
-                  defaults to `subprocess.PIPE`
-    :type stderr: stream, optional
-    :param wait: whether to wait until the command has finished, defaults to `True`
-    :type wait: bool, optional
-    :param stream: whether to stream the output to the command line, defaults to `True`
-    :type stream: bool, optional
-    :param quiet: whether to not display anything to the command line and not check the return code,
-                  defaults to `False`
-    :type quiet: bool, optional
-    :param returncode: the return code expected if the command runs as intended,
-                       defaults to `0`
-    :type returncode: int, optional
-    :param alias: whether to use the basename of the first element of `command`,
-                  defaults to `True`
-    :type alias: bool, optional
-    :param record: whether to record the call statistics, defaults to `True`
-    :type record: bool, optional
+    Args:
+        command: A list representing a single shell command
+        stdin: Object to pass into the `stdin` argument for `subprocess.Popen`,
+            defaults to `None`
+        stdout: Object to pass into the `stdout` argument for `subprocess.Popen`,
+            defaults to `subprocess.PIPE`
+        stderr: Object to pass into the `stderr` argument for `subprocess.Popen`,
+            defaults to `subprocess.PIPE`
+        wait: Whether to wait until the command has finished, defaults to `True`
+        stream: Whether to stream the output to the command line, defaults to `True`
+        quiet: Whether to not display anything to the command line and not check the return code,
+            defaults to `False`
+        returncode: The return code expected if the command runs as intended,
+            defaults to `0`
+        alias: Whether to use the basename of the first element of `command`,
+            defaults to `True`
+        record: Whether to record the call statistics, defaults to `True`
 
-    :return: (the spawned process, list of strings printed to stdout,
-        list of strings printed to stderr) if `wait=True`.
-        Otherwise, the spawned process
-    :rtype: tuple or subprocess.Process
+    Returns:
+        (the spawned process, list of strings printed to stdout,
+            list of strings printed to stderr) if `wait=True`.
+            Otherwise, the spawned process
     """
     command = [str(c) for c in command]
     c = command.copy()
@@ -242,13 +205,13 @@ def run_executable(
     return (p, stdout, stderr) if wait else p
 
 
-def get_kallisto_version():
+def get_kallisto_version() -> Optional[Tuple[int, int, int]]:
     """Get the provided Kallisto version.
 
     This function parses the help text by executing the included Kallisto binary.
 
-    :return: tuple of major, minor, patch versions
-    :rtype: tuple
+    Returns:
+        Major, minor, patch versions
     """
     p, stdout, stderr = run_executable([get_kallisto_binary_path()],
                                        quiet=True,
@@ -258,13 +221,13 @@ def get_kallisto_version():
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
-def get_bustools_version():
+def get_bustools_version() -> Optional[Tuple[int, int, int]]:
     """Get the provided Bustools version.
 
     This function parses the help text by executing the included Bustools binary.
 
-    :return: tuple of major, minor, patch versions
-    :rtype: tuple
+    Returns:
+        Major, minor, patch versions
     """
     p, stdout, stderr = run_executable([get_bustools_binary_path()],
                                        quiet=True,
@@ -274,16 +237,16 @@ def get_bustools_version():
     return tuple(int(ver) for ver in match.groups()) if match else None
 
 
-def parse_technologies(lines):
+def parse_technologies(lines: List[str]) -> Set[str]:
     """Parse a list of strings into a list of supported technologies.
 
     This function parses the technologies printed by running `kallisto bus --list`.
 
-    :param lines: the output of `kallisto bus --list` split into lines
-    :type lines: list
+    Args:
+        lines: The output of `kallisto bus --list` split into lines
 
-    :return: list of technologies
-    :rtype: list
+    Returns:
+        Set of technologies
     """
     parsing = False
     technologies = set()
@@ -301,11 +264,11 @@ def parse_technologies(lines):
     return technologies
 
 
-def get_supported_technologies():
+def get_supported_technologies() -> Set[str]:
     """Runs 'kallisto bus --list' to fetch a list of supported technologies.
 
-    :return: list of technologies
-    :rtype: list
+    Returns:
+        Set of technologies
     """
     p, stdout, stderr = run_executable([
         get_kallisto_binary_path(), 'bus', '--list'
@@ -316,14 +279,14 @@ def get_supported_technologies():
     return parse_technologies(stdout)
 
 
-def whitelist_provided(technology):
+def whitelist_provided(technology: str) -> bool:
     """Determine whether or not the whitelist for a technology is provided.
 
-    :param technology: the name of the technology
-    :type technology: str
+    Args:
+        technology: The name of the technology
 
-    :return: whether the whitelist is provided
-    :rtype: bool
+    Returns:
+        Whether the whitelist is provided
     """
     upper = technology.upper()
     return upper in TECHNOLOGIES_MAPPING and TECHNOLOGIES_MAPPING[
@@ -331,33 +294,31 @@ def whitelist_provided(technology):
 
 
 @dryable(dry_utils.move_file)
-def move_file(source, destination):
+def move_file(source: str, destination: str) -> str:
     """Move a file from source to destination, overwriting the file if the
     destination exists.
 
-    :param source: path to source file
-    :type source: str
-    :param destination: path to destination
-    :type destination: str
+    Args:
+        source: Path to source file
+        destination: Path to destination
 
-    :return: path to moved file
-    :rtype: str
+    Returns:
+        Path to moved file
     """
     shutil.move(source, destination)
     return destination
 
 
 @dryable(dry_utils.copy_whitelist)
-def copy_whitelist(technology, out_dir):
+def copy_whitelist(technology: str, out_dir: str) -> str:
     """Copies provided whitelist for specified technology.
 
-    :param technology: the name of the technology
-    :type technology: str
-    :param out_dir: directory to put the whitelist
-    :type out_dir: str
+    Args:
+        technology: The name of the technology
+        out_dir: Directory to put the whitelist
 
-    :return: path to whitelist
-    :rtype: str
+    Returns:
+        Path to whitelist
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
     archive_path = technology.chemistry.whitelist_path
@@ -371,16 +332,15 @@ def copy_whitelist(technology, out_dir):
 
 
 @dryable(dry_utils.copy_map)
-def copy_map(technology, out_dir):
+def copy_map(technology: str, out_dir: str) -> str:
     """Copies provided feature-to-cell barcode mapping for the speified technology.
 
-    :param technology: the name of the technology
-    :type technology: str
-    :param out_dir: directory to put the map
-    :type out_dir: str
+    Args:
+        technology: The name of the technology
+        out_dir: Directory to put the map
 
-    :return: path to map
-    :rtype: str
+    Returns:
+        Path to map
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
     archive_path = technology.chemistry.whitelist_path
@@ -394,25 +354,25 @@ def copy_map(technology, out_dir):
 
 
 @dryable(dry_utils.stream_file)
-def stream_file(url, path):
+def stream_file(url: str, path: str) -> str:
     """Creates a FIFO file to use for piping remote files into processes.
 
     This function spawns a new thread to download the remote file into a FIFO
     file object. FIFO file objects are only supported on unix systems.
 
-    :param url: url to the file
-    :type url: str
-    :param path: path to place FIFO file
-    :type path: str
+    Args:
+        url: Url to the file
+        path: Path to place FIFO file
 
-    :raises UnsupportedOSException: if the OS is Windows
+    Returns:
+        Path to FIFO file
 
-    :return: path to FIFO file
-    :rtype: str
+    Raises:
+        UnsupportedOSError: If the OS is Windows
     """
     # Windows does not support FIFO files.
     if PLATFORM == 'windows':
-        raise UnsupportedOSException((
+        raise UnsupportedOSError((
             'Windows does not support piping remote files.'
             'Please download the file manually.'
         ))
@@ -424,16 +384,16 @@ def stream_file(url, path):
     return path
 
 
-def read_t2g(t2g_path):
+def read_t2g(t2g_path: str) -> Dict[str, Tuple[str, ...]]:
     """Given a transcript-to-gene mapping path, read it into a dictionary.
     The first column is always assumed to tbe the transcript IDs.
 
-    :param t2g_path: path to t2g
-    :type t2g_path: str
+    Args:
+        t2g_path: Path to t2g
 
-    :return: dictionary containing transcript IDs as keys and all other columns
-             as a tuple as values
-    :rtype: dict
+    Returns:
+        Dictionary containing transcript IDs as keys and all other columns
+            as a tuple as values
     """
     t2g = {}
     with open_as_text(t2g_path, 'r') as f:
@@ -453,21 +413,22 @@ def read_t2g(t2g_path):
 
 
 def import_tcc_matrix_as_anndata(
-    matrix_path, barcodes_path, ec_path, txnames_path, threads=8
-):
+    matrix_path: str,
+    barcodes_path: str,
+    ec_path: str,
+    txnames_path: str,
+    threads: int = 8
+) -> anndata.AnnData:
     """Import a TCC matrix as an Anndata object.
 
-    :param matrix_path: path to the matrix ec file
-    :type matrix_path: str
-    :param barcodes_path: path to the barcodes txt file
-    :type barcodes_path: str
-    :param genes_path: path to the ec txt file
-    :type genes_path: str
-    :param txnames_path: path to transcripts.txt generated by `kallisto bus`
-    :type txnames_path: str
+    Args:
+        matrix_path: Path to the matrix ec file
+        barcodes_path: Path to the barcodes txt file
+        genes_path: Path to the ec txt file
+        txnames_path: Path to transcripts.txt generated by `kallisto bus`
 
-    :return: a new Anndata object
-    :rtype: anndata.Anndata
+    Returns:
+        A new Anndata object
     """
     df_barcodes = pd.read_csv(
         barcodes_path, index_col=0, header=None, names=['barcode']
@@ -509,25 +470,25 @@ def import_tcc_matrix_as_anndata(
 
 
 def import_matrix_as_anndata(
-    matrix_path, barcodes_path, genes_path, t2g_path=None, name='gene'
-):
+    matrix_path: str,
+    barcodes_path: str,
+    genes_path: str,
+    t2g_path: Optional[str] = None,
+    name: str = 'gene',
+) -> anndata.AnnData:
     """Import a matrix as an Anndata object.
 
-    :param matrix_path: path to the matrix ec file
-    :type matrix_path: str
-    :param barcodes_path: path to the barcodes txt file
-    :type barcodes_path: str
-    :param genes_path: path to the genes txt file
-    :type genes_path: str
-    :param t2g_path: path to transcript-to-gene mapping. If this is provided,
-                     the third column of the mapping is appended to the
-                     anndata var, defaults to `None`
-    :type t2g_path: str, optional
-    :param name: name of the columns, defaults to "gene"
-    :type name: str, optional
+    Args:
+        matrix_path: Path to the matrix ec file
+        barcodes_path: Path to the barcodes txt file
+        genes_path: Path to the genes txt file
+        t2g_path: Path to transcript-to-gene mapping. If this is provided,
+            the third column of the mapping is appended to the anndata var,
+            defaults to `None`
+        name: Name of the columns, defaults to "gene"
 
-    :return: a new Anndata object
-    :rtype: anndata.Anndata
+    Returns:
+        A new Anndata object
     """
     df_barcodes = pd.read_csv(
         barcodes_path, index_col=0, header=None, names=['barcode']
@@ -572,17 +533,18 @@ def import_matrix_as_anndata(
     return anndata.AnnData(X=mtx.tocsr(), obs=df_barcodes, var=df_genes)
 
 
-def overlay_anndatas(adata_spliced, adata_unspliced):
+def overlay_anndatas(
+    adata_spliced: anndata.AnnData, adata_unspliced: anndata.AnnData
+) -> anndata.AnnData:
     """'Overlays' anndata objects by taking the intersection of the obs and var
     of each anndata.
 
-    :param adata_spliced: an Anndata object
-    :type adata_spliced: anndata.Anndata
-    :param adata_unspliced: an Anndata object
-    :type adata_unspliced: anndata.Anndata
+    Args:
+        adata_spliced: An Anndata object
+        adata_unspliced: An Anndata object
 
-    :return: a new Anndata object
-    :rtype: anndata.Anndata
+    Returns:
+        A new Anndata object
     """
     obs_idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
@@ -602,17 +564,18 @@ def overlay_anndatas(adata_spliced, adata_unspliced):
     )
 
 
-def sum_anndatas(adata_spliced, adata_unspliced):
+def sum_anndatas(
+    adata_spliced: anndata.AnnData, adata_unspliced: anndata.AnnData
+) -> anndata.AnnData:
     """Sum the counts in two anndata objects by taking the intersection of
     both matrices and adding the values together.
 
-    :param adata_spliced: an Anndata object
-    :type adata_spliced: anndata.Anndata
-    :param adata_unspliced: an Anndata object
-    :type adata_unspliced: anndata.Anndata
+    Args:
+        adata_spliced: An Anndata object
+        adata_unspliced: An Anndata object
 
-    :return: a new Anndata object
-    :rtype: anndata.Anndata
+    Returns:
+        A new Anndata object
     """
     obs_idx = adata_spliced.obs.index.intersection(adata_unspliced.obs.index)
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
@@ -628,7 +591,7 @@ def sum_anndatas(adata_spliced, adata_unspliced):
     )
 
 
-def restore_cwd(func):
+def restore_cwd(func: Callable) -> Callable:
     """Function decorator to decorate functions that change the current working
     directory. When such a function is decorated with this function, the
     current working directory is restored to its previous state when the

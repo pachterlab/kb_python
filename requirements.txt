@@ -11,4 +11,4 @@ plotly>=4.5.0
 requests>=2.22.0
 scanpy>=1.4.4.post1
 scikit-learn>=0.21.3
-tqdm>=4.39.0
+typing-extensions>=3.7.4

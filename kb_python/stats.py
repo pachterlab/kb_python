@@ -2,6 +2,7 @@ import datetime as dt
 import json
 import os
 import sys
+from typing import Dict, List, Optional, Union
 
 from . import __version__
 from .config import (
@@ -52,13 +53,12 @@ class Stats:
                 'version': '.'.join(str(i) for i in get_bustools_version())
             }
 
-    def command(self, command, runtime=None):
+    def command(self, command: List[str], runtime: Optional[float] = None):
         """Report a shell command was run.
 
-        :param command: a shell command, represented as a list
-        :type command: list
-        :param kwargs: additional command information
-        :type kwargs: dict
+        Args:
+            command: A shell command, represented as a list
+            runtime: Command runtime
         """
         cmd = ' '.join(command)
         self.commands.append(cmd)
@@ -71,23 +71,26 @@ class Stats:
         self.elapsed = (self.end_time - self.start_time).total_seconds()
 
     @dryable(dummy_function)
-    def save(self, path):
+    def save(self, path: str) -> str:
         """Save statistics as JSON to path.
 
-        :param path: path to JSON
-        :type path: str
+        Args:
+            path: Path to JSON
 
-        :return: path to saved JSON
-        :rtype: str
+        Returns:
+            Path to saved JSON
         """
         if not is_dry():
             with open(path, 'w') as f:
                 json.dump(self.to_dict(), f, indent=4)
         return path
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[str, float]]:
         """Convert statistics to dictionary, so that it is easily parsed
         by the report-rendering functions.
+
+        Returns:
+            Statistics dictionary
         """
         return {
             'workdir': self.workdir,

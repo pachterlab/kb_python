@@ -21,7 +21,7 @@ from .config import (
     set_kallisto_binary_path,
     TECHNOLOGIES,
     TEMP_DIR,
-    UnsupportedOSException,
+    UnsupportedOSError,
 )
 from .compile import compile
 from .constants import INFO_FILENAME
@@ -37,8 +37,11 @@ from .utils import (
 )
 
 
-def get_binary_info():
+def get_binary_info() -> str:
     """Get information on the binaries that will be used for commands.
+
+    Returns:
+        `kallisto` and `bustools` binary versions and paths.
     """
     kallisto_version = '.'.join(str(i) for i in get_kallisto_version())
     bustools_version = '.'.join(str(i) for i in get_bustools_version())
@@ -108,11 +111,16 @@ def display_technologies():
     sys.exit(1)
 
 
-def parse_compile(parser, args, temp_dir='tmp'):
+def parse_compile(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
     """Parser for the `compile` command.
 
-    :param args: Command-line arguments dictionary, as parsed by argparse
-    :type args: dict
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
     """
     # target must be all when --view is used
     if args.view and args.target is not None:
@@ -159,11 +167,16 @@ def parse_compile(parser, args, temp_dir='tmp'):
         )
 
 
-def parse_ref(parser, args, temp_dir='tmp'):
+def parse_ref(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
     """Parser for the `ref` command.
 
-    :param args: Command-line arguments dictionary, as parsed by argparse
-    :type args: dict
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
     """
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
@@ -266,11 +279,16 @@ def parse_ref(parser, args, temp_dir='tmp'):
             )
 
 
-def parse_count(parser, args, temp_dir='tmp'):
+def parse_count(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
     """Parser for the `count` command.
 
-    :param args: Command-line arguments dictionary, as parsed by argparse
-    :type args: dict
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
     """
     if args.report:
         logger.warning((
@@ -590,16 +608,18 @@ COMMAND_TO_FUNCTION = {
 }
 
 
-def setup_info_args(parser, parent):
+def setup_info_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
     """Helper function to set up a subparser for the `info` command.
 
-    :param parser: argparse parser to add the `info` command to
-    :type args: argparse.ArgumentParser
-    :param parent: argparse parser parent of the newly added subcommand.
-                   used to inherit shared commands/flags
-    :type args: argparse.ArgumentParser
-    :return: the newly added parser
-    :rtype: argparse.ArgumentParser
+    Args:
+        parser: Parser to add the `info` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
     """
     parser_info = parser.add_parser(
         'info',
@@ -611,16 +631,18 @@ def setup_info_args(parser, parent):
     return parser_info
 
 
-def setup_compile_args(parser, parent):
+def setup_compile_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
     """Helper function to set up a subparser for the `compile` command.
 
-    :param parser: argparse parser to add the `compile` command to
-    :type args: argparse.ArgumentParser
-    :param parent: argparse parser parent of the newly added subcommand.
-                   used to inherit shared commands/flags
-    :type args: argparse.ArgumentParser
-    :return: the newly added parser
-    :rtype: argparse.ArgumentParser
+    Args:
+        parser: Parser to add the `compile` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
     """
     parser_compile = parser.add_parser(
         'compile',
@@ -698,16 +720,18 @@ def setup_compile_args(parser, parent):
     return parser_compile
 
 
-def setup_ref_args(parser, parent):
+def setup_ref_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
     """Helper function to set up a subparser for the `ref` command.
 
-    :param parser: argparse parser to add the `ref` command to
-    :type args: argparse.ArgumentParser
-    :param parent: argparse parser parent of the newly added subcommand.
-                   used to inherit shared commands/flags
-    :type args: argparse.ArgumentParser
-    :return: the newly added parser
-    :rtype: argparse.ArgumentParser
+    Args:
+        parser: Parser to add the `ref` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
     """
     kallisto_path = get_kallisto_binary_path()
     bustools_path = get_bustools_binary_path()
@@ -900,16 +924,18 @@ def setup_ref_args(parser, parent):
     return parser_ref
 
 
-def setup_count_args(parser, parent):
+def setup_count_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
     """Helper function to set up a subparser for the `count` command.
 
-    :param parser: argparse parser to add the `count` command to
-    :type args: argparse.ArgumentParser
-    :param parent: argparse parser parent of the newly added subcommand.
-                   used to inherit shared commands/flags
-    :type args: argparse.ArgumentParser
-    :return: the newly added parser
-    :rtype: argparse.ArgumentParser
+    Args:
+        parser: Parser to add the `count` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
     """
     kallisto_path = get_kallisto_binary_path()
     bustools_path = get_bustools_binary_path()
@@ -1261,14 +1287,14 @@ def main():
         # Check
         kallisto_path = get_kallisto_binary_path()
         if not kallisto_path:
-            raise UnsupportedOSException(
+            raise UnsupportedOSError(
                 'Failed to find compatible kallisto binary. '
                 'Provide a compatible binary with the `--kallisto` option or '
                 'run `kb compile`.'
             )
         bustools_path = get_bustools_binary_path()
         if not bustools_path:
-            raise UnsupportedOSException(
+            raise UnsupportedOSError(
                 'Failed to find compatible bustools binary. '
                 'Provide a compatible binary with the `--bustools` option or '
                 'run `kb compile`.'

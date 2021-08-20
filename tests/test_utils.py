@@ -7,7 +7,7 @@ from unittest.mock import ANY
 import anndata
 
 import kb_python.utils as utils
-from kb_python.config import UnsupportedOSException
+from kb_python.config import UnsupportedOSError
 from tests.mixins import TestMixin
 
 
@@ -111,7 +111,7 @@ class TestUtils(TestMixin, TestCase):
             mock.patch('kb_python.utils.urlretrieve') as urlretrieve:
             url = mock.MagicMock()
             path = mock.MagicMock()
-            with self.assertRaises(UnsupportedOSException):
+            with self.assertRaises(UnsupportedOSError):
                 utils.stream_file(url, path)
             os.mkfifo.assert_not_called()
             threading.thread.assert_not_called()

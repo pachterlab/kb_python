@@ -1,9 +1,11 @@
 import os
 import shutil
 import tempfile
+from typing import Dict, Optional
 from urllib.parse import urljoin, urlparse
 
 import requests
+from typing_extensions import Literal
 
 from .config import (
     BUSTOOLS_RELEASES_URL,
@@ -17,22 +19,34 @@ from .logging import logger
 from .utils import download_file, restore_cwd, run_executable
 
 
-def get_latest_github_release_tag(releases_url):
+class CompileError(Exception):
+    pass
+
+
+def get_latest_github_release_tag(releases_url: str) -> str:
     """Get the tag name of the latest GitHub release, given a url to the
     releases API.
 
-    :param releases_url: url to the releases API
-    :type releases_url: str
+    Args:
+        releases_url: Url to the releases API
 
-    :return: tag name
-    :rtype: str
+    Returns:
+        The tag name
     """
     response = requests.get(releases_url)
     response.raise_for_status()
     return response.json()[0]['tag_name']
 
 
-def get_filename_from_url(url):
+def get_filename_from_url(url: str) -> str:
+    """Fetch the filename from a URL.
+
+    Args:
+        url: The url
+
+    Returns:
+        The filename
+    """
     response = requests.get(url)
     response.raise_for_status()
     disposition = response.headers.get('content-disposition')
@@ -45,54 +59,59 @@ def get_filename_from_url(url):
         return os.path.basename(urlparse(url).path)
 
 
-def get_kallisto_url():
+def get_kallisto_url() -> str:
     """Get the tarball url of the latest kallisto release.
 
-    :return: tarball url
-    :rtype: str
+    Returns:
+        Tarball url
     """
     tag = get_latest_github_release_tag(KALLISTO_RELEASES_URL)
     return urljoin(KALLISTO_TARBALL_URL, tag)
 
 
-def get_bustools_url():
+def get_bustools_url() -> str:
     """Get the tarball url of the latest bustools release.
 
-    :return: tarball url
-    :rtype: str
+    Returns:
+        Tarball url
     """
     tag = get_latest_github_release_tag(BUSTOOLS_RELEASES_URL)
     return urljoin(BUSTOOLS_TARBALL_URL, tag)
 
 
-def find_git_root(path):
+def find_git_root(path: str) -> str:
     """Find the root directory of a git repo by walking.
 
-    :param path: path to start the search
-    :type path: str
+    Args:
+        path: Path to start the search
 
-    :return: path to root of git repo
-    :rtype: str
+    Returns:
+        Path to root of git repo
+
+    Raises:
+        CompileError: If the git root could not be found
     """
     for root, dirs, files in os.walk(path):
         if '.gitignore' in files:
             return root
-    raise Exception('Unable to find git root.')
+    raise CompileError('Unable to find git root.')
 
 
 @restore_cwd
-def compile_kallisto(source_dir, binary_path, cmake_arguments=None):
+def compile_kallisto(
+    source_dir: str,
+    binary_path: str,
+    cmake_arguments: Optional[str] = None
+) -> str:
     """Compile `kallisto` from source.
 
-    :param source_dir: path to directory containing root of kallisto git repo
-    :type source_dir: str
-    :param binary_path: path to place compiled binary
-    :type binary_path: str
-    :param cmake_arguments: additional arguments to pass to the cmake command
-    :type cmake_arguments: str, optional
+    Args:
+        source_dir: Path to directory containing root of kallisto git repo
+        binary_path: Path to place compiled binary
+        cmake_arguments: Additional arguments to pass to the cmake command
 
-    :return: path to compiled binary
-    :rtype: str
+    Returns:
+        Path to compiled binary
     """
     source_dir = os.path.abspath(source_dir)
     binary_path = os.path.abspath(binary_path)
@@ -131,18 +150,20 @@ def compile_kallisto(source_dir, binary_path, cmake_arguments=None):
 
 
 @restore_cwd
-def compile_bustools(source_dir, binary_path, cmake_arguments=None):
+def compile_bustools(
+    source_dir: str,
+    binary_path: str,
+    cmake_arguments: Optional[str] = None
+) -> str:
     """Compile `bustools` from source.
 
-    :param source_dir: path to directory containing root of bustools git repo
-    :type source_dir: str
-    :param binary_path: path to place compiled binary
-    :type binary_path: str
-    :param cmake_arguments: additional arguments to pass to the cmake command
-    :type cmake_arguments: str, optional
+    Args:
+        source_dir: Path to directory containing root of bustools git repo
+        binary_path: Path to place compiled binary
+        cmake_arguments: Additional arguments to pass to the cmake command
 
-    :return: path to compiled binary
-    :rtype: str
+    Returns:
+        Path to compiled binary
     """
     source_dir = os.path.abspath(source_dir)
     binary_path = os.path.abspath(binary_path)
@@ -175,33 +196,28 @@ def compile_bustools(source_dir, binary_path, cmake_arguments=None):
 
 @logger.namespaced('compile')
 def compile(
-    target,
-    out_dir=None,
-    cmake_arguments=None,
-    url=None,
-    overwrite=False,
-    temp_dir='tmp',
-):
+    target: Literal['kallisto', 'bustools', 'all'],
+    out_dir: Optional[str] = None,
+    cmake_arguments: Optional[str] = None,
+    url: Optional[str] = None,
+    overwrite: bool = False,
+    temp_dir: str = 'tmp',
+) -> Dict[str, str]:
     """Compile `kallisto` and/or `bustools` binaries by downloading and compiling
     a source archive.
 
-    :param target: which binary to compile. May be one of `kallisto`, `bustools`
-        or `all`
-    :type target: str
-    :param out_dir: path to output directory, defaults to `None`
-    :type out_dir: str, optional
-    :param cmake_arguments: additional arguments to pass to the cmake command
-    :type cmake_arguments: str, optional
-    :param url: download the source archive from this url instead, defaults to
-        `None`
-    :type url: str, optional
-    :param overwrite: overwrite any existing results, defaults to `False`
-    :type overwrite: bool, optional
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
+    Args:
+        target: Which binary to compile. May be one of `kallisto`, `bustools`
+            or `all`
+        out_dir: Path to output directory, defaults to `None`
+        cmake_arguments: Additional arguments to pass to the cmake command
+        url: Download the source archive from this url instead, defaults to
+            `None`
+        overwrite: Overwrite any existing results, defaults to `False`
+        temp_dir: Path to temporary directory, defaults to `tmp`
 
-    :return: dictionary of results
-    :rtype: dict
+    Returns:
+        Dictionary of results
     """
     results = {}
     if target in ('kallisto', 'all'):

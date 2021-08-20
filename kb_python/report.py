@@ -1,11 +1,12 @@
 import os
+from typing import Any, Dict, List, Optional, Tuple
 
 import nbformat
 import numpy as np
 import plotly.graph_objects as go
+from jinja2 import Template
 from nbconvert import HTMLExporter
 from nbconvert.preprocessors import ExecutePreprocessor
-from jinja2 import Template
 
 from . import __version__
 from .config import PACKAGE_PATH
@@ -19,19 +20,21 @@ MATRIX_TEMPLATE_PATH = os.path.join(REPORT_DIR, 'report_matrix.ipynb')
 MARGIN = go.layout.Margin(t=5, r=5, b=0, l=5)  # noqa: E741
 
 
-def dict_to_table(d, column_ratio=[3, 7], column_align=['right', 'left']):
+def dict_to_table(
+    d: Dict[str, Any],
+    column_ratio: List[int] = [3, 7],
+    column_align: List[str] = ['right', 'left']
+) -> go.Figure:
     """Convert a dictionary to a Plot.ly table of key-value pairs.
 
-    :param d: dictionary to convert
-    :type d: dict
-    :param column_ratio: relative column widths, represented as a ratio,
-                         defaults to `[3, 7]`
-    :type column_ratio: list, optional
-    :param column_align: column text alignments, defaults to `['right', 'left']`
-    :type column_align: list, optional
+    Args:
+        d: Dictionary to convert
+        column_ratio: Relative column widths, represented as a ratio,
+            defaults to `[3, 7]`
+        column_align: Column text alignments, defaults to `['right', 'left']`
 
-    :return: figure
-    :rtype: plotly.graph_objs.Figure
+    Returns:
+        Figure
     """
     keys = []
     values = []
@@ -64,14 +67,14 @@ def dict_to_table(d, column_ratio=[3, 7], column_align=['right', 'left']):
     return figure
 
 
-def knee_plot(n_counts):
+def knee_plot(n_counts: List[int]) -> go.Figure:
     """Generate knee plot card.
 
-    :param n_counts: list of UMI counts
-    :type n_counts: list
+    Args:
+        n_counts: List of UMI counts
 
-    :return: figure
-    :rtype: plotly.graph_objs.Figure
+    Returns:
+        Figure
     """
     knee = np.sort(n_counts)[::-1]
     scatter = go.Scattergl(x=knee, y=np.arange(len(knee)), mode='lines')
@@ -89,16 +92,15 @@ def knee_plot(n_counts):
     return figure
 
 
-def genes_detected_plot(n_counts, n_genes):
+def genes_detected_plot(n_counts: List[int], n_genes: List[int]) -> go.Figure:
     """Generate genes detected plot card.
 
-    :param n_counts: list of UMI counts
-    :type n_counts: list
-    :param n_genes: list of gene counts
-    :type n_genes: list
+    Args:
+        n_counts: List of UMI counts
+        n_genes: List of gene counts
 
-    :return: figure
-    :rtype: plotly.graph_objs.Figure
+    Returns:
+        Figure
     """
     scatter = go.Scattergl(x=n_counts, y=n_genes, mode='markers')
     figure = go.Figure(data=scatter)
@@ -115,14 +117,14 @@ def genes_detected_plot(n_counts, n_genes):
     return figure
 
 
-def elbow_plot(pca_variance_ratio):
+def elbow_plot(pca_variance_ratio: List[float]) -> go.Figure:
     """Generate elbow plot card.
 
-    :param pca_variance_ratio: list PCA variance ratios
-    :type pca_variance_ratio: list
+    Args:
+        pca_variance_ratio: List PCA variance ratios
 
-    :return: figure
-    :rtype: plotly.graph_objs.Figure
+    Returns:
+        Figure
     """
     scatter = go.Scattergl(
         x=np.arange(1,
@@ -142,14 +144,14 @@ def elbow_plot(pca_variance_ratio):
     return figure
 
 
-def pca_plot(pc):
+def pca_plot(pc: np.ndarray) -> go.Figure:
     """Generate PCA plot card.
 
-    :param pc: embeddings
-    :type pc: list
+    Args:
+        pc: Embeddings
 
-    :return: figure
-    :rtype: plotly.graph_objs.Figure
+    Returns:
+        Figure
     """
     scatter = go.Scattergl(x=pc[:, 0], y=pc[:, 1], mode='markers')
     figure = go.Figure(data=scatter)
@@ -165,36 +167,29 @@ def pca_plot(pc):
 
 
 def write_report(
-    stats_path,
-    info_path,
-    inspect_path,
-    out_path,
-    matrix_path=None,
-    barcodes_path=None,
-    genes_path=None,
-    t2g_path=None
-):
+    stats_path: str,
+    info_path: str,
+    inspect_path: str,
+    out_path: str,
+    matrix_path: Optional[str] = None,
+    barcodes_path: Optional[str] = None,
+    genes_path: Optional[str] = None,
+    t2g_path: Optional[str] = None,
+) -> str:
     """Render the Jupyter notebook report with Jinja2.
 
-    :param stats_path: path to kb stats JSON
-    :type stats_path: str
-    :param info_path: path to run_info.json
-    :type info_path: str
-    :param inspect_path: path to inspect.json
-    :type inspect_path: str
-    :param out_path: path to Jupyter notebook to generate
-    :type out_path: str
-    :param matrix_path: path to matrix
-    :type matrix_path: str
-    :param barcodes_path: list of paths to barcodes.txt
-    :type barcodes_path: str
-    :param genes_path: path to genes.txt, defaults to `None`
-    :type genes_path: str, optional
-    :param t2g_path: path to transcript-to-gene mapping
-    :type t2g_path: str
+    Args:
+        stats_path: Path to kb stats JSON
+        info_path: Path to run_info.json
+        inspect_path: Path to inspect.json
+        out_path: Path to Jupyter notebook to generate
+        matrix_path: Path to matrix
+        barcodes_path: List of paths to barcodes.txt
+        genes_path: Path to genes.txt, defaults to `None`
+        t2g_path: Path to transcript-to-gene mapping
 
-    :return: path to notebook generated
-    :rtype: str
+    Returns:
+        Path to notebook generated
     """
     template_path = MATRIX_TEMPLATE_PATH if all(
         p is not None
@@ -218,18 +213,17 @@ def write_report(
     return out_path
 
 
-def execute_report(execute_path, nb_path, html_path):
+def execute_report(execute_path: str, nb_path: str,
+                   html_path: str) -> Tuple[str, str]:
     """Execute the report and write the results as a Jupyter notebook and HTML.
 
-    :param execute_path: path to Jupyter notebook to execute
-    :type execute_path: str
-    :param nb_path: path to Jupyter notebook to generate
-    :type nb_path: str
-    :param html_path: path to HTML to generate
-    :type html_path: str
+    Args:
+        execute_path: Path to Jupyter notebook to execute
+        nb_path: Path to Jupyter notebook to generate
+        html_path: Path to HTML to generate
 
-    :return: tuple containing executed notebook and HTML
-    :rtype: tuple
+    Returns:
+        Tuple containing executed notebook and HTML
     """
     with open(execute_path, 'r') as f:
         nb = nbformat.read(f, as_version=4)
@@ -250,42 +244,33 @@ def execute_report(execute_path, nb_path, html_path):
 
 @dryable(lambda *args, **kwargs: {})
 def render_report(
-    stats_path,
-    info_path,
-    inspect_path,
-    nb_path,
-    html_path,
-    matrix_path=None,
-    barcodes_path=None,
-    genes_path=None,
-    t2g_path=None,
-    temp_dir='tmp'
-):
+    stats_path: str,
+    info_path: str,
+    inspect_path: str,
+    nb_path: str,
+    html_path: str,
+    matrix_path: Optional[str] = None,
+    barcodes_path: Optional[str] = None,
+    genes_path: Optional[str] = None,
+    t2g_path: Optional[str] = None,
+    temp_dir: str = 'tmp'
+) -> Dict[str, str]:
     """Render and execute the report.
 
-    :param stats_path: path to kb stats JSON
-    :type stats_path: str
-    :param info_path: path to run_info.json
-    :type info_path: str
-    :param inspect_path: path to inspect.json
-    :type inspect_path: str
-    :param nb_path: path to Jupyter notebook to generate
-    :type nb_path: str
-    :param html_path: path to HTML to generate
-    :type html_path: str
-    :param matrix_path: path to matrix
-    :type matrix_path: str
-    :param barcodes_path: list of paths to barcodes.txt
-    :type barcodes_path: str
-    :param genes_path: path to genes.txt, defaults to `None`
-    :type genes_path: str, optional
-    :param t2g_path: path to transcript-to-gene mapping
-    :type t2g_path: str
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
+    Args:
+        stats_path: Path to kb stats JSON
+        info_path: Path to run_info.json
+        inspect_path: Path to inspect.json
+        nb_path: Path to Jupyter notebook to generate
+        html_path: Path to HTML to generate
+        matrix_path: Path to matrix
+        barcodes_path: List of paths to barcodes.txt
+        genes_path: Path to genes.txt, defaults to `None`
+        t2g_path: Path to transcript-to-gene mapping
+        temp_dir: Path to temporary directory, defaults to `tmp`
 
-    :return: dictionary containing notebook and HTML paths
-    :rtype: dict
+    Returns:
+        Dictionary containing notebook and HTML paths
     """
     temp_path = write_report(
         stats_path, info_path, inspect_path, get_temporary_filename(temp_dir),

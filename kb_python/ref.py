@@ -2,11 +2,12 @@ import glob
 import itertools
 import os
 import tarfile
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import ngs_tools as ngs
 import pandas as pd
 
-from .config import get_kallisto_binary_path
+from .config import get_kallisto_binary_path, Reference
 from .logging import logger
 from .utils import (
     concatenate_files,
@@ -18,7 +19,15 @@ from .utils import (
 )
 
 
-def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
+class RefError(Exception):
+    pass
+
+
+def generate_kite_fasta(
+    feature_path: str,
+    out_path: str,
+    no_mismatches: bool = False
+) -> Tuple[str, int]:
     """Generate a FASTA file for feature barcoding with the KITE workflow.
 
     This FASTA contains all sequences that are 1 hamming distance from the
@@ -28,31 +37,22 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     pair of barcodes, the hamming distance 1 variants for those barcodes are
     not generated.
 
-    :param feature_path: path to TSV containing barcodes and feature names
-    :type feature_path: str
-    :param out_path: path to FASTA to generate
-    :type out_path: str
-    :param no_mismatches: whether to generate hamming distance 1 variants,
-                          defaults to `False`
-    :type no_mismatches: bool, optional
+    Args:
+        feature_path: Path to TSV containing barcodes and feature names
+        out_path: Path to FASTA to generate
+        no_mismatches: Whether to generate hamming distance 1 variants,
+            defaults to `False`
 
-    :raises Exception: if there are barcodes of different lengths
-    :raises Exception: if there are duplicate barcodes
+    Returns:
+        Path to generated FASTA, smallest barcode length
 
-    :return: (path to generated FASTA, set of barcode lengths)
-    :rtype: tuple
+    Raises:
+        RefError: If there are barcodes of different lengths or if there are
+            duplicate barcodes
     """
 
     def generate_mismatches(name, sequence):
         """Helper function to generate 1 hamming distance mismatches.
-
-        :param name: name of the sequence
-        :type name: str
-        :param sequence: the sequence
-        :type sequence: str
-
-        :return: a generator that yields a tuple of (unique name, mismatched sequence)
-        :rtype: generator
         """
         sequence = sequence.upper()
         for i in range(len(sequence)):
@@ -76,7 +76,7 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
         # Check that the first column contains the sequence
         # and the second column the feature name.
         if ngs.sequence.SEQUENCE_PARSER.search(row.sequence.upper()):
-            raise Exception((
+            raise RefError((
                 f'Encountered non-ATCG basepairs in barcode sequence {row.sequence}. '
                 'Does the first column contain the sequences and the second column the feature names?'
             ))
@@ -94,7 +94,7 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
         bc for bc in features.values() if list(features.values()).count(bc) > 1
     ])
     if len(duplicates) > 0:
-        raise Exception(
+        raise RefError(
             'Duplicate feature barcodes: {}'.format(' '.join(duplicates))
         )
     if len(lengths) > 1:
@@ -159,16 +159,15 @@ def generate_kite_fasta(feature_path, out_path, no_mismatches=False):
     return out_path, min(lengths)
 
 
-def create_t2g_from_fasta(fasta_path, t2g_path):
+def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
     """Parse FASTA headers to get transcripts-to-gene mapping.
 
-    :param fasta_path: path to FASTA file
-    :type fasta_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
+    Args:
+        fasta_path: Path to FASTA file
+        t2g_path: Path to output transcript-to-gene mapping
 
-    :return: dictionary containing path to generated t2g mapping
-    :rtype: dict
+    Returns:
+        Dictionary containing path to generated t2g mapping
     """
     logger.info(f'Creating transcript-to-gene mapping at {t2g_path}')
     with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
@@ -202,16 +201,15 @@ def create_t2g_from_fasta(fasta_path, t2g_path):
     return {'t2g': t2g_path}
 
 
-def create_t2c(fasta_path, t2c_path):
+def create_t2c(fasta_path: str, t2c_path: str) -> Dict[str, str]:
     """Creates a transcripts-to-capture list from a FASTA file.
 
-    :param fasta_path: path to FASTA file
-    :type fasta_path: str
-    :param t2c_path: path to output transcripts-to-capture list
-    :type t2c_path: str
+    Args:
+        fasta_path: Path to FASTA file
+        t2c_path: Path to output transcripts-to-capture list
 
-    :return: dictionary containing path to generated t2c list
-    :rtype: dict
+    Returns:
+        Dictionary containing path to generated t2c list
     """
     with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2c_path,
                                                                 'w') as f_out:
@@ -220,18 +218,18 @@ def create_t2c(fasta_path, t2c_path):
     return {'t2c': t2c_path}
 
 
-def kallisto_index(fasta_path, index_path, k=31):
+def kallisto_index(fasta_path: str,
+                   index_path: str,
+                   k: int = 31) -> Dict[str, str]:
     """Runs `kallisto index`.
 
-    :param fasta_path: path to FASTA file
-    :type fasta_path: str
-    :param index_path: path to output kallisto index
-    :type index_path: str
-    :param k: k-mer length, defaults to 31
-    :type k: int, optional
+    Args:
+        fasta_path: path to FASTA file
+        index_path: path to output kallisto index
+        k: k-mer length, defaults to 31
 
-    :return: dictionary containing path to generated index
-    :rtype: dict
+    Returns:
+        Dictionary containing path to generated index
     """
     logger.info(f'Indexing {fasta_path} to {index_path}')
     command = [
@@ -242,22 +240,24 @@ def kallisto_index(fasta_path, index_path, k=31):
     return {'index': index_path}
 
 
-def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
+def split_and_index(
+    fasta_path: str,
+    index_prefix: str,
+    n: int = 2,
+    k: int = 31,
+    temp_dir: str = 'tmp'
+) -> Dict[str, str]:
     """Split a FASTA file into `n` parts and index each one.
 
-    :param fasta_path: path to FASTA file
-    :type fasta_path: str
-    :param index_prefix: prefix of output kallisto indices
-    :type index_prefix: str
-    :param n: split the index into `n` files, defaults to `2`
-    :type n: int, optional
-    :param k: k-mer length, defaults to 31
-    :type k: int, optional
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
+    Args:
+        fasta_path: Path to FASTA file
+        index_prefix: Prefix of output kallisto indices
+        n: Split the index into `n` files, defaults to `2`
+        k: K-mer length, defaults to 31
+        temp_dir: Path to temporary directory, defaults to `tmp`
 
-    :return: dictionary containing path to generated index
-    :rtype: dict
+    Returns:
+        Dictionary containing path to generated index
     """
     fastas = []
     indices = []
@@ -296,33 +296,36 @@ def split_and_index(fasta_path, index_prefix, n=2, k=31, temp_dir='tmp'):
 
 
 @logger.namespaced('download')
-def download_reference(reference, files, temp_dir='tmp', overwrite=False):
+def download_reference(
+    reference: Reference,
+    files: Dict[str, str],
+    temp_dir: str = 'tmp',
+    overwrite: bool = False
+) -> Dict[str, str]:
     """Downloads a provided reference file from a static url.
 
     The configuration for provided references is in `config.py`.
 
-    :param reference: a Reference object, as defined in `config.py`
-    :type reference: Reference
-    :param files: dictionary that has the command-line option as keys and
-                  the path as values. used to determine if all the required
-                  paths to download the given reference have been provided
-    :type files: dict
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-    :param overwrite: overwrite an existing index file, defaults to `False`
-    :type overwrite: bool, optional
+    Args:
+        reference: A Reference object
+        files: Dictionary that has the command-line option as keys and
+            the path as values. used to determine if all the required
+            paths to download the given reference have been provided
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        overwrite: Overwrite an existing index file, defaults to `False`
 
-    :raises Exception: if the required options are not provided
+    Returns:
+        Dictionary containing paths to generated file(s)
 
-    :return: dictionary containing paths to generated file(s)
-    :rtype: dict
+    Raise:
+        RefError: If the required options are not provided
     """
     results = {}
     if not ngs.utils.all_exists(*list(files.values())) or overwrite:
         # Make sure all the required file paths are there.
         diff = set(reference.files.keys()) - set(files.keys())
         if diff:
-            raise Exception(
+            raise RefError(
                 'the following options are required to download this reference: {}'
                 .format(','.join(diff))
             )
@@ -352,16 +355,16 @@ def download_reference(reference, files, temp_dir='tmp', overwrite=False):
     return results
 
 
-def decompress_file(path, temp_dir='tmp'):
+def decompress_file(path: str, temp_dir: str = 'tmp') -> str:
     """Decompress the given path if it is a .gz file. Otherwise, return the
     original path.
 
-    :param path: path to the file
-    :type path: str
+    Args:
+        path: Path to the file
 
-    :return: unaltered `path` if the file is not a .gz file, otherwise path to the
-             uncompressed file
-    :rtype: str
+    Returns:
+        Unaltered `path` if the file is not a .gz file, otherwise path to the
+            uncompressed file
     """
     if path.endswith('.gz'):
         logger.info('Decompressing {} to {}'.format(path, temp_dir))
@@ -374,17 +377,19 @@ def decompress_file(path, temp_dir='tmp'):
         return path
 
 
-def get_gtf_attribute_include_func(include):
+def get_gtf_attribute_include_func(
+    include: List[Dict[str, str]]
+) -> Callable[[ngs.gtf.GtfEntry], bool]:
     """Helper function to create a filtering function to include certain GTF
     entries while processing. The returned function returns `True` if the
     entry should be included.
 
-    :param include: list of dictionaries representing key-value pairs of
-        attributes to include
-    :type include: list
+    Args:
+        include: List of dictionaries representing key-value pairs of
+            attributes to include
 
-    :return: filter function
-    :rtype: function
+    Returns:
+        Filter function
     """
 
     def include_func(entry):
@@ -398,17 +403,19 @@ def get_gtf_attribute_include_func(include):
     return include_func
 
 
-def get_gtf_attribute_exclude_func(exclude):
+def get_gtf_attribute_exclude_func(
+    exclude: List[Dict[str, str]]
+) -> Callable[[ngs.gtf.GtfEntry], bool]:
     """Helper function to create a filtering function to exclude certain GTF
     entries while processing. The returned function returns `False` if the
     entry should be excluded.
 
-    :param exclude: list of dictionaries representing key-value pairs of
-        attributes to exclude
-    :type exclude: list
+    Args:
+        exclude: List of dictionaries representing key-value pairs of
+            attributes to exclude
 
-    :return: filter function
-    :rtype: function
+    Returns:
+        Filter function
     """
 
     def exclude_func(entry):
@@ -424,45 +431,36 @@ def get_gtf_attribute_exclude_func(exclude):
 
 @logger.namespaced('ref')
 def ref(
-    fasta_paths,
-    gtf_paths,
-    cdna_path,
-    index_path,
-    t2g_path,
-    n=1,
-    k=None,
-    include=None,
-    exclude=None,
-    temp_dir='tmp',
-    overwrite=False
-):
+    fasta_paths: Union[List[str], str],
+    gtf_paths: Union[List[str], str],
+    cdna_path: str,
+    index_path: str,
+    t2g_path: str,
+    n: int = 1,
+    k: Optional[int] = None,
+    include: Optional[List[Dict[str, str]]] = None,
+    exclude: Optional[List[Dict[str, str]]] = None,
+    temp_dir: str = 'tmp',
+    overwrite: bool = False
+) -> Dict[str, str]:
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
-    :param fasta_paths: list of paths to genomic FASTA files
-    :type fasta_paths: list
-    :param gtf_paths: list of paths to GTF files
-    :type gtf_paths: list
-    :param cdna_path: path to generate the cDNA FASTA file
-    :type cdna_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
-    :param n: split the index into `n` files
-    :type n: int
-    :param k: override default kmer length 31, defaults to `None`
-    :type k: int, optional
-    :param include: list of dictionaries representing key-value pairs of
-        attributes to include
-    :type include: list
-    :param exclude: list of dictionaries representing key-value pairs of
-        attributes to exclude
-    :type exclude: list
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-    :param overwrite: overwrite an existing index file, defaults to `False`
-    :type overwrite: bool, optional
+    Args:
+        fasta_paths: List of paths to genomic FASTA files
+        gtf_paths: List of paths to GTF files
+        cdna_path: Path to generate the cDNA FASTA file
+        t2g_path: Path to output transcript-to-gene mapping
+        n: Split the index into `n` files
+        k: Override default kmer length 31, defaults to `None`
+        include: List of dictionaries representing key-value pairs of
+            attributes to include
+        exclude: List of dictionaries representing key-value pairs of
+            attributes to exclude
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        overwrite: Overwrite an existing index file, defaults to `False`
 
-    :return: dictionary containing paths to generated file(s)
-    :rtype: dict
+    Returns:
+        Dictionary containing paths to generated file(s)
     """
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]
@@ -529,40 +527,33 @@ def ref(
 
 @logger.namespaced('ref_kite')
 def ref_kite(
-    feature_path,
-    fasta_path,
-    index_path,
-    t2g_path,
-    n=1,
-    k=None,
-    no_mismatches=False,
-    temp_dir='tmp',
-    overwrite=False
-):
+    feature_path: str,
+    fasta_path: str,
+    index_path: str,
+    t2g_path: str,
+    n: int = 1,
+    k: Optional[int] = None,
+    no_mismatches: bool = False,
+    temp_dir: str = 'tmp',
+    overwrite: bool = False
+) -> Dict[str, str]:
     """Generates files necessary for feature barcoding with the KITE workflow.
 
-    :param feature_path: path to TSV containing barcodes and feature names
-    :type feature_path: str
-    :param fasta_path: path to generate fasta file containing all sequences
-                       that are 1 hamming distance from the provide barcodes
-                       (including the actual sequence)
-    :type fasta_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
-    :param n: split the index into `n` files
-    :type n: int
-    :param k: override calculated optimal kmer length, defaults to `None`
-    :type k: int, optional
-    :param no_mismatches: whether to generate hamming distance 1 variants,
-                          defaults to `False`
-    :type no_mismatches: bool, optional
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-    :param overwrite: overwrite an existing index file, defaults to `False`
-    :type overwrite: bool, optional
+    Args:
+        feature_path: Path to TSV containing barcodes and feature names
+        fasta_path: Path to generate fasta file containing all sequences
+            that are 1 hamming distance from the provide barcodes (including
+            the actual sequence)
+        t2g_path: Path to output transcript-to-gene mapping
+        n: Split the index into `n` files
+        k: Override calculated optimal kmer length, defaults to `None`
+        no_mismatches: Whether to generate hamming distance 1 variants,
+            defaults to `False`
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        overwrite: Overwrite an existing index file, defaults to `False`
 
-    :return: dictionary containing paths to generated file(s)
-    :rtype: dict
+    Returns:
+        Dictionary containing paths to generated file(s)
     """
     results = {}
     feature_path = decompress_file(feature_path, temp_dir=temp_dir)
@@ -596,59 +587,46 @@ def ref_kite(
 
 @logger.namespaced('ref_lamanno')
 def ref_lamanno(
-    fasta_paths,
-    gtf_paths,
-    cdna_path,
-    intron_path,
-    index_path,
-    t2g_path,
-    cdna_t2c_path,
-    intron_t2c_path,
-    n=1,
-    k=None,
-    flank=None,
-    include=None,
-    exclude=None,
-    temp_dir='tmp',
-    overwrite=False,
-):
+    fasta_paths: Union[List[str], str],
+    gtf_paths: Union[List[str], str],
+    cdna_path: str,
+    intron_path: str,
+    index_path: str,
+    t2g_path: str,
+    cdna_t2c_path: str,
+    intron_t2c_path: str,
+    n: int = 1,
+    k: Optional[int] = None,
+    flank: Optional[int] = None,
+    include: Optional[List[Dict[str, str]]] = None,
+    exclude: Optional[List[Dict[str, str]]] = None,
+    temp_dir: str = 'tmp',
+    overwrite: bool = False,
+) -> Dict[str, str]:
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
-    :param fasta_paths: list of paths to genomic FASTA files
-    :type fasta_paths: list
-    :param gtf_paths: list of paths to GTF files
-    :type gtf_paths: list
-    :param cdna_path: path to generate the cDNA FASTA file
-    :type cdna_path: str
-    :param intron_path: path to generate the intron FASTA file
-    :type intron_path: str
-    :param t2g_path: path to output transcript-to-gene mapping
-    :type t2g_path: str
-    :param cdna_t2c_path: path to generate the cDNA transcripts-to-capture file
-    :type cdna_t2c_path: str
-    :param intron_t2c_path: path to generate the intron transcripts-to-capture file
-    :type intron_t2c_path: str
-    :param n: split the index into `n` files
-    :type n: int
-    :param k: override default kmer length (31), defaults to `None`
-    :type k: int, optional
-    :param flank: number of bases to include from the flanking regions
-                  when generating the intron FASTA, defaults to `None`, which
-                  sets the flanking region to be k - 1 bases.
-    :type flank: int, optional
-    :param include: list of dictionaries representing key-value pairs of
-        attributes to include
-    :type include: list
-    :param exclude: list of dictionaries representing key-value pairs of
-        attributes to exclude
-    :type exclude: list
-    :param temp_dir: path to temporary directory, defaults to `tmp`
-    :type temp_dir: str, optional
-    :param overwrite: overwrite an existing index file, defaults to `False`
-    :type overwrite: bool, optional
+    Args:
+        fasta_paths: List of paths to genomic FASTA files
+        gtf_paths: List of paths to GTF files
+        cdna_path: Path to generate the cDNA FASTA file
+        intron_path: Path to generate the intron FASTA file
+        t2g_path: Path to output transcript-to-gene mapping
+        cdna_t2c_path: Path to generate the cDNA transcripts-to-capture file
+        intron_t2c_path: Path to generate the intron transcripts-to-capture file
+        n: Split the index into `n` files
+        k: Override default kmer length (31), defaults to `None`
+        flank: Number of bases to include from the flanking regions
+            when generating the intron FASTA, defaults to `None`, which
+            sets the flanking region to be k - 1 bases.
+        include: List of dictionaries representing key-value pairs of
+            attributes to include
+        exclude: List of dictionaries representing key-value pairs of
+            attributes to exclude
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        overwrite: Overwrite an existing index file, defaults to `False`
 
-    :return: dictionary containing paths to generated file(s)
-    :rtype: dict
+    Returns:
+        Dictionary containing paths to generated file(s)
     """
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]

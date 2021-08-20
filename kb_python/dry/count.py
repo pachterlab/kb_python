@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 
-def stream_batch(batch_path, temp_dir='tmp'):
+def stream_batch(batch_path: str, temp_dir: str = 'tmp') -> str:
     """Dry version of `count.stream_batch`.
     """
     with open(batch_path, 'r') as f:
@@ -18,7 +18,7 @@ def stream_batch(batch_path, temp_dir='tmp'):
     return batch_path
 
 
-def write_smartseq3_capture(capture_path):
+def write_smartseq3_capture(capture_path: str) -> str:
     """Dry version of `count.write_smartseq3_capture`.
     """
     print(f'echo \"{"T" * 32}\" > {capture_path}')

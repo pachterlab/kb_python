@@ -2,7 +2,7 @@ import os
 from unittest import mock, TestCase
 
 import kb_python.dry.utils as utils
-from kb_python.config import UnsupportedOSException
+from kb_python.config import UnsupportedOSError
 
 
 class TestUtils(TestCase):
@@ -50,7 +50,7 @@ class TestUtils(TestCase):
     def test_stream_file_windows(self):
         with mock.patch('kb_python.dry.utils.print') as p,\
             mock.patch('kb_python.dry.utils.PLATFORM', 'windows'):
-            with self.assertRaises(UnsupportedOSException):
+            with self.assertRaises(UnsupportedOSError):
                 utils.stream_file('url', 'path')
             p.assert_not_called()
 
