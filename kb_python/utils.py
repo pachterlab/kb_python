@@ -449,7 +449,7 @@ def import_tcc_matrix_as_anndata(
 
     ts = list(df_ec.transcripts)
     get_transcript_ids = lambda ts, transcripts: [
-        ','.join(transcripts[int(i)] for i in t.split(',')) for t in ts
+        ';'.join(transcripts[int(i)] for i in t.split(',')) for t in ts
     ]
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:

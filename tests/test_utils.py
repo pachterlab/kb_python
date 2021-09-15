@@ -131,6 +131,7 @@ class TestUtils(TestMixin, TestCase):
         )
         self.assertIsInstance(adata, anndata.AnnData)
         self.assertEqual({'transcript_ids'}, set(adata.var))
+        self.assertIn(';', adata.var.iloc[-1]['transcript_ids'])
         self.assertEqual(set(), set(adata.obs))
         self.assertEqual('ec', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
