@@ -462,7 +462,7 @@ def import_tcc_matrix_as_anndata(
     transcript_ids = []
     for future in futures:
         transcript_ids += future.result()
-    df_ec['transcript_ids'] = transcript_ids
+    df_ec['transcript_ids'] = pd.Categorical(transcript_ids)
     df_ec.drop('transcripts', axis=1, inplace=True)
     return anndata.AnnData(
         X=scipy.io.mmread(matrix_path).tocsr(), obs=df_barcodes, var=df_ec
@@ -528,7 +528,7 @@ def import_matrix_as_anndata(
             id_to_name[attributes[0]] = attributes[1]
     gene_names = [id_to_name.get(i, '') for i in df_genes.index]
     if any(bool(g) for g in gene_names):
-        df_genes[f'{name}_name'] = gene_names
+        df_genes[f'{name}_name'] = pd.Categorical(gene_names)
 
     return anndata.AnnData(X=mtx.tocsr(), obs=df_barcodes, var=df_genes)
 
