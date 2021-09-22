@@ -1,3 +1,4 @@
+import os
 from unittest import mock, TestCase
 from unittest.mock import call
 
@@ -52,8 +53,24 @@ class TestValidate(TestMixin, TestCase):
                 validate.validate_mtx('path')
 
     def test_validate(self):
-        with mock.patch('kb_python.validate.VALIDATORS'):
-            validate.validate('path/to/bus.bus')
+        mock_validators = {
+            '.bus': mock.MagicMock(),
+            '.mtx': mock.MagicMock(),
+        }
+        bus_path = os.path.join(self.temp_dir, 'bus.bus')
+        open(bus_path, 'w')
+        mtx_path = os.path.join(self.temp_dir, 'mtx.mtx')
+        open(mtx_path, 'w')
+
+        with mock.patch('kb_python.validate.VALIDATORS', mock_validators):
+            validate.validate(bus_path)
+            mock_validators['.bus'].assert_called_once_with(bus_path)
+            validate.validate(mtx_path)
+            mock_validators['.mtx'].assert_called_once_with(mtx_path)
+
+    def test_validate_doesnt_exist(self):
+        with self.assertRaises(validate.ValidateError):
+            validate.validate('nonexistent/path')
 
     def validate_files(self):
         with mock.patch('kb_python.validate.validate') as v,\

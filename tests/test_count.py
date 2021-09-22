@@ -380,6 +380,22 @@ class TestCount(TestMixin, TestCase):
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
 
+    def test_bustools_count_removes_existing_dir(self):
+        out_dir = self.temp_dir
+        counts_path = os.path.join(out_dir, COUNTS_PREFIX)
+        os.makedirs(counts_path, exist_ok=True)
+        result = count.bustools_count(
+            self.bus_scs_path, counts_path, self.t2g_path, self.ecmap_path,
+            self.txnames_path
+        )
+        self.assertEqual({
+            'mtx': '{}.mtx'.format(counts_path),
+            'genes': '{}.genes.txt'.format(counts_path),
+            'barcodes': '{}.barcodes.txt'.format(counts_path),
+        }, result)
+        for key, path in result.items():
+            self.assertTrue(os.path.exists(path))
+
     def test_bustools_capture(self):
         out_dir = self.temp_dir
         out_path = os.path.join(out_dir, 'capture.bus')

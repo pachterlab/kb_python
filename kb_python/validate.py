@@ -34,10 +34,10 @@ def validate_bus(path: str):
     match = BUSTOOLS_INSPECT_PARSER.match(stdout)
     if not match:
         raise ValidateError(
-            ('bustools inspect output could not be parsed for {}'.format(path))
+            f'bustools inspect output could not be parsed for {path}'
         )
     if int(match.groupdict().get('count', 0)) == 0:
-        raise ValidateError('{} has no BUS records'.format(path))
+        raise ValidateError(f'{path} has no BUS records')
 
 
 def validate_mtx(path: str):
@@ -54,7 +54,7 @@ def validate_mtx(path: str):
     try:
         scipy.io.mmread(path)
     except ValueError:
-        raise ValidateError('{} is not a valid matrix market file'.format(path))
+        raise ValidateError(f'{path} is not a valid matrix market file')
 
 
 VALIDATORS = {
@@ -80,16 +80,21 @@ def validate(path: str):
     if not is_validate():
         return
 
+    if not os.path.exists(path):
+        raise ValidateError(f'{path} does not exist')
+
     ext = os.path.splitext(path)[1]
     if ext in VALIDATORS:
         VALIDATORS[ext](path)
-        logger.debug('{} passed validation'.format(path))
+        logger.debug(f'{path} passed validation')
 
 
 def validate_files(pre: bool = True, post: bool = True) -> Callable:
     """Function decorator to validate input/output files.
 
     This function does not validate when the current run is a dry run.
+    The decorated function is expected to return a dictionary of paths as
+    values.
 
     Args:
         pre: Whether to validate input files, defaults to `True`
@@ -110,17 +115,10 @@ def validate_files(pre: bool = True, post: bool = True) -> Callable:
 
             results = func(*args, **kwargs)
 
+            # Assume results are in the form
             if not is_dry() and post:
-                to_check = []
-                if isinstance(results, str):
-                    to_check.append(results)
-                if isinstance(results, (list, tuple)):
-                    to_check += results
-                if isinstance(results, dict):
-                    to_check += list(results.values())
-                for arg in to_check:
-                    if isinstance(arg, str) and os.path.exists(arg):
-                        validate(arg)
+                for path in results.values():
+                    validate(path)
 
             return results
 

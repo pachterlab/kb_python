@@ -72,6 +72,7 @@ from .utils import (
     open_as_text,
     overlay_anndatas,
     read_t2g,
+    remove_directory,
     run_executable,
     stream_file,
     sum_anndatas,
@@ -587,6 +588,13 @@ def bustools_count(
     if em:
         command += ['--em']
     command += [bus_path]
+
+    # There is currently a bug when a directory with the same path as `out_prefix`
+    # exists, the matrix is named incorrectly. So, to get around this, manually
+    # detect and remove such a directory should it exist.
+    if os.path.isdir(out_prefix):
+        remove_directory(out_prefix)
+
     run_executable(command)
     return {
         'mtx':
