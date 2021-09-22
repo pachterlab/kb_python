@@ -767,6 +767,7 @@ def convert_matrix(
     name: str = 'gene',
     loom: bool = False,
     h5ad: bool = False,
+    by_name: bool = False,
     tcc: bool = False,
     threads: int = 8,
 ) -> Dict[str, str]:
@@ -785,6 +786,8 @@ def convert_matrix(
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
         h5ad: Whether to generate h5ad file, defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
         tcc: Whether the matrix is a TCC matrix, defaults to `False`
         threads: Number of threads to use, defaults to `8`
 
@@ -792,20 +795,25 @@ def convert_matrix(
         Dictionary of generated files
     """
     results = {}
-    logger.info('Reading matrix {}'.format(matrix_path))
+    logger.info(f'Reading matrix {matrix_path}')
     adata = import_tcc_matrix_as_anndata(
         matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
     ) if tcc else import_matrix_as_anndata(
-        matrix_path, barcodes_path, genes_path, t2g_path=t2g_path, name=name
+        matrix_path,
+        barcodes_path,
+        genes_path,
+        t2g_path=t2g_path,
+        name=name,
+        by_name=by_name
     )
     if loom:
-        loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
-        logger.info('Writing matrix to loom {}'.format(loom_path))
+        loom_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.loom')
+        logger.info(f'Writing matrix to loom {loom_path}')
         adata.write_loom(loom_path)
         results.update({'loom': loom_path})
     if h5ad:
-        h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
-        logger.info('Writing matrix to h5ad {}'.format(h5ad_path))
+        h5ad_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.h5ad')
+        logger.info(f'Writing matrix to h5ad {h5ad_path}')
         adata.write(h5ad_path)
         results.update({'h5ad': h5ad_path})
 
@@ -823,6 +831,7 @@ def convert_matrices(
     name: str = 'gene',
     loom: bool = False,
     h5ad: bool = False,
+    by_name: bool = False,
     nucleus: bool = False,
     tcc: bool = False,
     threads: int = 8,
@@ -842,6 +851,8 @@ def convert_matrices(
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
         h5ad: Whether to generate h5ad file, defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
         nucleus: Whether the matrices contain single nucleus counts, defaults to `False`
         tcc: Whether the matrix is a TCC matrix, defaults to `False`
         threads: Number of threads to use, defaults to `8`
@@ -858,7 +869,7 @@ def convert_matrices(
     for matrix_path, barcodes_path, genes_ec_path in zip(
             matrix_paths, barcodes_paths, ec_paths
             if not genes_paths or None in genes_paths else genes_paths):
-        logger.info('Reading matrix {}'.format(matrix_path))
+        logger.info(f'Reading matrix {matrix_path}')
         adatas.append(
             import_tcc_matrix_as_anndata(
                 matrix_path,
@@ -871,19 +882,20 @@ def convert_matrices(
                 barcodes_path,
                 genes_ec_path,
                 t2g_path=t2g_path,
-                name=name
+                name=name,
+                by_name=by_name
             )
         )
     logger.info('Combining matrices')
     adata = sum_anndatas(*adatas) if nucleus else overlay_anndatas(*adatas)
     if loom:
-        loom_path = os.path.join(counts_dir, '{}.loom'.format(ADATA_PREFIX))
-        logger.info('Writing matrices to loom {}'.format(loom_path))
+        loom_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.loom')
+        logger.info(f'Writing matrices to loom {loom_path}')
         adata.write_loom(loom_path)
         results.update({'loom': loom_path})
     if h5ad:
-        h5ad_path = os.path.join(counts_dir, '{}.h5ad'.format(ADATA_PREFIX))
-        logger.info('Writing matrices to h5ad {}'.format(h5ad_path))
+        h5ad_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.h5ad')
+        logger.info(f'Writing matrices to h5ad {h5ad_path}')
         adata.write(h5ad_path)
         results.update({'h5ad': h5ad_path})
     return results
@@ -907,6 +919,7 @@ def filter_with_bustools(
     count: bool = True,
     loom: bool = False,
     h5ad: bool = False,
+    by_name: bool = False,
     cellranger: bool = False,
     umi_gene: bool = False,
     em: bool = False,
@@ -936,6 +949,8 @@ def filter_with_bustools(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
@@ -997,6 +1012,7 @@ def filter_with_bustools(
                     name=FEATURE_NAME if kite else GENE_NAME,
                     loom=loom,
                     h5ad=h5ad,
+                    by_name=by_name,
                     tcc=tcc,
                     threads=threads
                 )
@@ -1157,6 +1173,7 @@ def count(
     overwrite: bool = False,
     loom: bool = False,
     h5ad: bool = False,
+    by_name: bool = False,
     cellranger: bool = False,
     inspect: bool = True,
     report: bool = False,
@@ -1195,6 +1212,8 @@ def count(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
@@ -1397,8 +1416,9 @@ def count(
                 name=name,
                 loom=loom,
                 h5ad=h5ad,
+                by_name=by_name,
                 tcc=tcc and not quant,
-                threads=threads
+                threads=threads,
             )
         )
     if cellranger:
@@ -1435,6 +1455,7 @@ def count(
             memory=memory,
             loom=loom,
             h5ad=h5ad,
+            by_name=by_name,
             umi_gene=umi_gene,
             em=em,
         )
@@ -1468,21 +1489,50 @@ def count(
 
 @logger.namespaced('count_smartseq3')
 def count_smartseq3(
-    index_paths,
-    t2g_path,
-    out_dir,
-    fastqs,
-    tcc=False,
-    mm=False,
-    temp_dir='tmp',
-    threads=8,
-    memory='4G',
-    overwrite=False,
-    loom=False,
-    h5ad=False,
-    inspect=True,
-    strand=None,
-):
+    index_paths: Union[List[str], str],
+    t2g_path: str,
+    out_dir: str,
+    fastqs: List[str],
+    tcc: bool = False,
+    mm: bool = False,
+    temp_dir: str = 'tmp',
+    threads: int = 8,
+    memory: str = '4G',
+    overwrite: bool = False,
+    loom: bool = False,
+    h5ad: bool = False,
+    by_name: bool = False,
+    inspect: bool = True,
+    strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+) -> Dict[str, Union[str, Dict[str, str]]]:
+    """Generates count matrices for Smartseq3.
+
+    Args:
+        index_paths: Paths to kallisto indices
+        t2g_path: Path to transcript-to-gene mapping
+        out_dir: Path to output directory
+        fastqs: List of FASTQ file paths or a single batch definition file
+        tcc: Whether to generate a TCC matrix instead of a gene count matrix,
+            defaults to `False`
+        mm: Whether to include BUS records that pseudoalign to multiple genes,
+            defaults to `False`
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        threads: Pumber of threads to use, defaults to `8`
+        memory: Amount of memory to use, defaults to `4G`
+        overwrite: Overwrite an existing index file, defaults to `False`
+        loom: Whether to convert the final count matrix into a loom file,
+            defaults to `False`
+        h5ad: Whether to convert the final count matrix into a h5ad file,
+            defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
+        inspect: Whether or not to inspect the output BUS file and generate
+            the inspect.json
+        strand: Strandedness, defaults to `None`
+
+    Returns:
+        Dictionary containing paths to generated files
+    """
     STATS.start()
     if not isinstance(index_paths, list):
         index_paths = [index_paths]
@@ -1704,6 +1754,7 @@ def count_smartseq3(
             name=name,
             loom=loom,
             h5ad=h5ad,
+            by_name=by_name,
             tcc=False,
             threads=threads
         )
@@ -1725,6 +1776,7 @@ def count_smartseq3(
             name=name,
             loom=loom,
             h5ad=h5ad,
+            by_name=by_name,
             tcc=False,
             threads=threads
         )
@@ -1738,6 +1790,7 @@ def count_smartseq3(
     return results
 
 
+# DEPRECATED
 @logger.namespaced('count_smartseq')
 def count_smartseq(
     index_paths: Union[List[str], str],
@@ -1854,6 +1907,7 @@ def count_velocity(
     overwrite: bool = False,
     loom: bool = False,
     h5ad: bool = False,
+    by_name: bool = False,
     cellranger: bool = False,
     report: bool = False,
     inspect: bool = True,
@@ -1889,6 +1943,8 @@ def count_velocity(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         report: Generate HTML reports, defaults to `False`
@@ -2071,6 +2127,7 @@ def count_velocity(
                 txnames_path=bus_result['txnames'],
                 loom=loom,
                 h5ad=h5ad,
+                by_name=by_name,
                 tcc=tcc,
                 nucleus=nucleus
             )
@@ -2170,6 +2227,7 @@ def count_velocity(
                     txnames_path=bus_result['txnames'],
                     loom=loom,
                     h5ad=h5ad,
+                    by_name=by_name,
                     tcc=tcc,
                     nucleus=nucleus,
                 )

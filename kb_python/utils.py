@@ -412,6 +412,66 @@ def read_t2g(t2g_path: str) -> Dict[str, Tuple[str, ...]]:
     return t2g
 
 
+def collapse_anndata(
+    adata: anndata.AnnData, by: Optional[str] = None
+) -> anndata.AnnData:
+    """Collapse the given Anndata by summing duplicate rows. The `by` argument
+    specifies which column to use. If not provided, the index is used.
+
+    Note:
+        This function also collapses any existing layers. Additionally, the
+        returned AnnData will have the values used to collapse as the index.
+
+    Args:
+        adata: The Anndata to collapse
+        by: The column to collapse by. If not provided, the index is used. When
+            this column contains missing values (i.e. nan or None), these
+            columns are removed.
+
+    Returns:
+        A new collapsed Anndata object. All matrices are sparse, regardless of
+        whether or not they were in the input Anndata.
+    """
+    var = adata.var
+    if by is not None:
+        var = var.set_index(by)
+    na_mask = var.index.isna()
+    adata = adata[:, ~na_mask].copy()
+    adata.var = var[~na_mask]
+
+    if not any(adata.var.index.duplicated()):
+        return adata
+
+    var_indices = {}
+    for i, index in enumerate(adata.var.index):
+        var_indices.setdefault(index, []).append(i)
+
+    # Convert all original matrices to csc for fast column operations
+    X = sparse.csc_matrix(adata.X)
+    layers = {
+        layer: sparse.csc_matrix(adata.layers[layer])
+        for layer in adata.layers
+    }
+    new_index = []
+    # lil_matrix is efficient for row-by-row construction
+    new_X = sparse.lil_matrix((len(var_indices), adata.shape[0]))
+    new_layers = {layer: new_X.copy() for layer in adata.layers}
+    for i, (index, indices) in enumerate(var_indices.items()):
+        new_index.append(index)
+        new_X[i] = X[:, indices].sum(axis=1).flatten()
+        for layer in layers.keys():
+            new_layers[layer][i] = layers[layer][:,
+                                                 indices].sum(axis=1).flatten()
+
+    return anndata.AnnData(
+        X=new_X.T.tocsr(),
+        layers={layer: new_layers[layer].T.tocsr()
+                for layer in new_layers},
+        obs=adata.obs.copy(),
+        var=pd.DataFrame(index=pd.Series(new_index, name=adata.var.index.name)),
+    )
+
+
 def import_tcc_matrix_as_anndata(
     matrix_path: str,
     barcodes_path: str,
@@ -475,6 +535,7 @@ def import_matrix_as_anndata(
     genes_path: str,
     t2g_path: Optional[str] = None,
     name: str = 'gene',
+    by_name: bool = False,
 ) -> anndata.AnnData:
     """Import a matrix as an Anndata object.
 
@@ -486,6 +547,8 @@ def import_matrix_as_anndata(
             the third column of the mapping is appended to the anndata var,
             defaults to `None`
         name: Name of the columns, defaults to "gene"
+        by_name: Aggregate counts by name instead of ID. `t2g_path` must be
+            provided and contain names.
 
     Returns:
         A new Anndata object
@@ -500,37 +563,25 @@ def import_matrix_as_anndata(
         str
     )  # To prevent logging from anndata
     mtx = scipy.io.mmread(matrix_path)
+    adata = collapse_anndata(
+        anndata.AnnData(X=mtx.tocsr(), obs=df_barcodes, var=df_genes)
+    )
 
-    # If any of the genes are duplicated, collapse them by summing
-    if any(df_genes.index.duplicated()):
-        logger.debug(
-            f'Deduplicating genes found in {genes_path} by adding duplicates'
-        )
-        mtx = mtx.tocsc()
-        gene_indices = {}
-        for i, gene in enumerate(df_genes.index):
-            gene_indices.setdefault(gene, []).append(i)
-        genes = []
-        deduplicated_mtx = sparse.lil_matrix(
-            (len(df_barcodes), len(gene_indices))
-        )
-        for i, gene in enumerate(sorted(gene_indices.keys())):
-            genes.append(gene)
-            indices = gene_indices[gene]
-            deduplicated_mtx[:, i] = mtx[:, indices].sum(axis=1)
-        df_genes = pd.DataFrame(index=pd.Series(genes, name=f'{name}_id'))
-        mtx = deduplicated_mtx
+    name_column = f'{name}_name'
+    if t2g_path:
+        t2g = read_t2g(t2g_path)
+        id_to_name = {}
+        for transcript, attributes in t2g.items():
+            if len(attributes) > 1:
+                id_to_name[attributes[0]] = attributes[1]
+        gene_names = [id_to_name.get(i, '') for i in adata.var.index]
+        if any(bool(g) for g in gene_names):
+            adata.var[name_column] = pd.Categorical(gene_names)
 
-    t2g = read_t2g(t2g_path) if t2g_path else {}
-    id_to_name = {}
-    for transcript, attributes in t2g.items():
-        if len(attributes) > 1:
-            id_to_name[attributes[0]] = attributes[1]
-    gene_names = [id_to_name.get(i, '') for i in df_genes.index]
-    if any(bool(g) for g in gene_names):
-        df_genes[f'{name}_name'] = pd.Categorical(gene_names)
-
-    return anndata.AnnData(X=mtx.tocsr(), obs=df_barcodes, var=df_genes)
+    return (
+        collapse_anndata(adata, by=name_column)
+        if name_column in adata.var.columns and by_name else adata
+    )
 
 
 def overlay_anndatas(
@@ -538,6 +589,11 @@ def overlay_anndatas(
 ) -> anndata.AnnData:
     """'Overlays' anndata objects by taking the intersection of the obs and var
     of each anndata.
+
+    Note:
+        Matrices generated by kallisto | bustools always contain all genes,
+        even if they have zero counts. Therefore, taking the intersection
+        is not entirely necessary but is done as a sanity check.
 
     Args:
         adata_spliced: An Anndata object
@@ -569,6 +625,11 @@ def sum_anndatas(
 ) -> anndata.AnnData:
     """Sum the counts in two anndata objects by taking the intersection of
     both matrices and adding the values together.
+
+    Note:
+        Matrices generated by kallisto | bustools always contain all genes,
+        even if they have zero counts. Therefore, taking the intersection
+        is not entirely necessary but is done as a sanity check.
 
     Args:
         adata_spliced: An Anndata object

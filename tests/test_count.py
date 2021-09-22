@@ -450,7 +450,8 @@ class TestCount(TestMixin, TestCase):
                 barcodes_path,
                 genes_path,
                 t2g_path=t2g_path,
-                name='gene'
+                name='gene',
+                by_name=False
             )
             import_matrix_as_anndata.return_value.write_loom.assert_called_once_with(
                 loom_path
@@ -480,7 +481,8 @@ class TestCount(TestMixin, TestCase):
                 barcodes_path,
                 genes_path,
                 t2g_path=t2g_path,
-                name='gene'
+                name='gene',
+                by_name=False
             )
             import_matrix_as_anndata.return_value.write.assert_called_once_with(
                 h5ad_path
@@ -545,7 +547,8 @@ class TestCount(TestMixin, TestCase):
                     barcode_path,
                     genes_path,
                     t2g_path=t2g_path,
-                    name='gene'
+                    name='gene',
+                    by_name=False
                 ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
@@ -585,7 +588,8 @@ class TestCount(TestMixin, TestCase):
                     barcode_path,
                     genes_path,
                     t2g_path=t2g_path,
-                    name='gene'
+                    name='gene',
+                    by_name=False
                 ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
@@ -663,7 +667,8 @@ class TestCount(TestMixin, TestCase):
                     barcode_path,
                     genes_path,
                     t2g_path=t2g_path,
-                    name='gene'
+                    name='gene',
+                    by_name=False,
                 ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
@@ -841,6 +846,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=True,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -1746,6 +1752,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=True,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -2084,6 +2091,7 @@ class TestCount(TestMixin, TestCase):
                 memory=memory,
                 loom=False,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 umi_gene=False,
                 em=False,
@@ -2360,6 +2368,7 @@ class TestCount(TestMixin, TestCase):
                 name='feature',
                 loom=True,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -2541,6 +2550,7 @@ class TestCount(TestMixin, TestCase):
                 memory=memory,
                 loom=False,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 umi_gene=False,
                 em=False,
@@ -2846,6 +2856,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3004,6 +3015,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3131,6 +3143,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3255,6 +3268,7 @@ class TestCount(TestMixin, TestCase):
                 name='gene',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3431,6 +3445,7 @@ class TestCount(TestMixin, TestCase):
                 name='transcript',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3607,6 +3622,7 @@ class TestCount(TestMixin, TestCase):
                 name='transcript',
                 loom=False,
                 h5ad=True,
+                by_name=False,
                 tcc=False,
                 threads=threads
             )
@@ -3848,6 +3864,7 @@ class TestCount(TestMixin, TestCase):
                     name='gene',
                     loom=False,
                     h5ad=True,
+                    by_name=False,
                     tcc=False,
                     threads=threads
                 ),
@@ -3862,6 +3879,7 @@ class TestCount(TestMixin, TestCase):
                     name='gene',
                     loom=False,
                     h5ad=True,
+                    by_name=False,
                     tcc=False,
                     threads=threads
                 ),
@@ -4180,6 +4198,7 @@ class TestCount(TestMixin, TestCase):
                     name='transcript',
                     loom=False,
                     h5ad=True,
+                    by_name=False,
                     tcc=False,
                     threads=threads
                 ),
@@ -4194,6 +4213,7 @@ class TestCount(TestMixin, TestCase):
                     name='transcript',
                     loom=False,
                     h5ad=True,
+                    by_name=False,
                     tcc=False,
                     threads=threads
                 ),
@@ -5975,6 +5995,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path=txnames_path,
                 loom=True,
                 h5ad=False,
+                by_name=False,
                 tcc=False,
                 nucleus=False,
             )
@@ -7121,6 +7142,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,
+                    by_name=False,
                     tcc=False,
                     nucleus=False
                 ),
@@ -7162,6 +7184,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,
+                    by_name=False,
                     tcc=False,
                     nucleus=False
                 )

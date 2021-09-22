@@ -5,6 +5,8 @@ from unittest.mock import call
 from unittest.mock import ANY
 
 import anndata
+import numpy as np
+import pandas as pd
 
 import kb_python.utils as utils
 from kb_python.config import UnsupportedOSError
@@ -232,3 +234,81 @@ class TestUtils(TestMixin, TestCase):
         cwd = os.path.abspath(os.getcwd())
         change_cwd_func(self.temp_dir)
         self.assertEqual(cwd, os.path.abspath(os.getcwd()))
+
+    def test_collapse_anndata_by_index(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(index=pd.Series(['c', 'c', 'd'], name='gene_id'))
+        )
+
+        collapsed = utils.collapse_anndata(adata)
+        self.assertEqual((2, 2), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['c', 'd'], name='gene_id'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[1, 2], [7, 5]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[13, 8], [19, 11]]), collapsed.layers['layer'].A
+        )
+
+    def test_collapse_anndata_by_column(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(
+                index=pd.Series(['c', 'c', 'd'], name='gene_id'),
+                data={'gene_name': ['e', 'f', 'f']}
+            )
+        )
+
+        collapsed = utils.collapse_anndata(adata, by='gene_name')
+        self.assertEqual((2, 2), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['e', 'f'], name='gene_name'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[0, 3], [3, 9]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[6, 15], [9, 21]]), collapsed.layers['layer'].A
+        )
+
+    def test_collapse_anndata_with_missing(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(index=pd.Series(['c', None, 'c'], name='gene_id'))
+        )
+
+        collapsed = utils.collapse_anndata(adata)
+        self.assertEqual((2, 1), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['c'], name='gene_id'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[14], [20]]), collapsed.layers['layer'].A
+        )

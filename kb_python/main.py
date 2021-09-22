@@ -324,6 +324,12 @@ def parse_count(
         )
     if args.tcc and args.em:
         parser.error('`--tcc` may not be used with `--em`.')
+    if args.gene_names and not (args.loom or args.h5ad):
+        parser.error(
+            '`--gene-names` may only be used with `--h5ad` or `--loom`'
+        )
+    if args.tcc and args.gene_names:
+        parser.error('`--gene-names` may not be used with `--tcc`')
 
     # Check if batch TSV was provided.
     batch_path = None
@@ -469,6 +475,7 @@ def parse_count(
             strand=args.strand,
             umi_gene=args.umi_gene,
             em=args.em,
+            by_name=args.gene_names
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -568,6 +575,7 @@ def parse_count(
                 h5ad=args.h5ad,
                 inspect=not args.no_inspect,
                 strand=args.strand,
+                by_name=args.gene_names
             )
         else:
             count(
@@ -598,6 +606,7 @@ def parse_count(
                 strand=args.strand,
                 umi_gene=args.umi_gene,
                 em=args.em,
+                by_name=args.gene_names
             )
 
 
@@ -1115,6 +1124,14 @@ def setup_count_args(
     parser_count.add_argument(
         '--cellranger',
         help='Convert count matrices to cellranger-compatible format',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--gene-names',
+        help=(
+            'Group counts by gene names instead of gene IDs when generating '
+            'the loom or h5ad file'
+        ),
         action='store_true'
     )
 
