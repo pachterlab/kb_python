@@ -218,3 +218,9 @@ class TestUtils(TestMixin, TestCase):
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
+
+    def test_copy_map(self):
+        map_path = utils.copy_map('10xv3', self.temp_dir)
+        self.assertTrue(os.path.exists(map_path))
+        with open(map_path, 'r') as f:
+            self.assertIn('\t', f.readline())
