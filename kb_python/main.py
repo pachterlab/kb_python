@@ -1093,7 +1093,6 @@ def setup_count_args(
         help='Path to cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
-        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     required_lamanno.add_argument(
         '-c2',
@@ -1101,7 +1100,6 @@ def setup_count_args(
         help='Path to intron transcripts-to-captured',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
-        or any(arg in sys.argv for arg in {'--lamanno', '--nucleus'})
     )
     parser_count.add_argument(
         '--overwrite',
