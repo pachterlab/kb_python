@@ -51,27 +51,33 @@ def get_provided_bustools_path() -> Optional[str]:
     return path
 
 
-def get_compiled_kallisto_path() -> Optional[str]:
+def get_compiled_kallisto_path(alias: str = COMPILED_DIR) -> Optional[str]:
     """Finds platform-dependent kallisto binary compiled with `compile`.
+
+    Args:
+        Alias: Alias of compiled binary.
 
     Returns:
         Path to the binary, `None` if not found
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
-    path = os.path.join(COMPILED_DIR, 'kallisto', bin_filename)
+    path = os.path.join(alias, 'kallisto', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
 
 
-def get_compiled_bustools_path() -> Optional[str]:
+def get_compiled_bustools_path(alias: str = COMPILED_DIR) -> Optional[str]:
     """Finds platform-dependent bustools binary compiled with `compile`.
+
+    Args:
+        Alias: Alias of compiled binary.
 
     Returns:
         Path to the binary, `None` if not found
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
-    path = os.path.join(COMPILED_DIR, 'bustools', bin_filename)
+    path = os.path.join(alias, 'bustools', bin_filename)
     if not os.path.isfile(path):
         return None
     return path

@@ -157,11 +157,13 @@ def parse_compile(
             parser.error(
                 '`target` must be one of `kallisto`, `bustools`, `all`'
             )
+
         compile(
             args.target,
             out_dir=args.o,
             cmake_arguments=args.cmake_arguments,
             url=args.url,
+            ref=args.ref,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -706,12 +708,22 @@ def setup_compile_args(
         type=str,
         default=None,
     )
-    parser_compile.add_argument(
+    compile_group = parser_compile.add_mutually_exclusive_group()
+    compile_group.add_argument(
         '--url',
         metavar='URL',
         help=(
             'Use a custom URL to a ZIP or tarball file containing the source code '
             'of the specified binary. May only be used with a single `target`.'
+        ),
+        type=str
+    )
+    compile_group.add_argument(
+        '--ref',
+        metavar='REF',
+        help=(
+            'Repository commmit hash or tag to fetch the source code from. '
+            'May only be used with a single `target`.'
         ),
         type=str
     )

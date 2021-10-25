@@ -66,6 +66,15 @@ class TestCompile(TestMixin, TestCase):
                 'https://api.github.com/repos/pachterlab/kallisto/releases'
             )
 
+    def test_get_kallisto_url_ref(self):
+        with mock.patch('kb_python.compile.get_latest_github_release_tag'
+                        ) as get_latest_github_release_tag:
+            self.assertEqual(
+                'https://api.github.com/repos/pachterlab/kallisto/tarball/ref',
+                compile.get_kallisto_url('ref')
+            )
+            get_latest_github_release_tag.assert_not_called()
+
     def test_get_bustools_url(self):
         with mock.patch('kb_python.compile.get_latest_github_release_tag'
                         ) as get_latest_github_release_tag:
@@ -77,6 +86,15 @@ class TestCompile(TestMixin, TestCase):
             get_latest_github_release_tag.assert_called_once_with(
                 'https://api.github.com/repos/BUStools/bustools/releases'
             )
+
+    def test_get_bustools_url_ref(self):
+        with mock.patch('kb_python.compile.get_latest_github_release_tag'
+                        ) as get_latest_github_release_tag:
+            self.assertEqual(
+                'https://api.github.com/repos/BUStools/bustools/tarball/ref',
+                compile.get_bustools_url('ref')
+            )
+            get_latest_github_release_tag.assert_not_called()
 
     def test_find_git_root(self):
         d1 = tempfile.mkdtemp(dir=self.temp_dir)
@@ -232,6 +250,38 @@ class TestCompile(TestMixin, TestCase):
                              ))
             download_file.assert_called_once_with(
                 'testurl', os.path.join(self.temp_dir, 'filename')
+            )
+            unpack_archive.assert_called_once_with(
+                download_file.return_value, mock.ANY
+            )
+            find_git_root.assert_called_once_with(mock.ANY)
+            compile_kallisto.assert_called_once_with(
+                find_git_root.return_value,
+                os.path.join(out_dir, 'kallisto'),
+                cmake_arguments=None
+            )
+            compile_bustools.assert_not_called()
+
+    def test_compile_full_with_ref(self):
+        with mock.patch('kb_python.compile.get_kallisto_url', return_value='kallisto_url') as get_kallisto_url,\
+            mock.patch('kb_python.compile.get_bustools_url', return_value='bustools_url'),\
+            mock.patch('kb_python.compile.download_file') as download_file,\
+            mock.patch('kb_python.compile.get_filename_from_url', return_value='filename'),\
+            mock.patch('kb_python.compile.shutil.unpack_archive') as unpack_archive,\
+            mock.patch('kb_python.compile.find_git_root') as find_git_root,\
+            mock.patch('kb_python.compile.compile_kallisto') as compile_kallisto,\
+            mock.patch('kb_python.compile.compile_bustools') as compile_bustools:
+            out_dir = self.temp_dir
+            self.assertEqual({'kallisto': compile_kallisto.return_value},
+                             compile.compile(
+                                 'kallisto',
+                                 out_dir,
+                                 ref='ref',
+                                 temp_dir=self.temp_dir
+                             ))
+            get_kallisto_url.assert_called_once_with('ref')
+            download_file.assert_called_once_with(
+                'kallisto_url', os.path.join(self.temp_dir, 'filename')
             )
             unpack_archive.assert_called_once_with(
                 download_file.return_value, mock.ANY

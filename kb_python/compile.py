@@ -59,23 +59,31 @@ def get_filename_from_url(url: str) -> str:
         return os.path.basename(urlparse(url).path)
 
 
-def get_kallisto_url() -> str:
-    """Get the tarball url of the latest kallisto release.
+def get_kallisto_url(ref: Optional[str] = None) -> str:
+    """Get the tarball url of the specified or latest kallisto release.
+
+    Args:
+        ref: Commit or release tag, defaults to `None`. By default, the most
+            recent release is used.
 
     Returns:
         Tarball url
     """
-    tag = get_latest_github_release_tag(KALLISTO_RELEASES_URL)
+    tag = ref or get_latest_github_release_tag(KALLISTO_RELEASES_URL)
     return urljoin(KALLISTO_TARBALL_URL, tag)
 
 
-def get_bustools_url() -> str:
-    """Get the tarball url of the latest bustools release.
+def get_bustools_url(ref: Optional[str] = None) -> str:
+    """Get the tarball url of the specified or latest bustools release.
+
+    Args:
+        ref: Commit or release tag, defaults to `None`. By default, the most
+            recent release is used.
 
     Returns:
         Tarball url
     """
-    tag = get_latest_github_release_tag(BUSTOOLS_RELEASES_URL)
+    tag = ref or get_latest_github_release_tag(BUSTOOLS_RELEASES_URL)
     return urljoin(BUSTOOLS_TARBALL_URL, tag)
 
 
@@ -200,6 +208,7 @@ def compile(
     out_dir: Optional[str] = None,
     cmake_arguments: Optional[str] = None,
     url: Optional[str] = None,
+    ref: Optional[str] = None,
     overwrite: bool = False,
     temp_dir: str = 'tmp',
 ) -> Dict[str, str]:
@@ -213,6 +222,7 @@ def compile(
         cmake_arguments: Additional arguments to pass to the cmake command
         url: Download the source archive from this url instead, defaults to
             `None`
+        ref: Commit hash or tag to use, defaults to `None`
         overwrite: Overwrite any existing results, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
 
@@ -230,7 +240,7 @@ def compile(
                 'Use `--overwrite` to overwrite.'
             )
 
-        _url = url or get_kallisto_url()
+        _url = url or get_kallisto_url(ref)
         logger.info(f'Downloading kallisto source from {_url}')
         archive_path = download_file(
             _url, os.path.join(temp_dir, get_filename_from_url(_url))
@@ -252,7 +262,7 @@ def compile(
                 'Use `--overwrite` to overwrite.'
             )
 
-        _url = url or get_bustools_url()
+        _url = url or get_bustools_url(ref)
         logger.info(f'Downloading bustools source from {_url}')
         archive_path = download_file(
             _url, os.path.join(temp_dir, get_filename_from_url(_url))
