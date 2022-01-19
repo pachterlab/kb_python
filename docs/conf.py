@@ -20,7 +20,7 @@ sys.path.insert(0, root_dir)
 # -- Project information -----------------------------------------------------
 
 project = 'kb-python'
-copyright = '2019, Kyung Hoi (Joseph) Min'
+copyright = '2021, Kyung Hoi (Joseph) Min'
 author = 'Kyung Hoi (Joseph) Min'
 
 # The full version, including alpha/beta/rc tags
@@ -33,6 +33,7 @@ master_doc = 'index'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.napoleon',
     'autoapi.extension',
 ]
 autoapi_type = 'python'

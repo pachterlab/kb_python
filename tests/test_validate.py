@@ -1,3 +1,4 @@
+import os
 from unittest import mock, TestCase
 from unittest.mock import call
 
@@ -32,14 +33,14 @@ class TestValidate(TestMixin, TestCase):
 
     def test_validate_bus_failed_parse(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = ''
-            with self.assertRaises(validate.FileVerificationFailed):
+            run_executable.return_value = None, '', None
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_bus('path')
 
     def test_validate_bus_no_records(self):
         with mock.patch('kb_python.validate.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'Read in 0 BUS records'
-            with self.assertRaises(validate.FileVerificationFailed):
+            run_executable.return_value = None, 'Read in 0 BUS records', None
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_bus('path')
 
     def test_validate_mtx(self):
@@ -48,12 +49,28 @@ class TestValidate(TestMixin, TestCase):
     def test_validate_mtx_raises_on_error(self):
         with mock.patch('kb_python.validate.scipy.io.mmread') as mmread:
             mmread.side_effect = ValueError('test')
-            with self.assertRaises(validate.FileVerificationFailed):
+            with self.assertRaises(validate.ValidateError):
                 validate.validate_mtx('path')
 
     def test_validate(self):
-        with mock.patch('kb_python.validate.VALIDATORS'):
-            validate.validate('path/to/bus.bus')
+        mock_validators = {
+            '.bus': mock.MagicMock(),
+            '.mtx': mock.MagicMock(),
+        }
+        bus_path = os.path.join(self.temp_dir, 'bus.bus')
+        open(bus_path, 'w')
+        mtx_path = os.path.join(self.temp_dir, 'mtx.mtx')
+        open(mtx_path, 'w')
+
+        with mock.patch('kb_python.validate.VALIDATORS', mock_validators):
+            validate.validate(bus_path)
+            mock_validators['.bus'].assert_called_once_with(bus_path)
+            validate.validate(mtx_path)
+            mock_validators['.mtx'].assert_called_once_with(mtx_path)
+
+    def test_validate_doesnt_exist(self):
+        with self.assertRaises(validate.ValidateError):
+            validate.validate('nonexistent/path')
 
     def validate_files(self):
         with mock.patch('kb_python.validate.validate') as v,\

@@ -5,10 +5,19 @@ from unittest.mock import call
 from unittest.mock import ANY
 
 import anndata
+import numpy as np
+import pandas as pd
 
 import kb_python.utils as utils
-from kb_python.config import UnsupportedOSException
+from kb_python.config import UnsupportedOSError
 from tests.mixins import TestMixin
+
+
+@utils.restore_cwd
+def change_cwd_func(temp_dir):
+    path = os.path.join(temp_dir, 'test')
+    os.makedirs(path)
+    os.chdir(path)
 
 
 class TestUtils(TestMixin, TestCase):
@@ -30,8 +39,9 @@ class TestUtils(TestMixin, TestCase):
 
     def test_run_executable(self):
         with mock.patch('kb_python.utils.STATS') as STATS:
-            p = utils.run_executable(['echo', 'TEST'], stream=False)
-            self.assertEqual(p.stdout.read(), 'TEST\n')
+            p, stdout, stderr = utils.run_executable(['echo', 'TEST'],
+                                                     stream=False)
+            self.assertEqual(stdout, 'TEST\n')
             STATS.command.assert_called_once_with(['echo', 'TEST'], runtime=ANY)
 
     def test_run_exectuable_raises_exception(self):
@@ -54,12 +64,12 @@ class TestUtils(TestMixin, TestCase):
 
     def test_get_kallisto_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'kallisto 1.2.3'
+            run_executable.return_value = None, 'kallisto 1.2.3', None
             self.assertEqual((1, 2, 3), utils.get_kallisto_version())
 
     def test_get_bustools_version(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable:
-            run_executable().stdout.read.return_value = 'bustools 1.2.3'
+            run_executable.return_value = None, 'bustools 1.2.3', None
             self.assertEqual((1, 2, 3), utils.get_bustools_version())
 
     def test_parse_technologies(self):
@@ -74,7 +84,7 @@ class TestUtils(TestMixin, TestCase):
     def test_get_supported_technologies(self):
         with mock.patch('kb_python.utils.run_executable') as run_executable,\
            mock.patch('kb_python.utils.parse_technologies') as parse_technologies:
-            run_executable().stdout = 'TEST'
+            run_executable.return_value = None, 'TEST', None
             utils.get_supported_technologies()
             parse_technologies.assert_called_once_with('TEST')
 
@@ -103,7 +113,7 @@ class TestUtils(TestMixin, TestCase):
             mock.patch('kb_python.utils.urlretrieve') as urlretrieve:
             url = mock.MagicMock()
             path = mock.MagicMock()
-            with self.assertRaises(UnsupportedOSException):
+            with self.assertRaises(UnsupportedOSError):
                 utils.stream_file(url, path)
             os.mkfifo.assert_not_called()
             threading.thread.assert_not_called()
@@ -123,6 +133,7 @@ class TestUtils(TestMixin, TestCase):
         )
         self.assertIsInstance(adata, anndata.AnnData)
         self.assertEqual({'transcript_ids'}, set(adata.var))
+        self.assertIn(';', adata.var.iloc[-1]['transcript_ids'])
         self.assertEqual(set(), set(adata.obs))
         self.assertEqual('ec', adata.var.index.name)
         self.assertEqual('barcode', adata.obs.index.name)
@@ -218,6 +229,89 @@ class TestUtils(TestMixin, TestCase):
     def test_copy_whitelist(self):
         whitelist_path = utils.copy_whitelist('10xv1', self.temp_dir)
         self.assertTrue(os.path.exists(whitelist_path))
+
+    def test_restore_cwd(self):
+        cwd = os.path.abspath(os.getcwd())
+        change_cwd_func(self.temp_dir)
+        self.assertEqual(cwd, os.path.abspath(os.getcwd()))
+
+    def test_collapse_anndata_by_index(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(index=pd.Series(['c', 'c', 'd'], name='gene_id'))
+        )
+
+        collapsed = utils.collapse_anndata(adata)
+        self.assertEqual((2, 2), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['c', 'd'], name='gene_id'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[1, 2], [7, 5]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[13, 8], [19, 11]]), collapsed.layers['layer'].A
+        )
+
+    def test_collapse_anndata_by_column(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(
+                index=pd.Series(['c', 'c', 'd'], name='gene_id'),
+                data={'gene_name': ['e', 'f', 'f']}
+            )
+        )
+
+        collapsed = utils.collapse_anndata(adata, by='gene_name')
+        self.assertEqual((2, 2), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['e', 'f'], name='gene_name'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[0, 3], [3, 9]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[6, 15], [9, 21]]), collapsed.layers['layer'].A
+        )
+
+    def test_collapse_anndata_with_missing(self):
+        adata = anndata.AnnData(
+            X=np.array([
+                [0, 1, 2],
+                [3, 4, 5],
+            ]),
+            layers={'layer': np.array([
+                [6, 7, 8],
+                [9, 10, 11],
+            ])},
+            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+            var=pd.DataFrame(index=pd.Series(['c', None, 'c'], name='gene_id'))
+        )
+
+        collapsed = utils.collapse_anndata(adata)
+        self.assertEqual((2, 1), collapsed.shape)
+        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+        pd.testing.assert_index_equal(
+            pd.Index(['c'], name='gene_id'), collapsed.var.index
+        )
+        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.A)
+        np.testing.assert_array_equal(
+            np.array([[14], [20]]), collapsed.layers['layer'].A
+        )
 
     def test_copy_map(self):
         map_path = utils.copy_map('10xv3', self.temp_dir)

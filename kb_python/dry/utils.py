@@ -1,25 +1,24 @@
 import os
 import tempfile
+from typing import List
 
 from ..config import (
     PLATFORM,
     TECHNOLOGIES_MAPPING,
-    UnsupportedOSException,
+    UnsupportedOSError,
 )
 
 
-def run_executable(command, quiet=False, alias=True, *args, **kwargs):
+def run_executable(command: List[str], quiet: bool = False, *args, **kwargs):
     """Dry version of `utils.run_executable`.
     """
     command = [str(c) for c in command]
     if not quiet:
         c = command.copy()
-        if alias:
-            c[0] = os.path.basename(c[0])
         print(' '.join(c))
 
 
-def make_directory(path):
+def make_directory(path: str):
     """Dry version of `utils.make_directory`.
     """
     if PLATFORM == 'windows':
@@ -28,7 +27,7 @@ def make_directory(path):
         print('mkdir -p {}'.format(path))
 
 
-def remove_directory(path):
+def remove_directory(path: str):
     """Dry version of `utils.remove_directory`.
     """
     if PLATFORM == 'windows':
@@ -37,29 +36,31 @@ def remove_directory(path):
         print('rm -rf {}'.format(path))
 
 
-def stream_file(url, path):
+def stream_file(url: str, path: str) -> str:
     """Dry version of `utils.stream_file`.
     """
     if PLATFORM == 'windows':
-        raise UnsupportedOSException((
+        raise UnsupportedOSError((
             'Windows does not support piping remote files.'
             'Please download the file manually.'
         ))
     else:
         print('mkfifo {}'.format(path))
         print('wget -bq {} -O {}'.format(url, path))
+        return path
 
 
-def move_file(source, destination):
+def move_file(source: str, destination: str) -> str:
     """Dry version of `utils.move_file`.
     """
     if PLATFORM == 'windows':
         print(f'move {source} {destination}')
     else:
         print(f'mv {source} {destination}')
+    return destination
 
 
-def copy_whitelist(technology, out_dir):
+def copy_whitelist(technology: str, out_dir: str) -> str:
     """Dry version of `utils.copy_whitelist`.
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
@@ -72,7 +73,7 @@ def copy_whitelist(technology, out_dir):
     return whitelist_path
 
 
-def copy_map(technology, out_dir):
+def copy_map(technology: str, out_dir: str) -> str:
     """Dry version of `utils.copy_map`.
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
@@ -85,7 +86,7 @@ def copy_map(technology, out_dir):
     return map_path
 
 
-def get_temporary_filename(temp_dir):
+def get_temporary_filename(temp_dir: str) -> str:
     """Dry version of `utils.get_temporary_filename`.
     """
     return os.path.join(

@@ -2,43 +2,82 @@ import os
 import platform
 import shutil
 from collections import namedtuple
+from typing import Optional
+from urllib.parse import urljoin
 
 import ngs_tools as ngs
 
 PACKAGE_PATH = os.path.abspath(os.path.dirname(__file__))
 PLATFORM = platform.system().lower()
-BINS_DIR = 'bins'
+BINS_DIR = os.path.join(PACKAGE_PATH, 'bins')
+COMPILED_DIR = os.path.join(BINS_DIR, 'compiled')
 
 TEMP_DIR = 'tmp'
 DRY = False
 VALIDATE = True
 
+GITHUB_API_URL = 'https://api.github.com'
+KALLISTO_REPO_URL = urljoin(GITHUB_API_URL, 'repos/pachterlab/kallisto/')
+BUSTOOLS_REPO_URL = urljoin(GITHUB_API_URL, 'repos/BUStools/bustools/')
+KALLISTO_RELEASES_URL = urljoin(KALLISTO_REPO_URL, 'releases')
+BUSTOOLS_RELEASES_URL = urljoin(BUSTOOLS_REPO_URL, 'releases')
+KALLISTO_TARBALL_URL = urljoin(KALLISTO_REPO_URL, 'tarball/')
+BUSTOOLS_TARBALL_URL = urljoin(BUSTOOLS_REPO_URL, 'tarball/')
 
-def get_provided_kallisto_path():
+
+def get_provided_kallisto_path() -> Optional[str]:
     """Finds platform-dependent kallisto binary included with the installation.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'kallisto', bin_filename
-    )
+    path = os.path.join(BINS_DIR, PLATFORM, 'kallisto', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
 
 
-def get_provided_bustools_path():
+def get_provided_bustools_path() -> Optional[str]:
     """Finds platform-dependent bustools binary included with the installation.
 
-    :return: path to the binary, `None` if not found
-    :rtype: str
+    Returns:
+        Path to the binary, `None` if not found
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
-    path = os.path.join(
-        PACKAGE_PATH, BINS_DIR, PLATFORM, 'bustools', bin_filename
-    )
+    path = os.path.join(BINS_DIR, PLATFORM, 'bustools', bin_filename)
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+def get_compiled_kallisto_path(alias: str = COMPILED_DIR) -> Optional[str]:
+    """Finds platform-dependent kallisto binary compiled with `compile`.
+
+    Args:
+        Alias: Alias of compiled binary.
+
+    Returns:
+        Path to the binary, `None` if not found
+    """
+    bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
+    path = os.path.join(alias, 'kallisto', bin_filename)
+    if not os.path.isfile(path):
+        return None
+    return path
+
+
+def get_compiled_bustools_path(alias: str = COMPILED_DIR) -> Optional[str]:
+    """Finds platform-dependent bustools binary compiled with `compile`.
+
+    Args:
+        Alias: Alias of compiled binary.
+
+    Returns:
+        Path to the binary, `None` if not found
+    """
+    bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
+    path = os.path.join(alias, 'bustools', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
@@ -47,12 +86,12 @@ def get_provided_bustools_path():
 # Binary paths. These should hold the full path to the binaries that should
 # be called throughout the execution of the program. Therefore, this
 # usually needs to be set only once. Defaults to provided binaries.
-KALLISTO_PATH = get_provided_kallisto_path()
-BUSTOOLS_PATH = get_provided_bustools_path()
+KALLISTO_PATH = get_compiled_kallisto_path() or get_provided_kallisto_path()
+BUSTOOLS_PATH = get_compiled_bustools_path() or get_provided_bustools_path()
 
 # Technology to file position mapping
 Technology = namedtuple('Technology', ['name', 'description', 'chemistry'])
-TECHNOLOGIES = [
+TECHNOLOGIES = sorted([
     Technology('10XV1', '10x version 1', ngs.chemistry.get_chemistry('10xv1')),
     Technology('10XV2', '10x version 2', ngs.chemistry.get_chemistry('10xv2')),
     Technology('10XV3', '10x version 3', ngs.chemistry.get_chemistry('10xv3')),
@@ -79,9 +118,29 @@ TECHNOLOGIES = [
         ngs.chemistry.get_chemistry('surecell')
     ),
     Technology(
-        'SMARTSEQ', 'Smart-seq2', ngs.chemistry.get_chemistry('smartseq2')
+        'SMARTSEQ', '(DEPRECATED) Smart-seq2',
+        ngs.chemistry.get_chemistry('smartseq2')
     ),
-]
+    Technology(
+        'SMARTSEQ2', 'Smart-seq2  (single or paired)',
+        ngs.chemistry.get_chemistry('smartseq2')
+    ),
+    Technology(
+        'BULK', 'Bulk (single or paired)',
+        ngs.chemistry.get_chemistry('smartseq2')
+    ),
+    Technology(
+        'SMARTSEQ3', 'Smart-seq3', ngs.chemistry.get_chemistry('smartseq3')
+    ),
+    Technology(
+        'BDWTA', 'BD Rhapsody', ngs.chemistry.get_chemistry('bd rhapsody')
+    ),
+    Technology('Visium', '10x Visium', ngs.chemistry.get_chemistry('visium')),
+    Technology(
+        'SPLIT-SEQ', 'SPLiT-seq', ngs.chemistry.get_chemistry('split-seq')
+    ),
+],
+                      key=lambda t: t.name)
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 
 # Supported pre-built indices
@@ -117,29 +176,36 @@ REFERENCES = [
 REFERENCES_MAPPING = {r.name: r for r in REFERENCES}
 
 
-class UnsupportedOSException(Exception):
+class UnsupportedOSError(Exception):
     pass
 
 
-class NotExecutableException(Exception):
+class ConfigError(Exception):
     pass
 
 
-def get_kallisto_binary_path():
-    """Dummy function that simply returns the current value of KALLISTO_PATH.
+def get_kallisto_binary_path() -> str:
+    """Dummy function that simply returns the current value of :data:`KALLISTO_PATH`.
     """
     return KALLISTO_PATH
 
 
-def get_bustools_binary_path():
-    """Dummy function that simply returns the current value of BUSTOOLS_PATH.
+def get_bustools_binary_path() -> str:
+    """Dummy function that simply returns the current value of :data:`BUSTOOLS_PATH`.
     """
     return BUSTOOLS_PATH
 
 
-def set_kallisto_binary_path(path):
-    """Helper function to set the KALLISTO_PATH variable. Automatically finds the
-    full path to the executable and sets that as KALLISTO_PATH.
+def set_kallisto_binary_path(path: str):
+    """Helper function to set the :data:`KALLISTO_PATH` variable. Automatically
+    finds the full path to the executable and sets that as :data:`KALLISTO_PATH`.
+
+    Args:
+        path: Path to the kallisto binary
+
+    Raises:
+        ConfigError: If `path` could not be resolved or if the executable is
+            not executable.
     """
     global KALLISTO_PATH
 
@@ -152,18 +218,25 @@ def set_kallisto_binary_path(path):
     elif os.path.isfile(path):
         actual_path = os.path.abspath(path)
     else:
-        raise Exception(f'Unable to resolve path {path}')
+        raise ConfigError(f'Unable to resolve path {path}')
 
     # Check that it is executable
     if not os.access(actual_path, os.X_OK):
-        raise NotExecutableException(f'{actual_path} is not executable')
+        raise ConfigError(f'{actual_path} is not executable')
 
     KALLISTO_PATH = actual_path
 
 
-def set_bustools_binary_path(path):
-    """Helper function to set the BUSTOOLS_PATH variable. Automatically finds the
-    full path to the executable and sets that as BUSTOOLS_PATH.
+def set_bustools_binary_path(path: str):
+    """Helper function to set the :data:`BUSTOOLS_PATH` variable. Automatically
+    finds the full path to the executable and sets that as :data:`BUSTOOLS_PATH`.
+
+    Args:
+        path: Path to the bustools binary
+
+    Raises:
+        ConfigError: If `path` could not be resolved or if the executable is
+            not executable.
     """
     global BUSTOOLS_PATH
 
@@ -176,11 +249,11 @@ def set_bustools_binary_path(path):
     elif os.path.isfile(path):
         actual_path = os.path.abspath(path)
     else:
-        raise Exception(f'Unable to resolve path {path}')
+        raise ConfigError(f'Unable to resolve path {path}')
 
     # Check that it is executable
     if not os.access(actual_path, os.X_OK):
-        raise NotExecutableException(f'{actual_path} is not executable')
+        raise ConfigError(f'{actual_path} is not executable')
 
     BUSTOOLS_PATH = actual_path
 
@@ -192,11 +265,11 @@ def set_dry():
     DRY = True
 
 
-def is_dry():
+def is_dry() -> bool:
     """Return whether the current run is a dry run.
 
-    :return: whether the current run is a dry run
-    :rtype: bool
+    Returns:
+        Whether the current run is a dry run
     """
     return DRY
 
@@ -208,10 +281,10 @@ def no_validate():
     VALIDATE = False
 
 
-def is_validate():
+def is_validate() -> bool:
     """Return whether validation is turned on.
 
-    :return: whether validation is on
-    :rtype: bool
+    Returns:
+        Whether validation is on
     """
     return VALIDATE

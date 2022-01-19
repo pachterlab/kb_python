@@ -55,7 +55,7 @@ class TestConfig(TestCase):
         with mock.patch('kb_python.config.KALLISTO_PATH', None),\
             mock.patch('kb_python.config.shutil.which', return_value='path/to/kallisto'),\
             mock.patch('kb_python.config.os.access', return_value=False):
-            with self.assertRaises(config.NotExecutableException):
+            with self.assertRaises(config.ConfigError):
                 config.set_kallisto_binary_path('kallisto')
 
     def test_get_provided_bustools_path(self):
@@ -107,5 +107,5 @@ class TestConfig(TestCase):
         with mock.patch('kb_python.config.BUSTOOLS_PATH', None),\
             mock.patch('kb_python.config.shutil.which', return_value='path/to/bustools'),\
             mock.patch('kb_python.config.os.access', return_value=False):
-            with self.assertRaises(config.NotExecutableException):
+            with self.assertRaises(config.ConfigError):
                 config.set_bustools_binary_path('bustools')
