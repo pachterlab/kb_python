@@ -343,7 +343,7 @@ def copy_map(technology: str, out_dir: str) -> str:
         Path to map
     """
     technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = technology.chemistry.whitelist_path
+    archive_path = technology.chemistry.feature_map_path
     map_path = os.path.join(
         out_dir,
         os.path.splitext(os.path.basename(archive_path))[0]

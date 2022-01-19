@@ -312,3 +312,9 @@ class TestUtils(TestMixin, TestCase):
         np.testing.assert_array_equal(
             np.array([[14], [20]]), collapsed.layers['layer'].A
         )
+
+    def test_copy_map(self):
+        map_path = utils.copy_map('10xv3', self.temp_dir)
+        self.assertTrue(os.path.exists(map_path))
+        with open(map_path, 'r') as f:
+            self.assertIn('\t', f.readline())
