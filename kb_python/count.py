@@ -1627,7 +1627,7 @@ def count_smartseq3(
     )
     unfiltered_results.update({'bus_scs': prev_result['bus']})
 
-    # Write capture file & capture interna/umi records.
+    # Write capture file & capture internal/umi records.
     capture_path = write_smartseq3_capture(
         os.path.join(out_dir, CAPTURE_FILENAME)
     )

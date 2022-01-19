@@ -6,6 +6,7 @@ import shutil
 import sys
 import textwrap
 import warnings
+from typing import Tuple
 
 from . import __version__
 from .config import (
@@ -35,6 +36,30 @@ from .utils import (
     open_as_text,
     remove_directory,
 )
+
+
+def test_binaries() -> Tuple[bool, bool]:
+    """Test whether kallisto and bustools binaries are executable.
+
+    Internally, this function calls :func:`utils.get_kallisto_version` and
+    :func:`utils.get_bustools_version`, both of which return `None` if there is
+    something wrong with their respective binaries.
+
+    Returns:
+        A tuple of two booleans indicating kallisto and bustools binaries.
+    """
+    kallisto_ok = True
+    try:
+        kallisto_ok = get_kallisto_version() is not None
+    except Exception:
+        kallisto_ok = False
+    bustools_ok = True
+    try:
+        bustools_ok = get_bustools_version() is not None
+    except Exception:
+        bustools_ok = False
+
+    return kallisto_ok, bustools_ok
 
 
 def get_binary_info() -> str:
@@ -89,8 +114,8 @@ def display_technologies():
             t.name,
             t.description,
             'yes' if chem.has_whitelist else '',
-            ' '.join(str(_def) for _def in chem.cell_barcode_parser)
-            if chem.has_cell_barcode else '',
+            ' '.join(str(_def) for _def in chem.barcode_parser)
+            if chem.has_barcode else '',
             ' '.join(str(_def)
                      for _def in chem.umi_parser) if chem.has_umi else '',
             ' '.join(str(_def) for _def in chem.cdna_parser),
@@ -1305,7 +1330,8 @@ def main():
     logger.debug('Printing verbose output')
 
     # Set binary paths
-    if args.command in ('ref', 'count'):
+    if args.command in ('ref', 'count') and ('dry_run' not in args
+                                             or not args.dry_run):
         if args.kallisto:
             set_kallisto_binary_path(args.kallisto)
         if args.bustools:
@@ -1313,22 +1339,24 @@ def main():
 
         # Check
         kallisto_path = get_kallisto_binary_path()
-        if not kallisto_path:
+        bustools_path = get_bustools_binary_path()
+        kallisto_ok, bustools_ok = test_binaries()
+
+        if not kallisto_path or not kallisto_ok:
             raise UnsupportedOSError(
                 'Failed to find compatible kallisto binary. '
                 'Provide a compatible binary with the `--kallisto` option or '
                 'run `kb compile`.'
             )
-        bustools_path = get_bustools_binary_path()
-        if not bustools_path:
+        if not bustools_path or not bustools_ok:
             raise UnsupportedOSError(
                 'Failed to find compatible bustools binary. '
                 'Provide a compatible binary with the `--bustools` option or '
                 'run `kb compile`.'
             )
 
-        logger.debug(f'kallisto binary located at {get_kallisto_binary_path()}')
-        logger.debug(f'bustools binary located at {get_bustools_binary_path()}')
+        logger.debug(f'kallisto binary located at {kallisto_path}')
+        logger.debug(f'bustools binary located at {bustools_path}')
 
     temp_dir = args.tmp or (
         os.path.join(args.o, TEMP_DIR)

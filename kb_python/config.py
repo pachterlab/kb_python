@@ -91,7 +91,7 @@ BUSTOOLS_PATH = get_compiled_bustools_path() or get_provided_bustools_path()
 
 # Technology to file position mapping
 Technology = namedtuple('Technology', ['name', 'description', 'chemistry'])
-TECHNOLOGIES = [
+TECHNOLOGIES = sorted([
     Technology('10XV1', '10x version 1', ngs.chemistry.get_chemistry('10xv1')),
     Technology('10XV2', '10x version 2', ngs.chemistry.get_chemistry('10xv2')),
     Technology('10XV3', '10x version 3', ngs.chemistry.get_chemistry('10xv3')),
@@ -132,7 +132,15 @@ TECHNOLOGIES = [
     Technology(
         'SMARTSEQ3', 'Smart-seq3', ngs.chemistry.get_chemistry('smartseq3')
     ),
-]
+    Technology(
+        'BDWTA', 'BD Rhapsody', ngs.chemistry.get_chemistry('bd rhapsody')
+    ),
+    Technology('Visium', '10x Visium', ngs.chemistry.get_chemistry('visium')),
+    Technology(
+        'SPLIT-SEQ', 'SPLiT-seq', ngs.chemistry.get_chemistry('split-seq')
+    ),
+],
+                      key=lambda t: t.name)
 TECHNOLOGIES_MAPPING = {t.name: t for t in TECHNOLOGIES}
 
 # Supported pre-built indices
