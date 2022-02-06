@@ -25,6 +25,9 @@ class TestMixin(TestCase):
         cls.t2g_path = os.path.join(
             cls.fixtures_dir, 'transcripts_to_genes.txt'
         )
+        cls.t2g_path2 = os.path.join(
+            cls.fixtures_dir, 'transcripts_to_genes2.txt'
+        )
         cls.index_path = os.path.join(cls.fixtures_dir, 'mouse_truncated.idx')
         cls.whitelist_path = os.path.join(cls.fixtures_dir, 'whitelist.txt')
         cls.fastqs = [
