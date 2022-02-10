@@ -4705,6 +4705,7 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
+                paired=False,
                 strand=None
             )
             self.assertEqual(bustools_sort.call_count, 4)
@@ -4770,6 +4771,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -4781,6 +4783,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5018,7 +5021,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5083,6 +5087,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5094,6 +5099,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5320,7 +5326,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5385,6 +5392,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5396,6 +5404,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5626,7 +5635,8 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                strand=None
+                strand=None,
+                paired=False
             )
             bustools_sort.assert_has_calls([
                 call(
@@ -5690,6 +5700,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5701,6 +5712,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5887,7 +5899,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5952,6 +5965,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5963,6 +5977,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5993,6 +6008,7 @@ class TestCount(TestMixin, TestCase):
                 t2g_path=self.t2g_path,
                 ec_paths=[None, None],
                 txnames_path=txnames_path,
+                name='gene',
                 loom=True,
                 h5ad=False,
                 by_name=False,
@@ -6174,7 +6190,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -6241,6 +6258,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6252,6 +6270,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -6547,7 +6566,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 6)
             bustools_sort.assert_has_calls([
@@ -6632,6 +6652,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6643,6 +6664,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6976,7 +6998,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 6)
             bustools_sort.assert_has_calls([
@@ -7061,6 +7084,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7072,6 +7096,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7142,6 +7167,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,
+                    name='gene',
                     by_name=False,
                     tcc=False,
                     nucleus=False
@@ -7366,7 +7392,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand='unstranded'
+                strand='unstranded',
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -7431,6 +7458,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7442,6 +7470,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )

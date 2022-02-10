@@ -205,6 +205,11 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
+    if args.n > 1:
+        logger.warning(
+            'Support for split indices (`-n`) will be deprecated in the next major release.'
+        )
+
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
@@ -325,12 +330,9 @@ def parse_count(
 
     args.i = args.i.split(',')
     if len(args.i) > 1:
-        logger.warning((
-            'Multiple indices were provided. Aligning to split indices is currently '
-            'EXPERIMENTAL and results in loss of reads. It is recommended to '
-            'use a single index until this feature is fully supported. Use at '
-            'your own risk!'
-        ))
+        logger.warning(
+            'Support for split indices will be deprecated in the next major release.'
+        )
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -471,7 +473,7 @@ def parse_count(
 
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ2', 'BULK', 'SMARTSEQ3'):
+        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ3'):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
@@ -499,6 +501,9 @@ def parse_count(
             inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus',
             temp_dir=temp_dir,
+            fragment_l=args.fragment_l,
+            fragment_s=args.fragment_s,
+            paired=args.parity == 'paired',
             strand=args.strand,
             umi_gene=args.umi_gene,
             em=args.em,
@@ -803,10 +808,7 @@ def setup_ref_args(
     required_ref.add_argument(
         '-i',
         metavar='INDEX',
-        help=(
-            'Path to the kallisto index to be constructed. '
-            'If `-n` is also specified, this is the prefix for the n indices to construct.'
-        ),
+        help='Path to the kallisto index to be constructed.',
         type=str,
         required=True
     )
@@ -877,14 +879,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '-n',
         metavar='N',
-        help=(
-            'Number of files to split the index into. If this option is specified, '
-            'the FASTA that is normally used to create an index is split into '
-            '`N` approximately-equal parts. Each of these FASTAs are indexed separately. '
-            'When using this option with `--workflow lamanno`, the intron FASTA '
-            'is split into N-1 approximately-equal parts and indexed, while the '
-            'cDNA FASTA is not split and indexed.'
-        ),
+        help=argparse.SUPPRESS,
         type=int,
         default=1,
         required=False

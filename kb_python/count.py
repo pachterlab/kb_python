@@ -1238,7 +1238,6 @@ def count(
     is_batch = isinstance(fastqs, str)
 
     results = {}
-
     make_directory(out_dir)
     unfiltered_results = results.setdefault('unfiltered', {})
 
@@ -1397,8 +1396,8 @@ def count(
         unfiltered_results.update(quant_result)
 
     # Convert outputs.
+    final_result = quant_result if quant else count_result
     if loom or h5ad:
-        result = quant_result if quant else count_result
         name = GENE_NAME
         if kite:
             name = FEATURE_NAME
@@ -1407,9 +1406,10 @@ def count(
         unfiltered_results.update(
             convert_matrix(
                 quant_dir if quant else counts_dir,
-                result['mtx'],
+                final_result['mtx'],
                 count_result['barcodes'],
-                genes_path=result['txnames'] if quant else result.get('genes'),
+                genes_path=final_result['txnames']
+                if quant else final_result.get('genes'),
                 t2g_path=t2g_path,
                 ec_path=count_result.get('ec'),
                 txnames_path=bus_result['txnames'],
@@ -1429,7 +1429,8 @@ def count(
         )
         unfiltered_results.update({'cellranger': cr_result})
 
-    # NOTE: bulk/smartseq2 does not support filtering. should we implement?
+    # NOTE: bulk/smartseq2 does not support filtering, so everything here
+    # assumes technology is not bulk/smartseq2
     if filter == 'bustools':
         filtered_counts_prefix = os.path.join(
             out_dir, FILTERED_COUNTS_DIR,
@@ -1909,9 +1910,12 @@ def count_velocity(
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
-    report: bool = False,
     inspect: bool = True,
+    report: bool = False,
     nucleus: bool = False,
+    fragment_l: Optional[int] = None,
+    fragment_s: Optional[int] = None,
+    paired: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = False,
     em: bool = False,
@@ -1947,12 +1951,16 @@ def count_velocity(
             `tcc=False`.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
-        report: Generate HTML reports, defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
+        report: Generate HTML reports, defaults to `False`
         nucleus: Whether this is a single-nucleus experiment. if `True`, the
             spliced and unspliced count matrices will be summed, defaults to
             `False`
+        fragment_l: Mean length of fragments, defaults to `None`
+        fragment_s: Standard deviation of fragment lengths, defaults to `None`
+        paired: Whether the fastqs are paired. Has no effect when a single
+            batch file is provided. Defaults to `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
             `False`
@@ -1965,6 +1973,7 @@ def count_velocity(
     STATS.start()
     if not isinstance(index_paths, list):
         index_paths = [index_paths]
+    is_batch = isinstance(fastqs, str)
 
     results = {}
     make_directory(out_dir)
@@ -1976,28 +1985,38 @@ def count_velocity(
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
+    if technology.upper() in ('BULK', 'SMARTSEQ2'):
+        bus_result['saved_index'] = os.path.join(out_dir, SAVED_INDEX_FILENAME)
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
+        _technology = 'BULK' if technology.upper(
+        ) == 'SMARTSEQ2' else technology
         if len(index_paths) > 1:
             bus_result = kallisto_bus_split(
                 fastqs,
                 index_paths,
-                technology,
+                _technology,
                 out_dir,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
+                paired=paired,
                 strand=strand,
             )
         else:
             # Pipe any remote files.
-            fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
+            fastqs = stream_batch(
+                fastqs, temp_dir=temp_dir
+            ) if is_batch else stream_fastqs(
+                fastqs, temp_dir=temp_dir
+            )
             bus_result = kallisto_bus(
                 fastqs,
                 index_paths[0],
-                technology,
+                _technology,
                 out_dir,
                 threads=threads,
+                paired=paired,
                 strand=strand
             )
     else:
@@ -2016,7 +2035,7 @@ def count_velocity(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path:
+    if not whitelist_path and not is_batch:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
@@ -2030,21 +2049,26 @@ def count_velocity(
             whitelist_path=whitelist_path,
         )
         unfiltered_results.update(inspect_result)
-    correct_result = bustools_correct(
-        sort_result['bus'],
-        os.path.join(
-            temp_dir,
-            update_filename(os.path.basename(sort_result['bus']), CORRECT_CODE)
-        ), whitelist_path
-    )
-    sort2_result = bustools_sort(
-        correct_result['bus'],
-        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory
-    )
-    unfiltered_results.update({'bus_scs': sort2_result['bus']})
+
+    prev_result = sort_result
+    if not is_batch:
+        prev_result = bustools_correct(
+            prev_result['bus'],
+            os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(sort_result['bus']), CORRECT_CODE
+                )
+            ), whitelist_path
+        )
+        prev_result = bustools_sort(
+            prev_result['bus'],
+            os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+            temp_dir=temp_dir,
+            threads=threads,
+            memory=memory
+        )
+        unfiltered_results.update({'bus_scs': prev_result['bus']})
 
     prefixes = [BUS_CDNA_PREFIX, BUS_INTRON_PREFIX]
     # The prefix and t2cs are swapped because we call bustools capture with
@@ -2055,11 +2079,15 @@ def count_velocity(
     }
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)
     make_directory(counts_dir)
+    cm = technology.upper() in ('BULK', 'SMARTSEQ2')
+    quant = cm and tcc
+    if quant:
+        quant_dir = os.path.join(out_dir, UNFILTERED_QUANT_DIR)
+        make_directory(quant_dir)
     for prefix, t2c_path in prefix_to_t2c.items():
         capture_result = bustools_capture(
-            sort2_result['bus'],
-            os.path.join(temp_dir, '{}.bus'.format(prefix)), t2c_path,
-            bus_result['ecmap'], bus_result['txnames']
+            prev_result['bus'], os.path.join(temp_dir, '{}.bus'.format(prefix)),
+            t2c_path, bus_result['ecmap'], bus_result['txnames']
         )
         sort_result = bustools_sort(
             capture_result['bus'],
@@ -2092,32 +2120,46 @@ def count_velocity(
             bus_result['txnames'],
             tcc=tcc,
             mm=mm or tcc,
+            cm=cm,
             umi_gene=umi_gene,
             em=em,
         )
         unfiltered_results[prefix].update(count_result)
+        if quant:
+            quant_result = kallisto_quant_tcc(
+                count_result['mtx'],
+                bus_result['saved_index'],
+                bus_result['ecmap'],
+                t2g_path,
+                quant_dir,
+                flens_path=bus_result.get('flens'),
+                l=fragment_l,
+                s=fragment_s,
+                threads=threads,
+            )
+            unfiltered_results.update(quant_result)
 
         if cellranger:
-            if not tcc:
-                cr_result = matrix_to_cellranger(
-                    count_result['mtx'], count_result['barcodes'],
-                    count_result['genes'], t2g_path,
-                    os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
-                )
-                unfiltered_results[prefix].update({'cellranger': cr_result})
-            else:
-                logger.warning(
-                    'TCC matrices can not be converted to cellranger-compatible format.'
-                )
+            cr_result = matrix_to_cellranger(
+                count_result['mtx'], count_result['barcodes'],
+                count_result['genes'], t2g_path,
+                os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+            )
+            unfiltered_results[prefix].update({'cellranger': cr_result})
 
     if loom or h5ad:
+        name = GENE_NAME
+        if quant:
+            name = TRANSCRIPT_NAME
+
         unfiltered_results.update(
             convert_matrices(
-                counts_dir,
+                quant_dir if quant else counts_dir,
                 [unfiltered_results[prefix]['mtx'] for prefix in prefixes],
                 [unfiltered_results[prefix]['barcodes'] for prefix in prefixes],
                 genes_paths=[
-                    unfiltered_results[prefix].get('genes')
+                    unfiltered_results[prefix]['txnames']
+                    if quant else unfiltered_results[prefix].get('genes')
                     for prefix in prefixes
                 ],
                 t2g_path=t2g_path,
@@ -2125,6 +2167,7 @@ def count_velocity(
                     unfiltered_results[prefix].get('ec') for prefix in prefixes
                 ],
                 txnames_path=bus_result['txnames'],
+                name=name,
                 loom=loom,
                 h5ad=h5ad,
                 by_name=by_name,
@@ -2133,12 +2176,14 @@ def count_velocity(
             )
         )
 
+    # NOTE: bulk/smartseq2 does not support filtering, so everything here
+    # assumes technology is not bulk/smartseq2
     if filter:
         filtered_results = results.setdefault('filtered', {})
         if filter == 'bustools':
             filtered_results.update(
                 filter_with_bustools(
-                    sort2_result['bus'],
+                    prev_result['bus'],
                     bus_result['ecmap'],
                     bus_result['txnames'],
                     t2g_path,
