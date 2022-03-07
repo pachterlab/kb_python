@@ -10,7 +10,6 @@ from kb_python.constants import (
     ABUNDANCE_GENE_TPM_FILENAME,
     ABUNDANCE_TPM_FILENAME,
     ADATA_PREFIX,
-    BATCH_FILENAME,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_FILTERED_FILENAME,
@@ -4358,180 +4357,6 @@ class TestCount(TestMixin, TestCase):
             import_matrix_as_anndata.assert_not_called()
             render_report.assert_not_called()
 
-    def test_count_smartseq(self):
-        with mock.patch('kb_python.count.STATS') as STATS,\
-            mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
-            mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
-            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.convert_transcripts_to_genes') as convert_transcripts_to_genes:
-            out_dir = 'out'
-            temp_dir = 'temp'
-            threads = 99999
-            memory = 'mem'
-            t2g_path = 't2g'
-            technology = 'tech'
-            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
-            index_paths = ['index']
-            STATS.save.return_value = 'stats'
-            convert_transcripts_to_genes.return_value = 'genes.txt'
-            kallisto_pseudo.return_value = {
-                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-                'cells': os.path.join(out_dir, CELLS_FILENAME),
-                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
-            }
-            write_smartseq_batch.return_value = {'batch': 'batch.txt'}
-            self.assertEqual({
-                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-                'cells': os.path.join(out_dir, CELLS_FILENAME),
-                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
-                'stats': 'stats',
-                'batch': 'batch.txt',
-                'genes': 'genes.txt'
-            },
-                             count.count_smartseq(
-                                 index_paths,
-                                 t2g_path,
-                                 technology,
-                                 out_dir,
-                                 fastq_pairs,
-                                 temp_dir=temp_dir,
-                                 threads=threads,
-                                 memory=memory
-                             ))
-
-            write_smartseq_batch.assert_called_once_with(
-                fastq_pairs, [0, 1], os.path.join(out_dir, BATCH_FILENAME)
-            )
-            kallisto_pseudo.assert_called_once_with(
-                'batch.txt', 'index', out_dir, threads=threads
-            )
-            convert_transcripts_to_genes.assert_called_once_with(
-                os.path.join(out_dir, TXNAMES_FILENAME), t2g_path,
-                os.path.join(out_dir, GENES_FILENAME)
-            )
-            convert_matrix.assert_not_called()
-
-    def test_count_smartseq_convert(self):
-        with mock.patch('kb_python.count.STATS') as STATS,\
-            mock.patch('kb_python.count.write_smartseq_batch') as write_smartseq_batch,\
-            mock.patch('kb_python.count.kallisto_pseudo') as kallisto_pseudo,\
-            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.convert_transcripts_to_genes') as convert_transcripts_to_genes:
-            out_dir = 'out'
-            temp_dir = 'temp'
-            threads = 99999
-            memory = 'mem'
-            t2g_path = 't2g'
-            technology = 'tech'
-            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
-            index_paths = ['index']
-            STATS.save.return_value = 'stats'
-            write_smartseq_batch.return_value = {'batch': 'batch.txt'}
-            convert_transcripts_to_genes.return_value = 'genes.txt'
-            kallisto_pseudo.return_value = {
-                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-                'cells': os.path.join(out_dir, CELLS_FILENAME),
-                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
-            }
-            self.assertEqual({
-                'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-                'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-                'cells': os.path.join(out_dir, CELLS_FILENAME),
-                'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-                'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
-                'stats': 'stats',
-                'batch': 'batch.txt',
-                'genes': 'genes.txt'
-            },
-                             count.count_smartseq(
-                                 index_paths,
-                                 t2g_path,
-                                 technology,
-                                 out_dir,
-                                 fastq_pairs,
-                                 temp_dir=temp_dir,
-                                 threads=threads,
-                                 memory=memory,
-                                 h5ad=True
-                             ))
-
-            write_smartseq_batch.assert_called_once_with(
-                fastq_pairs, [0, 1], os.path.join(out_dir, BATCH_FILENAME)
-            )
-            kallisto_pseudo.assert_called_once_with(
-                'batch.txt', 'index', out_dir, threads=threads
-            )
-            convert_transcripts_to_genes.assert_called_once_with(
-                os.path.join(out_dir, TXNAMES_FILENAME), t2g_path,
-                os.path.join(out_dir, GENES_FILENAME)
-            )
-            convert_matrix.assert_called_once_with(
-                out_dir,
-                os.path.join(out_dir, ABUNDANCE_FILENAME),
-                os.path.join(out_dir, CELLS_FILENAME),
-                'genes.txt',
-                t2g_path=t2g_path,
-                loom=False,
-                h5ad=True,
-                threads=threads
-            )
-
-    def test_count_smartseq_no_multiple_indices(self):
-        with mock.patch('kb_python.count.STATS'),\
-            mock.patch('kb_python.count.write_smartseq_batch'),\
-            mock.patch('kb_python.count.kallisto_pseudo'),\
-            mock.patch('kb_python.count.convert_matrix'):
-            out_dir = 'out'
-            temp_dir = 'temp'
-            threads = 99999
-            memory = 'mem'
-            t2g_path = 't2g'
-            technology = 'tech'
-            fastq_pairs = [['r1', 'r2'], ['r3', 'r4']]
-            index_paths = ['index', 'index2']
-            with self.assertRaises(Exception):
-                count.count_smartseq(
-                    index_paths,
-                    t2g_path,
-                    technology,
-                    out_dir,
-                    fastq_pairs,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory
-                )
-
-    def test_count_smartseq_no_streaming(self):
-        with mock.patch('kb_python.count.STATS'),\
-            mock.patch('kb_python.count.write_smartseq_batch'),\
-            mock.patch('kb_python.count.kallisto_pseudo'),\
-            mock.patch('kb_python.count.convert_matrix'):
-            out_dir = 'out'
-            temp_dir = 'temp'
-            threads = 99999
-            memory = 'mem'
-            t2g_path = 't2g'
-            technology = 'tech'
-            fastq_pairs = [['http://r1', 'r2'], ['r3', 'r4']]
-            index_paths = ['index']
-            with self.assertRaises(Exception):
-                count.count_smartseq(
-                    index_paths,
-                    t2g_path,
-                    technology,
-                    out_dir,
-                    fastq_pairs,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory
-                )
-
     def test_count_velocity_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
             mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
@@ -4705,6 +4530,7 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
+                paired=False,
                 strand=None
             )
             self.assertEqual(bustools_sort.call_count, 4)
@@ -4770,6 +4596,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -4781,6 +4608,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5018,7 +4846,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5083,6 +4912,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5094,6 +4924,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5320,7 +5151,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5385,6 +5217,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5396,6 +5229,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5626,7 +5460,8 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                strand=None
+                strand=None,
+                paired=False
             )
             bustools_sort.assert_has_calls([
                 call(
@@ -5690,6 +5525,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5701,6 +5537,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5887,7 +5724,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -5952,6 +5790,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -5963,6 +5802,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -5993,6 +5833,7 @@ class TestCount(TestMixin, TestCase):
                 t2g_path=self.t2g_path,
                 ec_paths=[None, None],
                 txnames_path=txnames_path,
+                name='gene',
                 loom=True,
                 h5ad=False,
                 by_name=False,
@@ -6174,7 +6015,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -6241,6 +6083,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6252,6 +6095,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )
@@ -6547,7 +6391,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 6)
             bustools_sort.assert_has_calls([
@@ -6632,6 +6477,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6643,6 +6489,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -6976,7 +6823,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand=None
+                strand=None,
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 6)
             bustools_sort.assert_has_calls([
@@ -7061,6 +6909,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7072,6 +6921,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7142,6 +6992,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path=txnames_path,
                     loom=True,
                     h5ad=False,
+                    name='gene',
                     by_name=False,
                     tcc=False,
                     nucleus=False
@@ -7366,7 +7217,8 @@ class TestCount(TestMixin, TestCase):
                 self.technology,
                 out_dir,
                 threads=threads,
-                strand='unstranded'
+                strand='unstranded',
+                paired=False
             )
             self.assertEqual(bustools_sort.call_count, 4)
             bustools_sort.assert_has_calls([
@@ -7431,6 +7283,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 ),
@@ -7442,6 +7295,7 @@ class TestCount(TestMixin, TestCase):
                     txnames_path,
                     tcc=False,
                     mm=False,
+                    cm=False,
                     umi_gene=False,
                     em=False,
                 )

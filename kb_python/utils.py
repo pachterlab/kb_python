@@ -568,15 +568,27 @@ def import_matrix_as_anndata(
     )
 
     name_column = f'{name}_name'
+    n_no_name = 0
     if t2g_path:
         t2g = read_t2g(t2g_path)
         id_to_name = {}
         for transcript, attributes in t2g.items():
             if len(attributes) > 1:
                 id_to_name[attributes[0]] = attributes[1]
-        gene_names = [id_to_name.get(i, '') for i in adata.var.index]
-        if any(bool(g) for g in gene_names):
-            adata.var[name_column] = pd.Categorical(gene_names)
+        gene_names = []
+        for gene_id in adata.var_names:
+            if id_to_name.get(gene_id):  # blank names are considered missing
+                gene_names.append(id_to_name[gene_id])
+            else:
+                gene_names.append(gene_id)
+                n_no_name += 1
+        adata.var[name_column] = pd.Categorical(gene_names)
+
+        if n_no_name > 0:
+            logger.warning(
+                f'{n_no_name} gene IDs do not have corresponding gene names. '
+                'These genes will use their gene IDs instead.'
+            )
 
     return (
         collapse_anndata(adata, by=name_column)

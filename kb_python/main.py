@@ -1,5 +1,4 @@
 import argparse
-import glob
 import logging
 import os
 import shutil
@@ -26,7 +25,7 @@ from .config import (
 )
 from .compile import compile
 from .constants import INFO_FILENAME
-from .count import count, count_smartseq, count_smartseq3, count_velocity
+from .count import count, count_smartseq3, count_velocity
 from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
@@ -205,6 +204,12 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
+    if args.n > 1:
+        logger.warning(
+            'Support for split indices (`-n`) will be deprecated in the next major release. '
+            'Please read the release notes on GitHub for more information. '
+        )
+
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
@@ -325,12 +330,10 @@ def parse_count(
 
     args.i = args.i.split(',')
     if len(args.i) > 1:
-        logger.warning((
-            'Multiple indices were provided. Aligning to split indices is currently '
-            'EXPERIMENTAL and results in loss of reads. It is recommended to '
-            'use a single index until this feature is fully supported. Use at '
-            'your own risk!'
-        ))
+        logger.warning(
+            'Support for split indices will be deprecated in the next major release. '
+            'Please read the release notes on GitHub for more information. '
+        )
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -471,7 +474,7 @@ def parse_count(
 
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ2', 'BULK', 'SMARTSEQ3'):
+        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ3'):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
@@ -499,6 +502,9 @@ def parse_count(
             inspect=not args.no_inspect,
             nucleus=args.workflow == 'nucleus',
             temp_dir=temp_dir,
+            fragment_l=args.fragment_l,
+            fragment_s=args.fragment_s,
+            paired=args.parity == 'paired',
             strand=args.strand,
             umi_gene=args.umi_gene,
             em=args.em,
@@ -510,83 +516,7 @@ def parse_count(
                 '`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
-        # Smart-seq
-        if args.x.upper() == 'SMARTSEQ':
-            logger.warning(
-                f'Technology `{args.x}` will be deprecated in the next release. '
-                'Please read the release notes on GitHub for more information. '
-            )
-            if args.dry_run:
-                parser.error(f'Technology `{args.x}` does not support dry run.')
-
-            if args.workflow != 'standard':
-                parser.error(
-                    f'TECHNOLOGY `{args.x}` only supports `standard` workflow.'
-                )
-
-            # Check for ignored arguments. (i.e. arguments either not supported or
-            # not yet implemented)
-            ignored = ['w', 'tcc', 'mm', 'filter', 'cellranger', 'report']
-            for arg in ignored:
-                if getattr(args, arg):
-                    logger.warning(
-                        f'Argument `{arg}` is not supported for technology `{args.x}`. This argument will be ignored.'
-                    )
-
-            cells = {}
-            if batch_path:
-                with open(batch_path, 'r') as f:
-                    for line in f:
-                        if line.isspace() or line.startswith('#'):
-                            continue
-                        cell_id, fastq_1, fastq_2 = line.strip().split('\t')
-                        if cell_id in cells:
-                            parser.error(
-                                f'Found duplicate cell ID {cell_id} in {batch_path}.'
-                            )
-                        cells[cell_id] = (fastq_1, fastq_2)
-            else:
-                # Allow glob notation for fastqs.
-                fastqs = []
-                for expr in args.fastqs:
-                    fastqs.extend(glob.glob(expr))
-                if len(fastqs) % 2:
-                    logger.warning(f'{len(fastqs)} FASTQs found. ')
-                fastqs = sorted(set(fastqs))
-                for cell_id, i in enumerate(range(0, len(fastqs), 2)):
-                    fastq_1, fastq_2 = fastqs[i], (
-                        fastqs[i + 1] if i + 1 < len(fastqs) else ''
-                    )
-                    cells[cell_id] = (fastq_1, fastq_2)
-            if not cells:
-                parser.error('No FASTQs found.')
-
-            logger.info('Found the following FASTQs:')
-            fastq_pairs = []
-            cell_ids = []
-            for cell_id, (fastq_1, fastq_2) in cells.items():
-                logger.info(f'        {cell_id}    {fastq_1}  {fastq_2}')
-                cell_ids.append(cell_id)
-                fastq_pairs.append((fastq_1, fastq_2))
-                if not fastq_1 or not fastq_2:
-                    parser.error(
-                        f'Single-end reads are currently not supported with technology `{args.x}`.'
-                    )
-            count_smartseq(
-                args.i,
-                args.g,
-                args.x,
-                args.o,
-                fastq_pairs,
-                cell_ids=cell_ids,
-                threads=args.t,
-                memory=args.m,
-                overwrite=args.overwrite,
-                loom=args.loom,
-                h5ad=args.h5ad,
-                temp_dir=temp_dir
-            )
-        elif args.x.upper() == 'SMARTSEQ3':
+        if args.x.upper() == 'SMARTSEQ3':
             count_smartseq3(
                 args.i,
                 args.g,
@@ -803,10 +733,7 @@ def setup_ref_args(
     required_ref.add_argument(
         '-i',
         metavar='INDEX',
-        help=(
-            'Path to the kallisto index to be constructed. '
-            'If `-n` is also specified, this is the prefix for the n indices to construct.'
-        ),
+        help='Path to the kallisto index to be constructed.',
         type=str,
         required=True
     )
@@ -877,14 +804,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '-n',
         metavar='N',
-        help=(
-            'Number of files to split the index into. If this option is specified, '
-            'the FASTA that is normally used to create an index is split into '
-            '`N` approximately-equal parts. Each of these FASTAs are indexed separately. '
-            'When using this option with `--workflow lamanno`, the intron FASTA '
-            'is split into N-1 approximately-equal parts and indexed, while the '
-            'cDNA FASTA is not split and indexed.'
-        ),
+        help=argparse.SUPPRESS,
         type=int,
         default=1,
         required=False
