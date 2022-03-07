@@ -14,7 +14,6 @@ from .constants import (
     ABUNDANCE_GENE_TPM_FILENAME,
     ABUNDANCE_TPM_FILENAME,
     ADATA_PREFIX,
-    BATCH_FILENAME,
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
@@ -1788,103 +1787,6 @@ def count_smartseq3(
     STATS.end()
     stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
     results.update({'stats': stats_path})
-    return results
-
-
-# DEPRECATED
-@logger.namespaced('count_smartseq')
-def count_smartseq(
-    index_paths: Union[List[str], str],
-    t2g_path: str,
-    technology: str,
-    out_dir: str,
-    fastq_pairs: List[List[str]],
-    cell_ids: Optional[List[str]] = None,
-    temp_dir: str = 'tmp',
-    threads: int = 8,
-    memory: str = '4G',
-    overwrite: bool = False,
-    loom: bool = False,
-    h5ad: bool = False,
-) -> Dict[str, Union[Dict[str, str], str]]:
-    """Generates gene or isoform count matrices from Smart-seq reads.
-    """
-    STATS.start()
-    if not isinstance(index_paths, list):
-        index_paths = [index_paths]
-
-    # Smart-seq does not support multiple indices.
-    if len(index_paths) > 1:
-        raise Exception(
-            f'Technology {technology} does not support multiple indices.'
-        )
-
-    # Smart-seq does not support fastq streaming.
-    if any(urlparse(fastq).scheme in ('http', 'https', 'ftp', 'ftps')
-           for pair in fastq_pairs
-           for fastq in pair):
-        raise Exception(
-            f'Technology {technology} does not support FASTQ streaming.'
-        )
-
-    results = {}
-
-    make_directory(out_dir)
-
-    pseudo_result = {
-        'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-        'cells': os.path.join(out_dir, CELLS_FILENAME),
-        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-    }
-
-    if any(not os.path.exists(path)
-           for name, path in pseudo_result.items()) or overwrite:
-        # Write batch information.
-        batch_result = write_smartseq_batch(
-            fastq_pairs,
-            cell_ids if cell_ids else list(range(len(fastq_pairs))),
-            os.path.join(out_dir, BATCH_FILENAME),
-        )
-        results.update(batch_result)
-
-        pseudo_result = kallisto_pseudo(
-            batch_result['batch'], index_paths[0], out_dir, threads=threads
-        )
-    else:
-        logger.info(
-            'Skipping kallisto pseudo because output files already exist. Use the --overwrite flag to overwrite.'
-        )
-    results.update(pseudo_result)
-
-    # Manually write genes.txt
-    # NOTE: there will be duplicated genes
-    genes_path = os.path.join(out_dir, GENES_FILENAME)
-    results['genes'] = convert_transcripts_to_genes(
-        pseudo_result['txnames'], t2g_path, genes_path
-    )
-
-    # Convert outputs.
-    if loom or h5ad:
-        results.update(
-            convert_matrix(
-                out_dir,
-                pseudo_result['mtx'],
-                pseudo_result['cells'],
-                results['genes'],
-                t2g_path=t2g_path,
-                loom=loom,
-                h5ad=h5ad,
-                threads=threads
-            )
-        )
-
-    # Generate report.
-    STATS.end()
-    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
-    results.update({'stats': stats_path})
-
     return results
 
 

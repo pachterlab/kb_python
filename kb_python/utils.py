@@ -577,7 +577,7 @@ def import_matrix_as_anndata(
                 id_to_name[attributes[0]] = attributes[1]
         gene_names = []
         for gene_id in adata.var_names:
-            if id_to_name.get(gene_id):
+            if id_to_name.get(gene_id):  # blank names are considered missing
                 gene_names.append(id_to_name[gene_id])
             else:
                 gene_names.append(gene_id)

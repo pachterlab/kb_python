@@ -118,10 +118,6 @@ TECHNOLOGIES = sorted([
         ngs.chemistry.get_chemistry('surecell')
     ),
     Technology(
-        'SMARTSEQ', '(DEPRECATED) Smart-seq2',
-        ngs.chemistry.get_chemistry('smartseq2')
-    ),
-    Technology(
         'SMARTSEQ2', 'Smart-seq2  (single or paired)',
         ngs.chemistry.get_chemistry('smartseq2')
     ),
