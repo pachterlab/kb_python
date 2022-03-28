@@ -1,6 +1,6 @@
 # kb-python
-![github version](https://img.shields.io/badge/Version-0.27.1-informational)
-[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.27.1/)
+![github version](https://img.shields.io/badge/Version-0.27.2-informational)
+[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.27.2/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/pachterlab/kb_python/branch/master/graph/badge.svg)](https://codecov.io/gh/pachterlab/kb_python)
