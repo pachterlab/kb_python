@@ -78,11 +78,11 @@ class TestUtils(TestCase):
             )
             p.assert_called()
 
-    def test_copy_map(self):
+    def test_create_10x_feature_barcode_map(self):
         with mock.patch('kb_python.dry.utils.print') as p:
             self.assertEqual(
-                'path/10x_version3_feature_map.txt',
-                utils.copy_map('10xv3', 'path')
+                'path/to/feature/barcode/map',
+                utils.copy_map('path/to/feature/barcode/map')
             )
             p.assert_called()
 

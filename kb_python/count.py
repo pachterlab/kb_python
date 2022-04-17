@@ -61,8 +61,8 @@ from .dry import count as dry_count
 from .logging import logger
 from .report import render_report
 from .utils import (
-    copy_map,
     copy_whitelist,
+    create_10x_feature_barcode_map,
     get_temporary_filename,
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
@@ -1304,33 +1304,6 @@ def count(
         unfiltered_results.update({'whitelist': whitelist_path})
 
     prev_result = sort_result
-    if FB:
-        logger.info(f'Copying {technology} feature-to-barcode map to {out_dir}')
-        map_path = copy_map(technology, out_dir)
-        project_result = bustools_project(
-            sort_result['bus'],
-            os.path.join(
-                temp_dir,
-                update_filename(
-                    os.path.basename(sort_result['bus']), PROJECT_CODE
-                )
-            ), map_path, bus_result['ecmap'], bus_result['txnames']
-        )
-
-        sort2_result = bustools_sort(
-            project_result['bus'],
-            os.path.join(
-                temp_dir,
-                update_filename(
-                    os.path.basename(project_result['bus']), SORT_CODE
-                )
-            ),
-            temp_dir=temp_dir,
-            threads=threads,
-            memory=memory
-        )
-        prev_result = sort2_result
-
     if inspect:
         inspect_result = bustools_inspect(
             prev_result['bus'],
@@ -1350,11 +1323,41 @@ def count(
         )
         prev_result = bustools_sort(
             prev_result['bus'],
-            os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+            os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus')
+            if not FB else os.path.join(
+                temp_dir,
+                update_filename(
+                    os.path.basename(prev_result['bus']), SORT_CODE
+                )
+            ),
             temp_dir=temp_dir,
             threads=threads,
             memory=memory
         )
+        if FB:
+            logger.info(
+                f'Copying {technology} feature-to-barcode map to {out_dir}'
+            )
+            map_path = create_10x_feature_barcode_map(
+                os.path.join(out_dir, '10x_feature_barcode_map.txt')
+            )
+            prev_result = bustools_project(
+                prev_result['bus'],
+                os.path.join(
+                    temp_dir,
+                    update_filename(
+                        os.path.basename(prev_result['bus']), PROJECT_CODE
+                    )
+                ), map_path, bus_result['ecmap'], bus_result['txnames']
+            )
+            prev_result = bustools_sort(
+                prev_result['bus'],
+                os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
+
         unfiltered_results.update({'bus_scs': prev_result['bus']})
 
     counts_dir = os.path.join(out_dir, UNFILTERED_COUNTS_DIR)

@@ -333,8 +333,10 @@ class TestUtils(TestMixin, TestCase):
             np.array([[14], [20]]), collapsed.layers['layer'].A
         )
 
-    def test_copy_map(self):
-        map_path = utils.copy_map('10xv3', self.temp_dir)
+    def test_create_10x_feature_barcode_map(self):
+        map_path = utils.create_10x_feature_barcode_map(
+            os.path.join(self.temp_dir, 'map.txt')
+        )
         self.assertTrue(os.path.exists(map_path))
         with open(map_path, 'r') as f:
             self.assertIn('\t', f.readline())

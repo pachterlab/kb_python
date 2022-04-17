@@ -2567,7 +2567,7 @@ class TestCount(TestMixin, TestCase):
             mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
             mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
             mock.patch('kb_python.count.bustools_project') as bustools_project,\
-            mock.patch('kb_python.count.copy_map') as copy_map,\
+            mock.patch('kb_python.count.create_10x_feature_barcode_map') as create_10x_feature_barcode_map,\
             mock.patch('kb_python.count.STATS') as STATS,\
             mock.patch('kb_python.count.render_report'),\
             mock.patch('kb_python.count.import_matrix_as_anndata'):
@@ -2583,12 +2583,12 @@ class TestCount(TestMixin, TestCase):
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
-            map_path = os.path.join(out_dir, '10xv3_feature_barcode_map.txt')
+            map_path = os.path.join(out_dir, '10x_feature_barcode_map.txt')
             bus_s_path = os.path.join(temp_dir, 'output.s.bus')
-            bus_sp_path = os.path.join(temp_dir, 'output.s.p.bus')
-            bus_sps_path = os.path.join(temp_dir, 'output.s.p.s.bus')
-            bus_spsc_path = os.path.join(temp_dir, 'output.s.p.s.c.bus')
-            bus_spscs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
+            bus_sc_path = os.path.join(temp_dir, 'output.s.c.bus')
+            bus_scs_path = os.path.join(temp_dir, 'output.s.c.s.bus')
+            bus_scsp_path = os.path.join(temp_dir, 'output.s.c.s.p.bus')
+            bus_scsps_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
             stream_fastqs.return_value = self.fastqs
             kallisto_bus.return_value = {
                 'bus': bus_path,
@@ -2599,14 +2599,14 @@ class TestCount(TestMixin, TestCase):
             bustools_sort.side_effect = [{
                 'bus': bus_s_path
             }, {
-                'bus': bus_sps_path
+                'bus': bus_scs_path
             }, {
-                'bus': bus_spscs_path
+                'bus': bus_scsps_path
             }]
-            copy_map.return_value = map_path
-            bustools_project.return_value = {'bus': bus_sp_path}
+            create_10x_feature_barcode_map.return_value = map_path
+            bustools_project.return_value = {'bus': bus_scsp_path}
             bustools_inspect.return_value = {'inspect': inspect_path}
-            bustools_correct.return_value = {'bus': bus_spsc_path}
+            bustools_correct.return_value = {'bus': bus_sc_path}
             bustools_count.return_value = {
                 'mtx': '{}.mtx'.format(counts_prefix),
                 'genes': '{}.genes.txt'.format(counts_prefix),
@@ -2622,7 +2622,7 @@ class TestCount(TestMixin, TestCase):
                     'txnames': txnames_path,
                     'info': info_path,
                     'inspect': inspect_path,
-                    'bus_scs': bus_spscs_path,
+                    'bus_scs': bus_scsps_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
                     'barcodes': '{}.barcodes.txt'.format(counts_prefix),
@@ -2663,35 +2663,35 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 ),
                 call(
-                    bus_sp_path,
-                    bus_sps_path,
+                    bus_sc_path,
+                    bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory
                 ),
                 call(
-                    bus_spsc_path,
-                    bus_spscs_path,
+                    bus_scsp_path,
+                    bus_scsps_path,
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory
                 )
             ])
-            copy_map.assert_called_once_with(self.technology, out_dir)
+            create_10x_feature_barcode_map.assert_called_once_with(map_path)
             bustools_project.assert_called_once_with(
-                bus_s_path, bus_sp_path, map_path, ecmap_path, txnames_path
+                bus_scs_path, bus_scsp_path, map_path, ecmap_path, txnames_path
             )
             bustools_inspect.assert_called_once_with(
-                bus_sps_path,
+                bus_s_path,
                 inspect_path,
                 whitelist_path=self.whitelist_path,
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_sps_path, bus_spsc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path
             )
             bustools_count.assert_called_once_with(
-                bus_spscs_path,
+                bus_scsps_path,
                 counts_prefix,
                 self.t2g_path,
                 ecmap_path,

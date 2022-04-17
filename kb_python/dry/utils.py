@@ -2,6 +2,8 @@ import os
 import tempfile
 from typing import List
 
+import ngs_tools as ngs
+
 from ..config import (
     PLATFORM,
     TECHNOLOGIES_MAPPING,
@@ -73,17 +75,29 @@ def copy_whitelist(technology: str, out_dir: str) -> str:
     return whitelist_path
 
 
-def copy_map(technology: str, out_dir: str) -> str:
-    """Dry version of `utils.copy_map`.
+def create_10x_feature_barcode_map(out_path: str) -> str:
+    """Dry version of `utils.create_10x_feature_barcode_map`.
     """
-    technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = technology.chemistry.feature_map_path
-    map_path = os.path.join(
-        out_dir,
-        os.path.splitext(os.path.basename(archive_path))[0]
-    )
-    print('gzip -dc {} > {}'.format(archive_path, map_path))
-    return map_path
+    chemistry = ngs.chemistry.get_chemistry('10xFB')
+    gex = chemistry.chemistry('gex')
+    fb = chemistry.chemistry('fb')
+    if PLATFORM == 'windows':
+        raise UnsupportedOSError(
+            "10x Feature Barcode dry run is not supported on Windows. "
+            f"Please manually combine {fb.whitelist_path} and {gex.whitelist_path} "
+            "into a TSV with the former as the first column and the latter as the second."
+        )
+    elif PLATFORM == 'linux':
+        print(
+            f'paste <(zcat {fb.whitelist_path}) <(zcat {gex.whitelist_path}) > {out_path}'
+        )
+    elif PLATFORM == 'darwin':
+        print(
+            f'paste <(gzcat {fb.whitelist_path}) <(gzcat {gex.whitelist_path}) > {out_path}'
+        )
+    else:
+        raise UnsupportedOSError(f'Unrecognized platform {PLATFORM}')
+    return out_path
 
 
 def get_temporary_filename(temp_dir: str) -> str:
