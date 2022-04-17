@@ -108,6 +108,8 @@ def display_technologies():
         'technology string\n(see https://pachterlab.github.io/kallisto/manual)\n'
     )
     for t in TECHNOLOGIES:
+        if not t.show:
+            continue
         chem = t.chemistry
         row = [
             t.name,

@@ -82,7 +82,8 @@ class TestUtils(TestCase):
         with mock.patch('kb_python.dry.utils.print') as p:
             self.assertEqual(
                 'path/to/feature/barcode/map',
-                utils.copy_map('path/to/feature/barcode/map')
+                utils.
+                create_10x_feature_barcode_map('path/to/feature/barcode/map')
             )
             p.assert_called()
 

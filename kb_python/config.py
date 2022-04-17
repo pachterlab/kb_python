@@ -2,7 +2,7 @@ import os
 import platform
 import shutil
 from collections import namedtuple
-from typing import Optional
+from typing import NamedTuple, Optional
 from urllib.parse import urljoin
 
 import ngs_tools as ngs
@@ -89,12 +89,23 @@ def get_compiled_bustools_path(alias: str = COMPILED_DIR) -> Optional[str]:
 KALLISTO_PATH = get_compiled_kallisto_path() or get_provided_kallisto_path()
 BUSTOOLS_PATH = get_compiled_bustools_path() or get_provided_bustools_path()
 
+
 # Technology to file position mapping
-Technology = namedtuple('Technology', ['name', 'description', 'chemistry'])
+class Technology(NamedTuple):
+    name: str
+    description: str
+    chemistry: ngs.chemistry.Chemistry
+    show: bool = True
+
+
 TECHNOLOGIES = sorted([
     Technology('10XV1', '10x version 1', ngs.chemistry.get_chemistry('10xv1')),
     Technology('10XV2', '10x version 2', ngs.chemistry.get_chemistry('10xv2')),
     Technology('10XV3', '10x version 3', ngs.chemistry.get_chemistry('10xv3')),
+    Technology(
+        '10XFB', '10x Feature Barcode',
+        ngs.chemistry.get_chemistry('10xFBonly'), False
+    ),
     Technology('CELSEQ', 'CEL-Seq', ngs.chemistry.get_chemistry('celseq')),
     Technology(
         'CELSEQ2', 'CEL-SEQ version 2', ngs.chemistry.get_chemistry('celseq2')

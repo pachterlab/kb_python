@@ -1299,7 +1299,7 @@ def count(
     if not whitelist_path and not is_batch:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
-            technology, sort_result['bus'], out_dir
+            technology if not FB else '10xFB', sort_result['bus'], out_dir
         )
         unfiltered_results.update({'whitelist': whitelist_path})
 
@@ -1336,7 +1336,7 @@ def count(
         )
         if FB:
             logger.info(
-                f'Copying {technology} feature-to-barcode map to {out_dir}'
+                f'Creating {technology} feature-to-barcode map at {out_dir}'
             )
             map_path = create_10x_feature_barcode_map(
                 os.path.join(out_dir, '10x_feature_barcode_map.txt')
