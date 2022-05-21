@@ -24,7 +24,6 @@ from kb_python.constants import (
     CELLRANGER_BARCODES,
     CELLRANGER_GENES,
     CELLRANGER_MATRIX,
-    CELLS_FILENAME,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
     FEATURE_PREFIX,
@@ -34,6 +33,8 @@ from kb_python.constants import (
     FLENS_FILENAME,
     GENES_FILENAME,
     INSPECT_FILENAME,
+    INSPECT_INTERNAL_FILENAME,
+    INSPECT_UMI_FILENAME,
     INTERNAL_SUFFIX,
     KALLISTO_INFO_FILENAME,
     KB_INFO_FILENAME,
@@ -57,29 +58,6 @@ class TestCount(TestMixin, TestCase):
         makedirs_mock = mock.patch('kb_python.count.make_directory')
         makedirs_mock.start()
         self.addCleanup(makedirs_mock.stop)
-
-    def test_kallisto_pseudo(self):
-        out_dir = self.temp_dir
-
-        # Write temporary batch file.
-        batch_path = os.path.join(out_dir, 'batch.txt')
-        with open(batch_path, 'w') as f:
-            f.write(
-                f'0\t{self.smartseq_fastqs[0]}\t{self.smartseq_fastqs[1]}\n'
-            )
-        result = count.kallisto_pseudo(
-            batch_path, self.index_path, out_dir, threads=1
-        )
-
-        self.assertEquals({
-            'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-            'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-            'cells': os.path.join(out_dir, CELLS_FILENAME),
-            'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-            'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-        }, result)
-        for key, path in result.items():
-            self.assertTrue(os.path.exists(path))
 
     def test_kallisto_bus(self):
         out_dir = self.temp_dir
@@ -3390,6 +3368,10 @@ class TestCount(TestMixin, TestCase):
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_internal_path = os.path.join(
+                out_dir, INSPECT_INTERNAL_FILENAME
+            )
+            inspect_umi_path = os.path.join(out_dir, INSPECT_UMI_FILENAME)
             info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
             flens_path = os.path.join(out_dir, FLENS_FILENAME)
             saved_index_path = os.path.join(out_dir, SAVED_INDEX_FILENAME)
@@ -3421,7 +3403,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': bus_scs_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_internal_path
+            }, {
+                'inspect': inspect_umi_path
+            }]
             copy_or_create_whitelist.return_value = self.whitelist_path
             bustools_correct.return_value = {'bus': bus_sc_path}
             write_smartseq3_capture.return_value = capture_path
@@ -3465,6 +3453,10 @@ class TestCount(TestMixin, TestCase):
                         self.whitelist_path,
                     'inspect':
                         inspect_path,
+                    'inspect_umi':
+                        inspect_umi_path,
+                    'inspect_internal':
+                        inspect_internal_path,
                     'bus_scs':
                         bus_scs_path,
                     'bus_internal':
@@ -3526,11 +3518,23 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path,
-                inspect_path,
-                whitelist_path=self.whitelist_path,
-            )
+            bustools_inspect.assert_has_calls([
+                call(
+                    bus_s_path,
+                    inspect_path,
+                    whitelist_path=self.whitelist_path,
+                ),
+                call(
+                    bus_internal_path,
+                    inspect_internal_path,
+                    whitelist_path=self.whitelist_path
+                ),
+                call(
+                    bus_umi_path,
+                    inspect_umi_path,
+                    whitelist_path=self.whitelist_path
+                ),
+            ])
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ3', bus_s_path, out_dir
             )
@@ -3656,6 +3660,10 @@ class TestCount(TestMixin, TestCase):
             ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
             txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
             inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
+            inspect_internal_path = os.path.join(
+                out_dir, INSPECT_INTERNAL_FILENAME
+            )
+            inspect_umi_path = os.path.join(out_dir, INSPECT_UMI_FILENAME)
             info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
             flens_path = os.path.join(out_dir, FLENS_FILENAME)
             saved_index_path = os.path.join(out_dir, SAVED_INDEX_FILENAME)
@@ -3687,7 +3695,13 @@ class TestCount(TestMixin, TestCase):
             }, {
                 'bus': bus_scs_path
             }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
+            bustools_inspect.side_effect = [{
+                'inspect': inspect_path
+            }, {
+                'inspect': inspect_internal_path
+            }, {
+                'inspect': inspect_umi_path
+            }]
             copy_or_create_whitelist.return_value = self.whitelist_path
             bustools_correct.return_value = {'bus': bus_sc_path}
             write_smartseq3_capture.return_value = capture_path
@@ -3764,6 +3778,10 @@ class TestCount(TestMixin, TestCase):
                         self.whitelist_path,
                     'inspect':
                         inspect_path,
+                    'inspect_umi':
+                        inspect_umi_path,
+                    'inspect_internal':
+                        inspect_internal_path,
                     'bus_scs':
                         bus_scs_path,
                     'bus_internal':
@@ -3858,11 +3876,23 @@ class TestCount(TestMixin, TestCase):
                     memory=memory
                 )
             ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path,
-                inspect_path,
-                whitelist_path=self.whitelist_path,
-            )
+            bustools_inspect.assert_has_calls([
+                call(
+                    bus_s_path,
+                    inspect_path,
+                    whitelist_path=self.whitelist_path,
+                ),
+                call(
+                    bus_internal_path,
+                    inspect_internal_path,
+                    whitelist_path=self.whitelist_path
+                ),
+                call(
+                    bus_umi_path,
+                    inspect_umi_path,
+                    whitelist_path=self.whitelist_path
+                ),
+            ])
             copy_or_create_whitelist.assert_called_once_with(
                 'SMARTSEQ3', bus_s_path, out_dir
             )
@@ -5308,6 +5338,7 @@ class TestCount(TestMixin, TestCase):
                 by_name=False,
                 tcc=False,
                 nucleus=False,
+                threads=threads,
             )
 
     def test_count_velocity_without_whitelist(self):
@@ -6436,13 +6467,15 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, convert_matrices.call_count)
             args = [
                 call(
-                    counts_dir, [
+                    counts_dir,
+                    [
                         '{}.mtx'.format(
                             os.path.join(counts_dir, BUS_CDNA_PREFIX)
                         ), '{}.mtx'.format(
                             os.path.join(counts_dir, BUS_INTRON_PREFIX)
                         )
-                    ], [
+                    ],
+                    [
                         '{}.barcodes.txt'.format(
                             os.path.join(counts_dir, BUS_CDNA_PREFIX)
                         ), '{}.barcodes.txt'.format(
@@ -6464,10 +6497,12 @@ class TestCount(TestMixin, TestCase):
                     name='gene',
                     by_name=False,
                     tcc=False,
-                    nucleus=False
+                    nucleus=False,
+                    threads=threads,
                 ),
                 call(
-                    os.path.join(out_dir, FILTERED_COUNTS_DIR), [
+                    os.path.join(out_dir, FILTERED_COUNTS_DIR),
+                    [
                         '{}.mtx'.format(
                             os.path.join(
                                 out_dir, FILTERED_COUNTS_DIR, BUS_CDNA_PREFIX
@@ -6477,7 +6512,8 @@ class TestCount(TestMixin, TestCase):
                                 out_dir, FILTERED_COUNTS_DIR, BUS_INTRON_PREFIX
                             )
                         )
-                    ], [
+                    ],
+                    [
                         '{}.barcodes.txt'.format(
                             os.path.join(
                                 out_dir, FILTERED_COUNTS_DIR, BUS_CDNA_PREFIX
@@ -6506,7 +6542,8 @@ class TestCount(TestMixin, TestCase):
                     h5ad=False,
                     by_name=False,
                     tcc=False,
-                    nucleus=False
+                    nucleus=False,
+                    threads=threads,
                 )
             ]
             self.assertEqual(args[0], convert_matrices.call_args_list[0])

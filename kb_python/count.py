@@ -21,7 +21,6 @@ from .constants import (
     CELLRANGER_DIR,
     CELLRANGER_GENES,
     CELLRANGER_MATRIX,
-    CELLS_FILENAME,
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
@@ -35,6 +34,8 @@ from .constants import (
     GENE_NAME,
     GENES_FILENAME,
     INSPECT_FILENAME,
+    INSPECT_INTERNAL_FILENAME,
+    INSPECT_UMI_FILENAME,
     INTERNAL_SUFFIX,
     KALLISTO_INFO_FILENAME,
     KB_INFO_FILENAME,
@@ -77,42 +78,6 @@ from .stats import STATS
 from .validate import validate_files
 
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
-
-
-@validate_files()
-def kallisto_pseudo(
-    batch_path: str,
-    index_path: str,
-    out_dir: str,
-    threads: int = 8,
-) -> Dict[str, str]:
-    """Runs `kallisto pseudo`.
-
-    Args:
-        batch_path: Path to textfile containing batch definitions
-        index_path: Path to kallisto index
-        out_dir: Path to output directory
-        threads: Number of threads to use, defaults to `8`
-
-    Returns:
-        Dictionary containing output files
-    """
-    logger.info(f'Using index {index_path} to generate matrices to {out_dir}')
-    command = [get_kallisto_binary_path(), 'pseudo']
-    command += ['--quant']
-    command += ['-i', index_path]
-    command += ['-o', out_dir]
-    command += ['-b', batch_path]
-    command += ['-t', threads]
-    run_executable(command)
-
-    return {
-        'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
-        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-        'cells': os.path.join(out_dir, CELLS_FILENAME),
-        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-    }
 
 
 @validate_files()
@@ -1435,163 +1400,100 @@ def count_smartseq3(
     )
     unfiltered_results.update({'bus_scs': prev_result['bus']})
 
+    # Helper function to update results with suffix
+    def update_results_with_suffix(current_results, new_results, suffix):
+        current_results.update({
+            f'{key}{suffix}': value
+            for key, value in new_results.items()
+        })
+
     # Write capture file & capture internal/umi records.
     capture_path = write_smartseq3_capture(
         os.path.join(out_dir, CAPTURE_FILENAME)
     )
-    capture_internal_result = bustools_capture(
-        prev_result['bus'],
-        os.path.join(out_dir, f'output{INTERNAL_SUFFIX}.bus'),
-        capture_path,
-        capture_type='umis',
-        complement=False
-    )
-    unfiltered_results.update({
-        f'bus{INTERNAL_SUFFIX}': capture_internal_result['bus']
-    })
-    capture_umi_result = bustools_capture(
-        prev_result['bus'],
-        os.path.join(out_dir, f'output{UMI_SUFFIX}.bus'),
-        capture_path,
-        capture_type='umis',
-        complement=True
-    )
-    unfiltered_results.update({f'bus{UMI_SUFFIX}': capture_umi_result['bus']})
 
-    # Count each
-    counts_internal_dir = os.path.join(
-        out_dir, f'{UNFILTERED_COUNTS_DIR}{INTERNAL_SUFFIX}'
-    )
-    make_directory(counts_internal_dir)
-    counts_internal_prefix = os.path.join(
-        counts_internal_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
-    )
-    count_internal_result = bustools_count(
-        capture_internal_result['bus'],
-        counts_internal_prefix,
-        t2g_path,
-        bus_result['ecmap'],
-        bus_result['txnames'],
-        tcc=tcc,
-        mm=mm or tcc,
-        cm=True,
-        umi_gene=False
-    )
-    unfiltered_results.update({
-        f'{key}{INTERNAL_SUFFIX}': value
-        for key, value in count_internal_result.items()
-    })
-
-    counts_umi_dir = os.path.join(
-        out_dir, f'{UNFILTERED_COUNTS_DIR}{UMI_SUFFIX}'
-    )
-    make_directory(counts_umi_dir)
-    counts_umi_prefix = os.path.join(
-        counts_umi_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
-    )
-    count_umi_result = bustools_count(
-        capture_umi_result['bus'],
-        counts_umi_prefix,
-        t2g_path,
-        bus_result['ecmap'],
-        bus_result['txnames'],
-        tcc=tcc,
-        mm=mm or tcc,
-        cm=False,
-        umi_gene=True
-    )
-    unfiltered_results.update({
-        f'{key}{UMI_SUFFIX}': value
-        for key, value in count_umi_result.items()
-    })
-
-    # Quant
-    if tcc:
-        quant_internal_dir = os.path.join(
-            out_dir, f'{UNFILTERED_QUANT_DIR}{INTERNAL_SUFFIX}'
+    suffix_to_inspect_filename = {
+        INTERNAL_SUFFIX: INSPECT_INTERNAL_FILENAME,
+        UMI_SUFFIX: INSPECT_UMI_FILENAME,
+    }
+    for suffix, inspect_filename in suffix_to_inspect_filename.items():
+        capture_result = bustools_capture(
+            prev_result['bus'],
+            os.path.join(out_dir, f'output{suffix}.bus'),
+            capture_path,
+            capture_type='umis',
+            complement=suffix == UMI_SUFFIX
         )
-        make_directory(quant_internal_dir)
-        quant_internal_result = kallisto_quant_tcc(
-            count_internal_result['mtx'],
-            bus_result['saved_index'],
-            bus_result['ecmap'],
+        update_results_with_suffix(unfiltered_results, capture_result, suffix)
+
+        if inspect:
+            inspect_result = bustools_inspect(
+                capture_result['bus'],
+                os.path.join(out_dir, inspect_filename),
+                whitelist_path=whitelist_path,
+            )
+            update_results_with_suffix(
+                unfiltered_results, inspect_result, suffix
+            )
+
+        counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}')
+        make_directory(counts_dir)
+        counts_prefix = os.path.join(
+            counts_dir, TCC_PREFIX if tcc else COUNTS_PREFIX
+        )
+
+        count_result = bustools_count(
+            capture_result['bus'],
+            counts_prefix,
             t2g_path,
-            quant_internal_dir,
-            flens_path=bus_result['flens'],
-            threads=threads,
-        )
-        unfiltered_results.update({
-            f'{key}{INTERNAL_SUFFIX}': value
-            for key, value in quant_internal_result.items()
-        })
-
-        quant_umi_dir = os.path.join(
-            out_dir, f'{UNFILTERED_QUANT_DIR}{UMI_SUFFIX}'
-        )
-        make_directory(quant_umi_dir)
-        quant_umi_result = kallisto_quant_tcc(
-            count_umi_result['mtx'],
-            bus_result['saved_index'],
             bus_result['ecmap'],
-            t2g_path,
-            quant_umi_dir,
-            flens_path=None,
-            threads=threads,
+            bus_result['txnames'],
+            tcc=tcc,
+            mm=mm or tcc,
+            cm=suffix == INTERNAL_SUFFIX,
+            umi_gene=suffix == UMI_SUFFIX
         )
-        unfiltered_results.update({
-            f'{key}{UMI_SUFFIX}': value
-            for key, value in quant_umi_result.items()
-        })
+        update_results_with_suffix(unfiltered_results, count_result, suffix)
 
-    # Convert
-    if loom or h5ad:
-        name = GENE_NAME
         if tcc:
-            name = TRANSCRIPT_NAME
+            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
+            make_directory(quant_dir)
+            quant_result = kallisto_quant_tcc(
+                count_result['mtx'],
+                bus_result['saved_index'],
+                bus_result['ecmap'],
+                t2g_path,
+                quant_dir,
+                flens_path=bus_result['flens'],
+                threads=threads,
+            )
+            update_results_with_suffix(unfiltered_results, quant_result, suffix)
 
-        result_internal = quant_internal_result if tcc else count_internal_result
-        convert_internal_result = convert_matrix(
-            quant_internal_dir if tcc else counts_internal_dir,
-            result_internal['mtx'],
-            count_internal_result['barcodes'],
-            genes_path=result_internal['txnames']
-            if tcc else result_internal.get('genes'),
-            t2g_path=t2g_path,
-            ec_path=count_internal_result.get('ec'),
-            txnames_path=bus_result['txnames'],
-            name=name,
-            loom=loom,
-            h5ad=h5ad,
-            by_name=by_name,
-            tcc=False,
-            threads=threads
-        )
-        unfiltered_results.update({
-            f'{key}{INTERNAL_SUFFIX}': value
-            for key, value in convert_internal_result.items()
-        })
+        if loom or h5ad:
+            name = GENE_NAME
+            if tcc:
+                name = TRANSCRIPT_NAME
 
-        result_umi = quant_umi_result if tcc else count_umi_result
-        convert_umi_result = convert_matrix(
-            quant_umi_dir if tcc else counts_umi_dir,
-            result_umi['mtx'],
-            count_umi_result['barcodes'],
-            genes_path=result_umi['txnames']
-            if tcc else result_umi.get('genes'),
-            t2g_path=t2g_path,
-            ec_path=count_umi_result.get('ec'),
-            txnames_path=bus_result['txnames'],
-            name=name,
-            loom=loom,
-            h5ad=h5ad,
-            by_name=by_name,
-            tcc=False,
-            threads=threads
-        )
-        unfiltered_results.update({
-            f'{key}{UMI_SUFFIX}': value
-            for key, value in convert_umi_result.items()
-        })
+            result = quant_result if tcc else count_result
+            convert_result = convert_matrix(
+                quant_dir if tcc else counts_dir,
+                result['mtx'],
+                count_result['barcodes'],
+                genes_path=result['txnames'] if tcc else result.get('genes'),
+                t2g_path=t2g_path,
+                ec_path=count_result.get('ec'),
+                txnames_path=bus_result['txnames'],
+                name=name,
+                loom=loom,
+                h5ad=h5ad,
+                by_name=by_name,
+                tcc=False,
+                threads=threads
+            )
+            update_results_with_suffix(
+                unfiltered_results, convert_result, suffix
+            )
+
     STATS.end()
     stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
     results.update({'stats': stats_path})
@@ -1867,7 +1769,8 @@ def count_velocity(
                 h5ad=h5ad,
                 by_name=by_name,
                 tcc=tcc,
-                nucleus=nucleus
+                nucleus=nucleus,
+                threads=threads,
             )
         )
 
@@ -1970,6 +1873,7 @@ def count_velocity(
                     by_name=by_name,
                     tcc=tcc,
                     nucleus=nucleus,
+                    threads=threads,
                 )
             )
 
@@ -2023,4 +1927,277 @@ def count_velocity(
                 'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
             )
 
+    return results
+
+
+@logger.namespaced('count_velocity_smartseq3')
+def count_velocity_smartseq3(
+    index_path: str,
+    t2g_path: str,
+    cdna_t2c_path: str,
+    intron_t2c_path: str,
+    out_dir: str,
+    fastqs: List[str],
+    tcc: bool = False,
+    mm: bool = False,
+    temp_dir: str = 'tmp',
+    threads: int = 8,
+    memory: str = '4G',
+    overwrite: bool = False,
+    loom: bool = False,
+    h5ad: bool = False,
+    by_name: bool = False,
+    inspect: bool = True,
+    strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+) -> Dict[str, Union[str, Dict[str, str]]]:
+    """Generates count matrices for Smartseq3.
+
+    Args:
+        index_path: Path to kallisto index
+        t2g_path: Path to transcript-to-gene mapping
+        out_dir: Path to output directory
+        fastqs: List of FASTQ file paths or a single batch definition file
+        tcc: Whether to generate a TCC matrix instead of a gene count matrix,
+            defaults to `False`
+        mm: Whether to include BUS records that pseudoalign to multiple genes,
+            defaults to `False`
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        threads: Pumber of threads to use, defaults to `8`
+        memory: Amount of memory to use, defaults to `4G`
+        overwrite: Overwrite an existing index file, defaults to `False`
+        loom: Whether to convert the final count matrix into a loom file,
+            defaults to `False`
+        h5ad: Whether to convert the final count matrix into a h5ad file,
+            defaults to `False`
+        by_name: Aggregate counts by name instead of ID. Only affects when
+            `tcc=False`.
+        inspect: Whether or not to inspect the output BUS file and generate
+            the inspect.json
+        strand: Strandedness, defaults to `None`
+
+    Returns:
+        Dictionary containing paths to generated files
+    """
+    STATS.start()
+    is_batch = isinstance(fastqs, str)
+
+    results = {}
+    make_directory(out_dir)
+    unfiltered_results = results.setdefault('unfiltered', {})
+
+    bus_result = {
+        'bus': os.path.join(out_dir, BUS_FILENAME),
+        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
+        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
+        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME),
+        'flens': os.path.join(out_dir, FLENS_FILENAME),
+        'saved_index': os.path.join(out_dir, SAVED_INDEX_FILENAME)
+    }
+    if any(not os.path.exists(path)
+           for name, path in bus_result.items()) or overwrite:
+        # Pipe any remote files.
+        fastqs = stream_batch(
+            fastqs, temp_dir=temp_dir
+        ) if is_batch else stream_fastqs(
+            fastqs, temp_dir=temp_dir
+        )
+        bus_result = kallisto_bus(
+            fastqs,
+            index_path,
+            'SMARTSEQ3',
+            out_dir,
+            threads=threads,
+            paired=True,
+            strand=strand,
+        )
+    else:
+        logger.info(
+            'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
+        )
+    unfiltered_results.update(bus_result)
+
+    sort_result = bustools_sort(
+        bus_result['bus'],
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(bus_result['bus']), SORT_CODE)
+        ),
+        temp_dir=temp_dir,
+        threads=threads,
+        memory=memory
+    )
+    logger.info('Whitelist not provided')
+    whitelist_path = copy_or_create_whitelist(
+        'SMARTSEQ3', sort_result['bus'], out_dir
+    )
+    unfiltered_results.update({'whitelist': whitelist_path})
+
+    prev_result = sort_result
+    if inspect:
+        inspect_result = bustools_inspect(
+            prev_result['bus'],
+            os.path.join(out_dir, INSPECT_FILENAME),
+            whitelist_path=whitelist_path,
+        )
+        unfiltered_results.update(inspect_result)
+    prev_result = bustools_correct(
+        prev_result['bus'],
+        os.path.join(
+            temp_dir,
+            update_filename(os.path.basename(prev_result['bus']), CORRECT_CODE)
+        ), whitelist_path
+    )
+    prev_result = bustools_sort(
+        prev_result['bus'],
+        os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+        temp_dir=temp_dir,
+        threads=threads,
+        memory=memory
+    )
+    unfiltered_results.update({'bus_scs': prev_result['bus']})
+
+    # Helper function to update results with suffix
+    def update_results_with_suffix(current_results, new_results, suffix):
+        current_results.update({
+            f'{key}{suffix}': value
+            for key, value in new_results.items()
+        })
+
+    # Write capture file & capture internal/umi records.
+    capture_path = write_smartseq3_capture(
+        os.path.join(out_dir, CAPTURE_FILENAME)
+    )
+
+    prefixes = [BUS_CDNA_PREFIX, BUS_INTRON_PREFIX]
+    # The prefix and t2cs are swapped because we call bustools capture with
+    # the --complement flag.
+    prefix_to_t2c = {
+        BUS_CDNA_PREFIX: intron_t2c_path,
+        BUS_INTRON_PREFIX: cdna_t2c_path,
+    }
+    suffix_to_inspect_filename = {
+        INTERNAL_SUFFIX: INSPECT_INTERNAL_FILENAME,
+        UMI_SUFFIX: INSPECT_UMI_FILENAME,
+    }
+    for suffix, inspect_filename in suffix_to_inspect_filename.items():
+        capture_result = bustools_capture(
+            prev_result['bus'],
+            os.path.join(out_dir, f'output{suffix}.bus'),
+            capture_path,
+            capture_type='umis',
+            complement=suffix == UMI_SUFFIX
+        )
+        update_results_with_suffix(unfiltered_results, capture_result, suffix)
+
+        if inspect:
+            inspect_result = bustools_inspect(
+                capture_result['bus'],
+                os.path.join(out_dir, inspect_filename),
+                whitelist_path=whitelist_path,
+            )
+            update_results_with_suffix(
+                unfiltered_results, inspect_result, suffix
+            )
+
+        counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}')
+        make_directory(counts_dir)
+        if tcc:
+            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
+            make_directory(quant_dir)
+        for prefix, t2c_path in prefix_to_t2c.items():
+            capture_result = bustools_capture(
+                capture_result['bus'],
+                os.path.join(temp_dir, f'{prefix}{suffix}.bus'), t2c_path,
+                bus_result['ecmap'], bus_result['txnames']
+            )
+            sort_result = bustools_sort(
+                capture_result['bus'],
+                os.path.join(
+                    out_dir, f'{prefix}{suffix}.{UNFILTERED_CODE}.bus'
+                ),
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
+            prefix_results = unfiltered_results.setdefault(prefix, {})
+            update_results_with_suffix(prefix_results, sort_result, suffix)
+
+            if inspect:
+                inpsect_result = bustools_inspect(
+                    sort_result['bus'],
+                    os.path.join(
+                        out_dir, update_filename(inspect_filename, prefix)
+                    ),
+                )
+                update_results_with_suffix(
+                    prefix_results, inpsect_result, suffix
+                )
+
+            counts_prefix = os.path.join(counts_dir, prefix)
+            count_result = bustools_count(
+                sort_result['bus'],
+                counts_prefix,
+                t2g_path,
+                bus_result['ecmap'],
+                bus_result['txnames'],
+                tcc=tcc,
+                mm=mm or tcc,
+                cm=suffix == INTERNAL_SUFFIX,
+                umi_gene=suffix == UMI_SUFFIX,
+            )
+            update_results_with_suffix(prefix_results, count_result, suffix)
+
+            if tcc:
+                quant_result = kallisto_quant_tcc(
+                    count_result['mtx'],
+                    bus_result['saved_index'],
+                    bus_result['ecmap'],
+                    t2g_path,
+                    quant_dir,
+                    flens_path=bus_result['flens'],
+                    threads=threads,
+                )
+                update_results_with_suffix(prefix_results, quant_result, suffix)
+
+        # After internal/UMI is done, create anndata separately for each
+        if loom or h5ad:
+            name = GENE_NAME
+            if tcc:
+                name = TRANSCRIPT_NAME
+
+            convert_result = convert_matrices(
+                quant_dir if tcc else counts_dir,
+                [
+                    unfiltered_results[prefix][f'mtx{suffix}']
+                    for prefix in prefixes
+                ],
+                [
+                    unfiltered_results[prefix][f'barcodes{suffix}']
+                    for prefix in prefixes
+                ],
+                genes_paths=[
+                    unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
+                    unfiltered_results[prefix].get(f'genes{suffix}')
+                    for prefix in prefixes
+                ],
+                t2g_path=t2g_path,
+                ec_paths=[
+                    unfiltered_results[prefix].get(f'ec{suffix}')
+                    for prefix in prefixes
+                ],
+                txnames_path=bus_result['txnames'],
+                name=name,
+                loom=loom,
+                h5ad=h5ad,
+                by_name=by_name,
+                tcc=False,
+                threads=threads,
+            )
+            update_results_with_suffix(
+                unfiltered_results, convert_result, suffix
+            )
+
+    STATS.end()
+    stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
+    results.update({'stats': stats_path})
     return results

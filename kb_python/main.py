@@ -25,7 +25,6 @@ from .config import (
 )
 from .compile import compile
 from .constants import INFO_FILENAME
-from .count import count, count_smartseq3, count_velocity
 from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
@@ -463,42 +462,65 @@ def parse_count(
 
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ3'):
+        if args.x.upper() in ('SMARTSEQ',):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
 
-        count_velocity(
-            args.i,
-            args.g,
-            args.c1,
-            args.c2,
-            args.x,
-            args.o,
-            batch_path or args.fastqs,
-            args.w,
-            tcc=args.tcc,
-            mm=args.mm,
-            filter=args.filter,
-            filter_threshold=args.filter_threshold,
-            threads=args.t,
-            memory=args.m,
-            overwrite=args.overwrite,
-            loom=args.loom,
-            h5ad=args.h5ad,
-            cellranger=args.cellranger,
-            report=args.report,
-            inspect=not args.no_inspect,
-            nucleus=args.workflow == 'nucleus',
-            temp_dir=temp_dir,
-            fragment_l=args.fragment_l,
-            fragment_s=args.fragment_s,
-            paired=args.parity == 'paired',
-            strand=args.strand,
-            umi_gene=args.umi_gene,
-            em=args.em,
-            by_name=args.gene_names
-        )
+        if args.x.upper() == 'SMARTSEQ3':
+            from .count import count_velocity_smartseq3
+            count_velocity_smartseq3(
+                args.i,
+                args.g,
+                args.c1,
+                args.c2,
+                args.o,
+                args.fastqs,
+                tcc=args.tcc,
+                mm=args.mm,
+                temp_dir=temp_dir,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                inspect=not args.no_inspect,
+                strand=args.strand,
+                by_name=args.gene_names
+            )
+        else:
+            from .count import count_velocity
+            count_velocity(
+                args.i,
+                args.g,
+                args.c1,
+                args.c2,
+                args.x,
+                args.o,
+                batch_path or args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                filter=args.filter,
+                filter_threshold=args.filter_threshold,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                cellranger=args.cellranger,
+                report=args.report,
+                inspect=not args.no_inspect,
+                nucleus=args.workflow == 'nucleus',
+                temp_dir=temp_dir,
+                fragment_l=args.fragment_l,
+                fragment_s=args.fragment_s,
+                paired=args.parity == 'paired',
+                strand=args.strand,
+                umi_gene=args.umi_gene,
+                em=args.em,
+                by_name=args.gene_names
+            )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
             parser.error(
@@ -506,6 +528,7 @@ def parse_count(
             )
 
         if args.x.upper() == 'SMARTSEQ3':
+            from .count import count_smartseq3
             count_smartseq3(
                 args.i,
                 args.g,
@@ -524,6 +547,7 @@ def parse_count(
                 by_name=args.gene_names
             )
         else:
+            from .count import count
             count(
                 args.i,
                 args.g,

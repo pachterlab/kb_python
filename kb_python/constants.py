@@ -60,6 +60,8 @@ SAVED_INDEX_FILENAME = 'index.saved'
 INTERNAL_SUFFIX = '_internal'
 UMI_SUFFIX = '_umi'
 CAPTURE_FILENAME = 'capture_nonUMI.txt'
+INSPECT_INTERNAL_FILENAME = 'inspect_internal.json'
+INSPECT_UMI_FILENAME = 'inspect_umi.json'
 
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of
