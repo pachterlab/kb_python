@@ -2084,13 +2084,13 @@ def count_velocity_smartseq3(
             quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
             make_directory(quant_dir)
         for prefix, t2c_path in prefix_to_t2c.items():
-            capture_result = bustools_capture(
+            prefix_capture_result = bustools_capture(
                 capture_result['bus'],
                 os.path.join(temp_dir, f'{prefix}{suffix}.bus'), t2c_path,
                 bus_result['ecmap'], bus_result['txnames']
             )
             sort_result = bustools_sort(
-                capture_result['bus'],
+                prefix_capture_result['bus'],
                 os.path.join(
                     out_dir, f'{prefix}{suffix}.{UNFILTERED_CODE}.bus'
                 ),
