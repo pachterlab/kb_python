@@ -473,27 +473,6 @@ def bustools_whitelist(
     return {'whitelist': out_path}
 
 
-def write_smartseq_batch(
-    fastq_pairs: List[List[str]], cell_ids: List[str], out_path: str
-) -> Dict[str, str]:
-    """Write a 3-column TSV specifying batch information for Smart-seq reads.
-    This file is required to use `kallisto pseudo` on multiple samples (= cells).
-
-    Args:
-        fastq_pairs: List of pairs of FASTQs
-        cell_ids: List of cell IDs
-        out_path: Path to batch file to output
-
-    Returns:
-        Dictionary of written batch file
-    """
-    logger.info(f'Writing batch definition TSV to {out_path}')
-    with open(out_path, 'w') as f:
-        for cell_id, (fastq_1, fastq_2) in zip(cell_ids, fastq_pairs):
-            f.write(f'{cell_id}\t{fastq_1}\t{fastq_2}\n')
-    return {'batch': out_path}
-
-
 def matrix_to_cellranger(
     matrix_path: str, barcodes_path: str, genes_path: str, t2g_path: str,
     out_dir: str

@@ -1,5 +1,4 @@
 import os
-import uuid
 from unittest import mock, TestCase
 from unittest.mock import ANY, call
 
@@ -246,18 +245,6 @@ class TestCount(TestMixin, TestCase):
         self.assertEqual({'whitelist': out_path}, result)
         for key, path in result.items():
             self.assertTrue(os.path.exists(path))
-
-    def test_write_smartseq_batch(self):
-        out_path = os.path.join(self.temp_dir, str(uuid.uuid4()))
-        fastq_pairs = [['r1_1', 'r2_1'], ['r1_2', 'r2_2']]
-        cell_ids = ['cell_1', 'cell_2']
-        self.assertEqual({
-            'batch': out_path
-        }, count.write_smartseq_batch(fastq_pairs, cell_ids, out_path))
-        with open(out_path, 'r') as f:
-            self.assertEqual(
-                'cell_1\tr1_1\tr2_1\ncell_2\tr1_2\tr2_2\n', f.read()
-            )
 
     def test_convert_matrix_loom(self):
         with mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata,\
