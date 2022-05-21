@@ -206,12 +206,6 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
-    if args.n > 1:
-        logger.warning(
-            'Support for split indices (`-n`) will be deprecated in the next major release. '
-            'Please read the release notes on GitHub for more information. '
-        )
-
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
@@ -329,13 +323,6 @@ def parse_count(
             'Using `--report` may cause `kb` to exceed maximum memory specified '
             'and crash for large count matrices.'
         ))
-
-    args.i = args.i.split(',')
-    if len(args.i) > 1:
-        logger.warning(
-            'Support for split indices will be deprecated in the next major release. '
-            'Please read the release notes on GitHub for more information. '
-        )
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -804,14 +791,6 @@ def setup_ref_args(
     )
 
     parser_ref.add_argument(
-        '-n',
-        metavar='N',
-        help=argparse.SUPPRESS,
-        type=int,
-        default=1,
-        required=False
-    )
-    parser_ref.add_argument(
         '-d',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
@@ -931,7 +910,7 @@ def setup_count_args(
     required_count.add_argument(
         '-i',
         metavar='INDEX',
-        help='Path to kallisto index/indices, comma-delimited',
+        help='Path to kallisto index',
         type=str,
         required=True
     )

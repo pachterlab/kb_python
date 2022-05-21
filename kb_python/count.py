@@ -1,4 +1,3 @@
-import json
 import os
 import re
 from typing import Dict, List, Optional, Union
@@ -7,7 +6,7 @@ from urllib.parse import urlparse
 import scipy.io
 from typing_extensions import Literal
 
-from .config import get_bustools_binary_path, get_kallisto_binary_path, is_dry
+from .config import get_bustools_binary_path, get_kallisto_binary_path
 from .constants import (
     ABUNDANCE_FILENAME,
     ABUNDANCE_GENE_FILENAME,
@@ -17,8 +16,6 @@ from .constants import (
     BUS_CDNA_PREFIX,
     BUS_FILENAME,
     BUS_INTRON_PREFIX,
-    BUS_MASHED_FILENAME,
-    BUS_MERGED_FILENAME,
     CAPTURE_FILENAME,
     CELLRANGER_BARCODES,
     CELLRANGER_DIR,
@@ -28,7 +25,6 @@ from .constants import (
     CORRECT_CODE,
     COUNTS_PREFIX,
     ECMAP_FILENAME,
-    ECMAP_MERGED_FILENAME,
     FEATURE_NAME,
     FEATURE_PREFIX,
     FILTER_WHITELIST_FILENAME,
@@ -67,7 +63,6 @@ from .utils import (
     import_matrix_as_anndata,
     import_tcc_matrix_as_anndata,
     make_directory,
-    move_file,
     open_as_text,
     overlay_anndatas,
     read_t2g,
@@ -194,97 +189,6 @@ def kallisto_bus(
     return results
 
 
-def kallisto_bus_split(
-    fastqs: List[str],
-    index_paths: str,
-    technology: str,
-    out_dir: str,
-    temp_dir: str = 'tmp',
-    threads: int = 8,
-    memory: str = '4G',
-    paired: bool = False,
-    strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
-) -> Dict[str, str]:
-    """Runs `kallisto bus` with split indices.
-
-    Args:
-        fastqs: List of FASTQ file paths or URLs
-        index_paths: Paths to kallisto indices
-        technology: Single-cell technology used
-        out_dir: Path to output directory
-        temp_dir: Path to temporary directory, defaults to `tmp`
-        threads: Number of threads to use, defaults to `8`
-        memory: Amount of memory to use, defaults to `4G`
-        paired: Whether the fastqs are paired. Has no effect when a single
-            batch file is provided. Defaults to `False`
-        strand: Strandedness, defaults to `None`
-
-    Returns:
-        Dictionary containing paths to generated files
-    """
-    logger.info(f'Generating BUS file using {len(index_paths)} indices')
-    part_dirs = []
-    for i, index_path in enumerate(index_paths):
-        bus_part_dir = os.path.join(temp_dir, f'bus_part{i}')
-        fastqs = stream_fastqs(fastqs, temp_dir=temp_dir)
-        kallisto_bus(
-            fastqs,
-            index_path,
-            technology,
-            bus_part_dir,
-            threads=threads,
-            n=True,
-            k=True,
-            paired=paired,
-            strand=strand,
-        )
-        part_dirs.append(bus_part_dir)
-
-        # Sort each part to temp, and then overwrite the original
-        # output.bus
-        bus_part = os.path.join(bus_part_dir, BUS_FILENAME)
-        sort_part = bustools_sort(
-            bus_part,
-            get_temporary_filename(temp_dir),
-            temp_dir=temp_dir,
-            threads=threads,
-            memory=memory,
-            flags=True
-        )
-        move_file(sort_part['bus'], bus_part)
-
-    # Mash parts into one & sort by flag again
-    mash_result = bustools_mash(part_dirs, out_dir)
-    sort_result = bustools_sort(
-        mash_result['bus'],
-        get_temporary_filename(temp_dir),
-        temp_dir=temp_dir,
-        threads=threads,
-        memory=memory,
-        flags=True
-    )
-    move_file(sort_result['bus'], mash_result['bus'])
-
-    # Merge
-    merge_result = bustools_merge(
-        mash_result['bus'], out_dir, mash_result['ecmap'],
-        mash_result['txnames']
-    )
-
-    # Move files to appropriate places
-    bus_path = os.path.join(out_dir, BUS_FILENAME)
-    ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
-    move_file(merge_result['bus'], bus_path)
-    move_file(merge_result['ecmap'], ecmap_path)
-
-    return {
-        'bus': bus_path,
-        'ecmap': ecmap_path,
-        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-    }
-
-
 @validate_files(pre=False)
 def kallisto_quant_tcc(
     mtx_path: str,
@@ -339,78 +243,6 @@ def kallisto_quant_tcc(
         'tpm_mtx': os.path.join(out_dir, ABUNDANCE_TPM_FILENAME),
         'fld': os.path.join(out_dir, FLD_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-    }
-
-
-@validate_files(pre=False)
-def bustools_mash(out_dirs: List[str], out_dir: str) -> Dict[str, str]:
-    """Runs `bustools mash`. Additionally, combines the `run_info.json`s into
-    one.
-
-    Args:
-        out_dirs: List of `kallisto bus` output directories. Note that
-            BUS files should be sorted by flag
-        out_dir: Path to output directory
-
-    Returns:
-        Dictionary containing paths to generated files
-    """
-    logger.info(f'Mashing BUS records to {out_dir} from')
-    for out in out_dirs:
-        logger.info((' ' * 8) + out)
-    command = [get_bustools_binary_path(), 'mash']
-    command += ['-o', out_dir]
-    command += out_dirs
-    run_executable(command)
-
-    # Combine run_info.jsons (don't run this if dry)
-    info_path = None
-    if not is_dry():
-        run_info = {}
-        for o_dir in out_dirs:
-            info_path = os.path.join(o_dir, KALLISTO_INFO_FILENAME)
-            with open(info_path, 'r') as f:
-                info = json.load(f)
-
-            for key, value in info.items():
-                run_info.setdefault(key, []).append(value)
-        info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-        with open(info_path, 'w') as f:
-            json.dump(run_info, f, indent=4)
-    return {
-        'bus': os.path.join(out_dir, BUS_MASHED_FILENAME),
-        'ecmap': os.path.join(out_dir, ECMAP_FILENAME),
-        'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
-        'info': info_path
-    }
-
-
-@validate_files(pre=False)
-def bustools_merge(
-    bus_path: str, out_dir: str, ecmap_path: str, txnames_path: str
-) -> Dict[str, str]:
-    """Runs `bustools merge`.
-
-        bus_path: Path to BUS file to merge
-        out_dir: Path to output directory, where the merged BUS file and
-            ecmap will be written
-        ecmap_path: Path to ecmap file, as generated by `kallisto bus`
-        txnames_path: Path to transcript names file, as generated by `kallisto bus`
-
-    Returns:
-        Dictionary containing path to generated BUS file and merged ecmap
-    """
-    logger.info(f'Merging BUS records in {bus_path} to {out_dir}')
-    command = [get_bustools_binary_path(), 'merge']
-    command += ['-o', out_dir]
-    command += ['-e', ecmap_path]
-    command += ['-t', txnames_path]
-    command += [bus_path]
-    run_executable(command)
-
-    return {
-        'bus': os.path.join(out_dir, BUS_MERGED_FILENAME),
-        'ecmap': os.path.join(out_dir, ECMAP_MERGED_FILENAME),
     }
 
 
@@ -1154,7 +986,7 @@ def write_smartseq3_capture(capture_path: str) -> str:
 
 @logger.namespaced('count')
 def count(
-    index_paths: Union[List[str], str],
+    index_path: str,
     t2g_path: str,
     technology: str,
     out_dir: str,
@@ -1186,7 +1018,7 @@ def count(
     """Generates count matrices for single-cell RNA seq.
 
     Args:
-        index_paths: Paths to kallisto indices
+        index_path: Path to kallisto index
         t2g_path: Path to transcript-to-gene mapping
         technology: Single-cell technology used
         out_dir: Path to output directory
@@ -1232,8 +1064,6 @@ def count(
         Dictionary containing paths to generated files
     """
     STATS.start()
-    if not isinstance(index_paths, list):
-        index_paths = [index_paths]
     is_batch = isinstance(fastqs, str)
 
     results = {}
@@ -1246,40 +1076,30 @@ def count(
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
         'info': os.path.join(out_dir, KALLISTO_INFO_FILENAME)
     }
+    if paired:
+        bus_result['flens'] = os.path.join(out_dir, FLENS_FILENAME)
     if technology.upper() in ('BULK', 'SMARTSEQ2'):
         bus_result['saved_index'] = os.path.join(out_dir, SAVED_INDEX_FILENAME)
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
         _technology = 'BULK' if technology.upper(
         ) == 'SMARTSEQ2' else technology
-        if len(index_paths) > 1:
-            bus_result = kallisto_bus_split(
-                fastqs,
-                index_paths,
-                _technology,
-                out_dir,
-                temp_dir=temp_dir,
-                threads=threads,
-                memory=memory,
-                paired=paired,
-                strand=strand,
-            )
-        else:
-            # Pipe any remote files.
-            fastqs = stream_batch(
-                fastqs, temp_dir=temp_dir
-            ) if is_batch else stream_fastqs(
-                fastqs, temp_dir=temp_dir
-            )
-            bus_result = kallisto_bus(
-                fastqs,
-                index_paths[0],
-                _technology,
-                out_dir,
-                threads=threads,
-                paired=paired,
-                strand=strand,
-            )
+
+        # Pipe any remote files.
+        fastqs = stream_batch(
+            fastqs, temp_dir=temp_dir
+        ) if is_batch else stream_fastqs(
+            fastqs, temp_dir=temp_dir
+        )
+        bus_result = kallisto_bus(
+            fastqs,
+            index_path,
+            _technology,
+            out_dir,
+            threads=threads,
+            paired=paired,
+            strand=strand,
+        )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
@@ -1492,7 +1312,7 @@ def count(
 
 @logger.namespaced('count_smartseq3')
 def count_smartseq3(
-    index_paths: Union[List[str], str],
+    index_path: str,
     t2g_path: str,
     out_dir: str,
     fastqs: List[str],
@@ -1511,7 +1331,7 @@ def count_smartseq3(
     """Generates count matrices for Smartseq3.
 
     Args:
-        index_paths: Paths to kallisto indices
+        index_path: Path to kallisto index
         t2g_path: Path to transcript-to-gene mapping
         out_dir: Path to output directory
         fastqs: List of FASTQ file paths or a single batch definition file
@@ -1537,8 +1357,6 @@ def count_smartseq3(
         Dictionary containing paths to generated files
     """
     STATS.start()
-    if not isinstance(index_paths, list):
-        index_paths = [index_paths]
     is_batch = isinstance(fastqs, str)
 
     results = {}
@@ -1556,34 +1374,21 @@ def count_smartseq3(
     }
     if any(not os.path.exists(path)
            for name, path in bus_result.items()) or overwrite:
-        if len(index_paths) > 1:
-            bus_result = kallisto_bus_split(
-                fastqs,
-                index_paths,
-                'SMARTSEQ3',
-                out_dir,
-                temp_dir=temp_dir,
-                threads=threads,
-                memory=memory,
-                paired=True,
-                strand=strand,
-            )
-        else:
-            # Pipe any remote files.
-            fastqs = stream_batch(
-                fastqs, temp_dir=temp_dir
-            ) if is_batch else stream_fastqs(
-                fastqs, temp_dir=temp_dir
-            )
-            bus_result = kallisto_bus(
-                fastqs,
-                index_paths[0],
-                'SMARTSEQ3',
-                out_dir,
-                threads=threads,
-                paired=True,
-                strand=strand,
-            )
+        # Pipe any remote files.
+        fastqs = stream_batch(
+            fastqs, temp_dir=temp_dir
+        ) if is_batch else stream_fastqs(
+            fastqs, temp_dir=temp_dir
+        )
+        bus_result = kallisto_bus(
+            fastqs,
+            index_path,
+            'SMARTSEQ3',
+            out_dir,
+            threads=threads,
+            paired=True,
+            strand=strand,
+        )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
@@ -1795,7 +1600,7 @@ def count_smartseq3(
 
 @logger.namespaced('count_lamanno')
 def count_velocity(
-    index_paths: Union[List[str], str],
+    index_path: str,
     t2g_path: str,
     cdna_t2c_path: str,
     intron_t2c_path: str,
@@ -1828,7 +1633,7 @@ def count_velocity(
     """Generates RNA velocity matrices for single-cell RNA seq.
 
     Args:
-        index_paths: Paths to kallisto indices
+        index_path: Path to kallisto index
         t2g_path: Path to transcript-to-gene mapping
         cdna_t2c_path: Path to cDNA transcripts-to-capture file
         intron_t2c_path: Path to intron transcripts-to-capture file
@@ -1876,8 +1681,6 @@ def count_velocity(
         Dictionary containing path to generated index
     """
     STATS.start()
-    if not isinstance(index_paths, list):
-        index_paths = [index_paths]
     is_batch = isinstance(fastqs, str)
 
     results = {}
@@ -1896,34 +1699,21 @@ def count_velocity(
            for name, path in bus_result.items()) or overwrite:
         _technology = 'BULK' if technology.upper(
         ) == 'SMARTSEQ2' else technology
-        if len(index_paths) > 1:
-            bus_result = kallisto_bus_split(
-                fastqs,
-                index_paths,
-                _technology,
-                out_dir,
-                temp_dir=temp_dir,
-                threads=threads,
-                memory=memory,
-                paired=paired,
-                strand=strand,
-            )
-        else:
-            # Pipe any remote files.
-            fastqs = stream_batch(
-                fastqs, temp_dir=temp_dir
-            ) if is_batch else stream_fastqs(
-                fastqs, temp_dir=temp_dir
-            )
-            bus_result = kallisto_bus(
-                fastqs,
-                index_paths[0],
-                _technology,
-                out_dir,
-                threads=threads,
-                paired=paired,
-                strand=strand
-            )
+        # Pipe any remote files.
+        fastqs = stream_batch(
+            fastqs, temp_dir=temp_dir
+        ) if is_batch else stream_fastqs(
+            fastqs, temp_dir=temp_dir
+        )
+        bus_result = kallisto_bus(
+            fastqs,
+            index_path,
+            _technology,
+            out_dir,
+            threads=threads,
+            paired=paired,
+            strand=strand
+        )
     else:
         logger.info(
             'Skipping kallisto bus because output files already exist. Use the --overwrite flag to overwrite.'
