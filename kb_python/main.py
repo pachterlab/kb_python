@@ -366,7 +366,7 @@ def parse_count(
         )
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
-        unsupported = ['filter', 'w']
+        unsupported = ['filter']
         for arg in unsupported:
             if getattr(args, arg):
                 parser.error(
@@ -427,7 +427,7 @@ def parse_count(
                 )
     elif args.x.upper() == 'SMARTSEQ3':
         unsupported = [
-            'filter', 'w', 'parity', 'fragment-l', 'fragment-s', 'report',
+            'filter', 'parity', 'fragment-l', 'fragment-s', 'report',
             'cellranger'
         ]
         for arg in unsupported:
@@ -476,6 +476,7 @@ def parse_count(
                 args.c2,
                 args.o,
                 args.fastqs,
+                args.w,
                 tcc=args.tcc,
                 mm=args.mm,
                 temp_dir=temp_dir,
@@ -534,6 +535,7 @@ def parse_count(
                 args.g,
                 args.o,
                 args.fastqs,
+                args.w,
                 tcc=args.tcc,
                 mm=args.mm,
                 temp_dir=temp_dir,

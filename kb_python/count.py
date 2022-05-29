@@ -1260,6 +1260,7 @@ def count_smartseq3(
     t2g_path: str,
     out_dir: str,
     fastqs: List[str],
+    whitelist_path: Optional[str] = None,
     tcc: bool = False,
     mm: bool = False,
     temp_dir: str = 'tmp',
@@ -1278,7 +1279,8 @@ def count_smartseq3(
         index_path: Path to kallisto index
         t2g_path: Path to transcript-to-gene mapping
         out_dir: Path to output directory
-        fastqs: List of FASTQ file paths or a single batch definition file
+        fastqs: List of FASTQ file paths
+        whitelist_path: Path to whitelist, defaults to `None`
         tcc: Whether to generate a TCC matrix instead of a gene count matrix,
             defaults to `False`
         mm: Whether to include BUS records that pseudoalign to multiple genes,
@@ -1349,11 +1351,13 @@ def count_smartseq3(
         threads=threads,
         memory=memory
     )
-    logger.info('Whitelist not provided')
-    whitelist_path = copy_or_create_whitelist(
-        'SMARTSEQ3', sort_result['bus'], out_dir
-    )
-    unfiltered_results.update({'whitelist': whitelist_path})
+
+    if not whitelist_path:
+        logger.info('Whitelist not provided')
+        whitelist_path = copy_or_create_whitelist(
+            'SMARTSEQ3', sort_result['bus'], out_dir
+        )
+        unfiltered_results.update({'whitelist': whitelist_path})
 
     prev_result = sort_result
     if inspect:
@@ -1917,6 +1921,7 @@ def count_velocity_smartseq3(
     intron_t2c_path: str,
     out_dir: str,
     fastqs: List[str],
+    whitelist_path: Optional[str] = None,
     tcc: bool = False,
     mm: bool = False,
     temp_dir: str = 'tmp',
@@ -1935,7 +1940,8 @@ def count_velocity_smartseq3(
         index_path: Path to kallisto index
         t2g_path: Path to transcript-to-gene mapping
         out_dir: Path to output directory
-        fastqs: List of FASTQ file paths or a single batch definition file
+        fastqs: List of FASTQ file paths
+        whitelist_path: Path to whitelist, defaults to `None`
         tcc: Whether to generate a TCC matrix instead of a gene count matrix,
             defaults to `False`
         mm: Whether to include BUS records that pseudoalign to multiple genes,
