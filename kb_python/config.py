@@ -102,7 +102,10 @@ TECHNOLOGIES = sorted([
     Technology('10XV1', '10x version 1', ngs.chemistry.get_chemistry('10xv1')),
     Technology('10XV2', '10x version 2', ngs.chemistry.get_chemistry('10xv2')),
     Technology('10XV3', '10x version 3', ngs.chemistry.get_chemistry('10xv3')),
-    Technology('10XV3_ULTIMA', '10x version 3 sequenced with Ultima', ngs.chemistry.get_chemistry('10xv3_Ultima')),
+    Technology(
+        '10XV3_ULTIMA', '10x version 3 sequenced with Ultima',
+        ngs.chemistry.get_chemistry('10xv3_Ultima')
+    ),
     Technology(
         '10XFB', '10x Feature Barcode',
         ngs.chemistry.get_chemistry('10xFBonly'), False
