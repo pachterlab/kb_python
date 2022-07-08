@@ -16,9 +16,6 @@ BUS_S_FILENAME = 'output.s.bus'
 BUS_SC_FILENAME = 'output.s.c.bus'
 BUS_UNFILTERED_FILENAME = 'output.unfiltered.bus'
 BUS_FILTERED_FILENAME = 'output.filtered.bus'
-BUS_MASHED_FILENAME = 'mashed.bus'
-BUS_MERGED_FILENAME = 'merged.bus'
-ECMAP_MERGED_FILENAME = 'merged.ec'
 BUS_CDNA_PREFIX = 'spliced'
 BUS_INTRON_PREFIX = 'unspliced'
 ECMAP_FILENAME = 'matrix.ec'
@@ -63,6 +60,8 @@ SAVED_INDEX_FILENAME = 'index.saved'
 INTERNAL_SUFFIX = '_internal'
 UMI_SUFFIX = '_umi'
 CAPTURE_FILENAME = 'capture_nonUMI.txt'
+INSPECT_INTERNAL_FILENAME = 'inspect_internal.json'
+INSPECT_UMI_FILENAME = 'inspect_umi.json'
 
 # File codes.
 # These are appended to the filename whenever it undergoes some kind of

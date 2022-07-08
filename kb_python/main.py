@@ -25,7 +25,6 @@ from .config import (
 )
 from .compile import compile
 from .constants import INFO_FILENAME
-from .count import count, count_smartseq3, count_velocity
 from .logging import logger
 from .ref import download_reference, ref, ref_kite, ref_lamanno
 from .utils import (
@@ -108,6 +107,8 @@ def display_technologies():
         'technology string\n(see https://pachterlab.github.io/kallisto/manual)\n'
     )
     for t in TECHNOLOGIES:
+        if not t.show:
+            continue
         chem = t.chemistry
         row = [
             t.name,
@@ -204,12 +205,6 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
-    if args.n > 1:
-        logger.warning(
-            'Support for split indices (`-n`) will be deprecated in the next major release. '
-            'Please read the release notes on GitHub for more information. '
-        )
-
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
@@ -260,7 +255,6 @@ def parse_ref(
             args.g,
             args.c1,
             args.c2,
-            n=args.n,
             k=args.k,
             flank=args.flank,
             include=include,
@@ -289,7 +283,6 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
-                n=args.n,
                 k=args.k,
                 no_mismatches=args.no_mismatches,
                 overwrite=args.overwrite,
@@ -302,7 +295,6 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
-                n=args.n,
                 k=args.k,
                 include=include,
                 exclude=exclude,
@@ -327,13 +319,6 @@ def parse_count(
             'Using `--report` may cause `kb` to exceed maximum memory specified '
             'and crash for large count matrices.'
         ))
-
-    args.i = args.i.split(',')
-    if len(args.i) > 1:
-        logger.warning(
-            'Support for split indices will be deprecated in the next major release. '
-            'Please read the release notes on GitHub for more information. '
-        )
 
     if args.w and args.w.lower() == 'none':
         args.w = None
@@ -378,7 +363,7 @@ def parse_count(
         )
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
-        unsupported = ['filter', 'w']
+        unsupported = ['filter']
         for arg in unsupported:
             if getattr(args, arg):
                 parser.error(
@@ -439,7 +424,7 @@ def parse_count(
                 )
     elif args.x.upper() == 'SMARTSEQ3':
         unsupported = [
-            'filter', 'w', 'parity', 'fragment-l', 'fragment-s', 'report',
+            'filter', 'parity', 'fragment-l', 'fragment-s', 'report',
             'cellranger'
         ]
         for arg in unsupported:
@@ -474,54 +459,21 @@ def parse_count(
 
     if args.workflow in {'lamanno', 'nucleus'}:
         # Smartseq can not be used with lamanno or nucleus.
-        if args.x.upper() in ('SMARTSEQ', 'SMARTSEQ3'):
+        if args.x.upper() in ('SMARTSEQ',):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
 
-        count_velocity(
-            args.i,
-            args.g,
-            args.c1,
-            args.c2,
-            args.x,
-            args.o,
-            batch_path or args.fastqs,
-            args.w,
-            tcc=args.tcc,
-            mm=args.mm,
-            filter=args.filter,
-            filter_threshold=args.filter_threshold,
-            threads=args.t,
-            memory=args.m,
-            overwrite=args.overwrite,
-            loom=args.loom,
-            h5ad=args.h5ad,
-            cellranger=args.cellranger,
-            report=args.report,
-            inspect=not args.no_inspect,
-            nucleus=args.workflow == 'nucleus',
-            temp_dir=temp_dir,
-            fragment_l=args.fragment_l,
-            fragment_s=args.fragment_s,
-            paired=args.parity == 'paired',
-            strand=args.strand,
-            umi_gene=args.umi_gene,
-            em=args.em,
-            by_name=args.gene_names
-        )
-    else:
-        if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
-            parser.error(
-                '`kite:10xFB` workflow is only supported with technology `10XV3`'
-            )
-
         if args.x.upper() == 'SMARTSEQ3':
-            count_smartseq3(
+            from .count import count_velocity_smartseq3
+            count_velocity_smartseq3(
                 args.i,
                 args.g,
+                args.c1,
+                args.c2,
                 args.o,
                 args.fastqs,
+                args.w,
                 tcc=args.tcc,
                 mm=args.mm,
                 temp_dir=temp_dir,
@@ -535,6 +487,66 @@ def parse_count(
                 by_name=args.gene_names
             )
         else:
+            from .count import count_velocity
+            count_velocity(
+                args.i,
+                args.g,
+                args.c1,
+                args.c2,
+                args.x,
+                args.o,
+                batch_path or args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                filter=args.filter,
+                filter_threshold=args.filter_threshold,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                cellranger=args.cellranger,
+                report=args.report,
+                inspect=not args.no_inspect,
+                nucleus=args.workflow == 'nucleus',
+                temp_dir=temp_dir,
+                fragment_l=args.fragment_l,
+                fragment_s=args.fragment_s,
+                paired=args.parity == 'paired',
+                strand=args.strand,
+                umi_gene=args.umi_gene,
+                em=args.em,
+                by_name=args.gene_names
+            )
+    else:
+        if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
+            parser.error(
+                '`kite:10xFB` workflow is only supported with technology `10XV3`'
+            )
+
+        if args.x.upper() == 'SMARTSEQ3':
+            from .count import count_smartseq3
+            count_smartseq3(
+                args.i,
+                args.g,
+                args.o,
+                args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                temp_dir=temp_dir,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                inspect=not args.no_inspect,
+                strand=args.strand,
+                by_name=args.gene_names
+            )
+        else:
+            from .count import count
             count(
                 args.i,
                 args.g,
@@ -802,14 +814,6 @@ def setup_ref_args(
     )
 
     parser_ref.add_argument(
-        '-n',
-        metavar='N',
-        help=argparse.SUPPRESS,
-        type=int,
-        default=1,
-        required=False
-    )
-    parser_ref.add_argument(
         '-d',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
@@ -929,7 +933,7 @@ def setup_count_args(
     required_count.add_argument(
         '-i',
         metavar='INDEX',
-        help='Path to kallisto index/indices, comma-delimited',
+        help='Path to kallisto index',
         type=str,
         required=True
     )

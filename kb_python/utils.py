@@ -331,26 +331,26 @@ def copy_whitelist(technology: str, out_dir: str) -> str:
     return whitelist_path
 
 
-@dryable(dry_utils.copy_map)
-def copy_map(technology: str, out_dir: str) -> str:
-    """Copies provided feature-to-cell barcode mapping for the speified technology.
+@dryable(dry_utils.create_10x_feature_barcode_map)
+def create_10x_feature_barcode_map(out_path: str) -> str:
+    """Create a feature-barcode map for the 10x Feature Barcoding technology.
 
     Args:
-        technology: The name of the technology
-        out_dir: Directory to put the map
+        out_path: Path to the output mapping file
 
     Returns:
         Path to map
     """
-    technology = TECHNOLOGIES_MAPPING[technology.upper()]
-    archive_path = technology.chemistry.feature_map_path
-    map_path = os.path.join(
-        out_dir,
-        os.path.splitext(os.path.basename(archive_path))[0]
-    )
-    with open_as_text(archive_path, 'r') as f, open(map_path, 'w') as out:
-        out.write(f.read())
-    return map_path
+    chemistry = ngs.chemistry.get_chemistry('10xFB')
+    gex = chemistry.chemistry('gex')
+    fb = chemistry.chemistry('fb')
+    with open_as_text(fb.whitelist_path, 'r') as fb_f, open_as_text(
+            gex.whitelist_path, 'r') as gex_f, open(out_path, 'w') as out:
+        for fb_line, gex_line in zip(fb_f, gex_f):
+            fb_barcode = fb_line.strip()
+            gex_barcode = gex_line.strip()
+            out.write(f'{fb_barcode}\t{gex_barcode}\n')
+    return out_path
 
 
 @dryable(dry_utils.stream_file)
