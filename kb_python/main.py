@@ -204,11 +204,6 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
-    if args.n > 1:
-        logger.warning(
-            'Support for split indices (`-n`) will be deprecated in the next major release. '
-            'Please read the release notes on GitHub for more information. '
-        )
 
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
@@ -260,7 +255,6 @@ def parse_ref(
             args.g,
             args.c1,
             args.c2,
-            n=args.n,
             k=args.k,
             flank=args.flank,
             include=include,
@@ -289,7 +283,6 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
-                n=args.n,
                 k=args.k,
                 no_mismatches=args.no_mismatches,
                 overwrite=args.overwrite,
@@ -302,7 +295,6 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
-                n=args.n,
                 k=args.k,
                 include=include,
                 exclude=exclude,
