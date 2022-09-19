@@ -22,12 +22,12 @@ https://doi.org/10.1038/s41587-021-00870-2
 The latest release can be installed with
 
 ```bash
-pip install ffq
+pip install kb-python
 ```
 
 The development version can be installed with
 ```bash
-pip install git+https://github.com/pachterlab/ffq
+pip install git+https://github.com/pachterlab/kb_python
 ```
 
 There are no prerequisite packages to install. The `kallisto` and `bustools` binaries are included with the package.
