@@ -31,6 +31,8 @@ ADATA_PREFIX = 'adata'
 GENE_NAME = 'gene'
 FEATURE_NAME = 'feature'
 TRANSCRIPT_NAME = 'transcript'
+GENOMEBAM_FILENAME = 'pseudoalignments.bam'
+GENOMEBAM_INDEX_FILENAME = 'pseudoalignments.bam.bai'
 
 UNFILTERED_COUNTS_DIR = 'counts_unfiltered'
 FILTERED_COUNTS_DIR = 'counts_filtered'

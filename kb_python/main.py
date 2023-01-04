@@ -346,6 +346,9 @@ def parse_count(
     if args.tcc and args.gene_names:
         parser.error('`--gene-names` may not be used with `--tcc`')
 
+    if args.genomebam and not args.gtf:
+        parser.error('`--gtf` must be provided when using `--genomebam`.')
+
     # Check if batch TSV was provided.
     batch_path = None
     if len(args.fastqs) == 1:
@@ -483,8 +486,11 @@ def parse_count(
                 loom=args.loom,
                 h5ad=args.h5ad,
                 inspect=not args.no_inspect,
+                genomebam=args.genomebam,
                 strand=args.strand,
-                by_name=args.gene_names
+                by_name=args.gene_names,
+                gtf_path=args.gtf,
+                chromosomes_path=args.chromosomes,
             )
         else:
             from .count import count_velocity
@@ -514,10 +520,13 @@ def parse_count(
                 fragment_l=args.fragment_l,
                 fragment_s=args.fragment_s,
                 paired=args.parity == 'paired',
+                genomebam=args.genomebam,
                 strand=args.strand,
                 umi_gene=args.umi_gene,
                 em=args.em,
-                by_name=args.gene_names
+                by_name=args.gene_names,
+                gtf_path=args.gtf,
+                chromosomes_path=args.chromosomes,
             )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -542,8 +551,11 @@ def parse_count(
                 loom=args.loom,
                 h5ad=args.h5ad,
                 inspect=not args.no_inspect,
+                genomebam=args.genomebam,
                 strand=args.strand,
-                by_name=args.gene_names
+                by_name=args.gene_names,
+                gtf_path=args.gtf,
+                chromosomes_path=args.chromosomes,
             )
         else:
             from .count import count
@@ -572,10 +584,13 @@ def parse_count(
                 fragment_l=args.fragment_l,
                 fragment_s=args.fragment_s,
                 paired=args.parity == 'paired',
+                genomebam=args.genomebam,
                 strand=args.strand,
                 umi_gene=args.umi_gene,
                 em=args.em,
-                by_name=args.gene_names
+                by_name=args.gene_names,
+                gtf_path=args.gtf,
+                chromosomes_path=args.chromosomes,
             )
 
 
@@ -990,6 +1005,28 @@ def setup_count_args(
         type=str,
         default=None,
         choices=['unstranded', 'forward', 'reverse']
+    )
+    parser_count.add_argument(
+        '--genomebam',
+        help='Project pseudoalignments to genome sorted BAM file.',
+        action='store_true',
+        default=False,
+    )
+    parser_count.add_argument(
+        '--gtf',
+        help=(
+            'GTF file for transcriptome information (required for --genomebam).',
+        ),
+        type=str,
+        default=None,
+    )
+    parser_count.add_argument(
+        '--chromosomes',
+        help=(
+            'Tab separated file with chromosome names and lengths (optional for --genomebam, but recommended).'
+        ),
+        type=str,
+        default=None,
     )
     parser_count.add_argument(
         '--workflow',
