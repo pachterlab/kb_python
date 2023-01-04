@@ -1015,13 +1015,14 @@ def setup_count_args(
     parser_count.add_argument(
         '--gtf',
         help=(
-            'GTF file for transcriptome information (required for --genomebam).',
+            'GTF file for transcriptome information (required for --genomebam).'
         ),
         type=str,
         default=None,
     )
     parser_count.add_argument(
         '--chromosomes',
+        metavar='chrom.sizes',
         help=(
             'Tab separated file with chromosome names and lengths (optional for --genomebam, but recommended).'
         ),
