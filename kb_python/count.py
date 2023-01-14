@@ -33,6 +33,8 @@ from .constants import (
     FLENS_FILENAME,
     GENE_NAME,
     GENES_FILENAME,
+    GENOMEBAM_FILENAME,
+    GENOMEBAM_INDEX_FILENAME,
     INSPECT_FILENAME,
     INSPECT_INTERNAL_FILENAME,
     INSPECT_UMI_FILENAME,
@@ -90,7 +92,10 @@ def kallisto_bus(
     n: bool = False,
     k: bool = False,
     paired: bool = False,
+    genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+    gtf_path: Optional[str] = None,
+    chromosomes_path: Optional[str] = None,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -106,7 +111,13 @@ def kallisto_bus(
             defaults to `False`
         paired: Whether or not to supply the `--paired` flag, only used for
             bulk and smartseq2 samples, defaults to `False`
+        genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
+            `False`
         strand: Strandedness, defaults to `None`
+        gtf_path: GTF file for transcriptome information (required for --genomebam),
+            defaults to `None`
+        chromosomes_path: Tab separated file with chromosome names and lengths
+            (optional for --genomebam, but recommended), defaults to `None`
 
     Returns:
         Dictionary containing paths to generated files
@@ -137,6 +148,16 @@ def kallisto_bus(
     if paired:
         command += ['--paired']
         results['flens'] = os.path.join(out_dir, FLENS_FILENAME)
+    if genomebam:
+        command += ['--genomebam']
+        if gtf_path is not None:
+            command += ['-g', gtf_path]
+        if chromosomes_path is not None:
+            command += ['-c', chromosomes_path]
+        results['genomebam'] = os.path.join(out_dir, GENOMEBAM_FILENAME)
+        results['genomebam_index'] = os.path.join(
+            out_dir, GENOMEBAM_INDEX_FILENAME
+        )
     if strand == 'unstranded':
         command += ['--unstranded']
     elif strand == 'forward':
@@ -955,9 +976,12 @@ def count(
     fragment_l: Optional[int] = None,
     fragment_s: Optional[int] = None,
     paired: bool = False,
+    genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = False,
     em: bool = False,
+    gtf_path: Optional[str] = None,
+    chromosomes_path: Optional[str] = None,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -998,11 +1022,17 @@ def count(
         fragment_s: Standard deviation of fragment lengths, defaults to `None`
         paired: Whether the fastqs are paired. Has no effect when a single
             batch file is provided. Defaults to `False`
+        genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
+            `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
             `False`
         em: Whether to estimate gene abundances using EM algorithm,
             defaults to `False`
+        gtf_path: GTF file for transcriptome information (required for --genomebam),
+            defaults to `None`
+        chromosomes_path: Tab separated file with chromosome names and lengths
+            (optional for --genomebam, but recommended), defaults to `None`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1042,7 +1072,10 @@ def count(
             out_dir,
             threads=threads,
             paired=paired,
+            genomebam=genomebam,
             strand=strand,
+            gtf_path=gtf_path,
+            chromosomes_path=chromosomes_path,
         )
     else:
         logger.info(
@@ -1271,7 +1304,10 @@ def count_smartseq3(
     h5ad: bool = False,
     by_name: bool = False,
     inspect: bool = True,
+    genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+    gtf_path: Optional[str] = None,
+    chromosomes_path: Optional[str] = None,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for Smartseq3.
 
@@ -1297,7 +1333,13 @@ def count_smartseq3(
             `tcc=False`.
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
+        genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
+            `False`
         strand: Strandedness, defaults to `None`
+        gtf_path: GTF file for transcriptome information (required for --genomebam),
+            defaults to `None`
+        chromosomes_path: Tab separated file with chromosome names and lengths
+            (optional for --genomebam, but recommended), defaults to `None`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1333,7 +1375,10 @@ def count_smartseq3(
             out_dir,
             threads=threads,
             paired=True,
+            genomebam=genomebam,
             strand=strand,
+            gtf_path=gtf_path,
+            chromosomes_path=chromosomes_path
         )
     else:
         logger.info(
@@ -1511,9 +1556,12 @@ def count_velocity(
     fragment_l: Optional[int] = None,
     fragment_s: Optional[int] = None,
     paired: bool = False,
+    genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = False,
     em: bool = False,
+    gtf_path: Optional[str] = None,
+    chromosomes_path: Optional[str] = None,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1556,11 +1604,17 @@ def count_velocity(
         fragment_s: Standard deviation of fragment lengths, defaults to `None`
         paired: Whether the fastqs are paired. Has no effect when a single
             batch file is provided. Defaults to `False`
+        genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
+            `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
             `False`
         em: Whether to estimate gene abundances using EM algorithm, defaults to
             `False`
+        gtf_path: GTF file for transcriptome information (required for --genomebam),
+            defaults to `None`
+        chromosomes_path: Tab separated file with chromosome names and lengths
+            (optional for --genomebam, but recommended), defaults to `None`
 
     Returns:
         Dictionary containing path to generated index
@@ -1597,7 +1651,10 @@ def count_velocity(
             out_dir,
             threads=threads,
             paired=paired,
-            strand=strand
+            genomebam=genomebam,
+            strand=strand,
+            gtf_path=gtf_path,
+            chromosomes_path=chromosomes_path,
         )
     else:
         logger.info(
@@ -1932,7 +1989,10 @@ def count_velocity_smartseq3(
     h5ad: bool = False,
     by_name: bool = False,
     inspect: bool = True,
+    genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+    gtf_path: Optional[str] = None,
+    chromosomes_path: Optional[str] = None,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for Smartseq3.
 
@@ -1958,7 +2018,13 @@ def count_velocity_smartseq3(
             `tcc=False`.
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
+        genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
+            `False`
         strand: Strandedness, defaults to `None`
+        gtf_path: GTF file for transcriptome information (required for --genomebam),
+            defaults to `None`
+        chromosomes_path: Tab separated file with chromosome names and lengths
+            (optional for --genomebam, but recommended), defaults to `None`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1993,7 +2059,10 @@ def count_velocity_smartseq3(
             out_dir,
             threads=threads,
             paired=True,
+            genomebam=genomebam,
             strand=strand,
+            gtf_path=gtf_path,
+            chromosomes_path=chromosomes_path
         )
     else:
         logger.info(
