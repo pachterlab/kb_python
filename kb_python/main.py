@@ -367,9 +367,7 @@ def parse_count(
             pass
 
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
-        parser.error(
-            f'`--em` may not be used for technology {args.x}'
-        )
+        parser.error(f'`--em` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
         unsupported = ['filter']
