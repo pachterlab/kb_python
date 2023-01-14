@@ -348,6 +348,10 @@ def parse_count(
 
     if args.genomebam and not args.gtf:
         parser.error('`--gtf` must be provided when using `--genomebam`.')
+    if args.genomebam and not args.chromosomes:
+        logger.warning(
+            '`--chromosomes` is recommended when using `--genomebam`'
+        )
 
     # Check if batch TSV was provided.
     batch_path = None
