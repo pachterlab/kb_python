@@ -222,7 +222,8 @@ def kallisto_index(
     fasta_path: str,
     index_path: str,
     k: int = 31,
-    threads: int = 8
+    threads: int = 8,
+    dlist: str = None
 ) -> Dict[str, str]:
     """Runs `kallisto index`.
 
@@ -231,6 +232,7 @@ def kallisto_index(
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
+        dlist: D-list FASTA file(s)
 
     Returns:
         Dictionary containing path to generated index
@@ -239,6 +241,8 @@ def kallisto_index(
     command = [get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k]
     if threads > 1:
         command += ['-t', threads]
+    if dlist:
+        command += ['-d', dlist]
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
@@ -467,7 +471,8 @@ def ref(
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
     overwrite: bool = False,
-    threads: int = 8
+    threads: int = 8,
+    dlist: str = None
 ) -> Dict[str, str]:
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
@@ -485,6 +490,7 @@ def ref(
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
         threads: Number of threads to use, defaults to `8`
+        dlist: D-list FASTA file(s)
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -540,7 +546,7 @@ def ref(
         index_result = split_and_index(
             cdna_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            cdna_path, index_path, k=k or 31, threads=threads
+            cdna_path, index_path, k=k or 31, threads=threads, dlist=dlist
         )
         results.update(index_result)
     else:
@@ -631,7 +637,8 @@ def ref_lamanno(
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
     overwrite: bool = False,
-    threads: int = 8
+    threads: int = 8,
+    dlist: str = None
 ) -> Dict[str, str]:
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
@@ -655,6 +662,7 @@ def ref_lamanno(
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
         threads: Number of threads to use, defaults to `8`
+        dlist: D-list FASTA file(s)
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -775,11 +783,11 @@ def ref_lamanno(
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
         if n == 1:
             index_result = kallisto_index(
-                combined_path, index_path, k=k or 31, threads=threads
+                combined_path, index_path, k=k or 31, threads=threads, dlist=dlist
             )
         else:
             cdna_index_result = kallisto_index(
-                cdna_path, f'{index_path}_cdna', k=k or 31, threads=threads
+                cdna_path, f'{index_path}_cdna', k=k or 31, threads=threads, dlist=dlist
             )
             if n == 2:
                 intron_index_result = kallisto_index(

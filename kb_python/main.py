@@ -205,9 +205,12 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
+    dlist = ""
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
+    if args.d_list is None:
+        dlist = str(args.fasta)
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
@@ -260,6 +263,7 @@ def parse_ref(
             include=include,
             exclude=exclude,
             threads=args.t,
+            dlist=dlist,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -277,6 +281,10 @@ def parse_ref(
                 parser.error(
                     '`--include-attribute` or `--exclude-attribute` may not be used '
                     f'for workflow `{args.workflow}`'
+                )
+            if args.d_list:
+                parser.error(
+                    f'`--d-list` may not be used for workflow `{args.workflow}`'
                 )
 
             ref_kite(
@@ -301,6 +309,7 @@ def parse_ref(
                 include=include,
                 exclude=exclude,
                 threads=args.t,
+                dlist=dlist,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
@@ -860,6 +869,13 @@ def setup_ref_args(
         help=('Number of threads to use (default: 8)'),
         type=int,
         default=8
+    )
+    parser_ref.add_argument(
+        '--d-list',
+        metavar='FASTA',
+        help=('D-list file(s) (default: the Genomic FASTA file(s))'),
+        type=str,
+        default=None
     )
     parser_ref.add_argument(
         '--workflow',
