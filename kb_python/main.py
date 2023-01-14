@@ -259,6 +259,7 @@ def parse_ref(
             flank=args.flank,
             include=include,
             exclude=exclude,
+            threads=args.t,
             overwrite=args.overwrite,
             temp_dir=temp_dir
         )
@@ -285,6 +286,7 @@ def parse_ref(
                 args.g,
                 k=args.k,
                 no_mismatches=args.no_mismatches,
+                threads=args.t,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
@@ -298,6 +300,7 @@ def parse_ref(
                 k=args.k,
                 include=include,
                 exclude=exclude,
+                threads=args.t,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
@@ -855,6 +858,15 @@ def setup_ref_args(
         required=False
     )
     parser_ref.add_argument(
+        '-t',
+        metavar='THREADS',
+        help=(
+            'Number of threads to use (default: 8)'
+        ),
+        type=int,
+        default=8
+    )
+    parser_ref.add_argument(
         '--workflow',
         help=(
             'Type of workflow to prepare files for. '
@@ -999,9 +1011,9 @@ def setup_count_args(
     parser_count.add_argument(
         '-m',
         metavar='MEMORY',
-        help='Maximum memory used (default: 4G)',
+        help='Maximum memory used (default: 2G)',
         type=str,
-        default='4G'
+        default='2G'
     )
     parser_count.add_argument(
         '--strand',

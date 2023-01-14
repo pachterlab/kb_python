@@ -220,22 +220,24 @@ def create_t2c(fasta_path: str, t2c_path: str) -> Dict[str, str]:
 
 def kallisto_index(fasta_path: str,
                    index_path: str,
-                   k: int = 31) -> Dict[str, str]:
+                   k: int = 31,
+                   threads: int = 8) -> Dict[str, str]:
     """Runs `kallisto index`.
 
     Args:
         fasta_path: path to FASTA file
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
+        threads: Number of threads to use, defaults to `8`
 
     Returns:
         Dictionary containing path to generated index
     """
     logger.info(f'Indexing {fasta_path} to {index_path}')
-    command = [
-        get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k,
-        fasta_path
-    ]
+    command = [get_kallisto_binary_path(), 'index', '-i', index_path, '-k', k]
+    if threads > 1:
+        command += ['-t', threads]
+    command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
 
@@ -462,7 +464,8 @@ def ref(
     include: Optional[List[Dict[str, str]]] = None,
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
-    overwrite: bool = False
+    overwrite: bool = False,
+    threads: int = 8
 ) -> Dict[str, str]:
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
@@ -479,6 +482,7 @@ def ref(
             attributes to exclude
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        threads: Number of threads to use, defaults to `8`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -534,7 +538,7 @@ def ref(
         index_result = split_and_index(
             cdna_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            cdna_path, index_path, k=k or 31
+            cdna_path, index_path, k=k or 31, threads=threads
         )
         results.update(index_result)
     else:
@@ -556,7 +560,8 @@ def ref_kite(
     k: Optional[int] = None,
     no_mismatches: bool = False,
     temp_dir: str = 'tmp',
-    overwrite: bool = False
+    overwrite: bool = False,
+    threads: int = 8
 ) -> Dict[str, str]:
     """Generates files necessary for feature barcoding with the KITE workflow.
 
@@ -572,6 +577,7 @@ def ref_kite(
             defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        threads: Number of threads to use, defaults to `8`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -595,7 +601,7 @@ def ref_kite(
         index_result = split_and_index(
             kite_path, index_path, n=n, k=k or optimal_k, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            kite_path, index_path, k=k or optimal_k
+            kite_path, index_path, k=k or optimal_k, threads=threads
         )
         results.update(index_result)
     else:
@@ -623,6 +629,7 @@ def ref_lamanno(
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
     overwrite: bool = False,
+    threads: int = 8
 ) -> Dict[str, str]:
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
@@ -645,6 +652,7 @@ def ref_lamanno(
             attributes to exclude
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        threads: Number of threads to use, defaults to `8`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -764,14 +772,14 @@ def ref_lamanno(
         # if n = 2, make two indices, one for spliced and another for unspliced
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
         if n == 1:
-            index_result = kallisto_index(combined_path, index_path, k=k or 31)
+            index_result = kallisto_index(combined_path, index_path, k=k or 31, threads=threads)
         else:
             cdna_index_result = kallisto_index(
-                cdna_path, f'{index_path}_cdna', k=k or 31
+                cdna_path, f'{index_path}_cdna', k=k or 31, threads=threads
             )
             if n == 2:
                 intron_index_result = kallisto_index(
-                    intron_path, f'{index_path}_intron', k=k or 31
+                    intron_path, f'{index_path}_intron', k=k or 31, threads=threads
                 )
                 index_result = {
                     'indices': [
