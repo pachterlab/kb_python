@@ -366,10 +366,9 @@ def parse_count(
         except Exception:
             pass
 
-    if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and (args.umi_gene
-                                                                 or args.em):
+    if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
         parser.error(
-            f'`--umi-gene` or `--em` may not be used for technology {args.x}'
+            f'`--em` may not be used for technology {args.x}'
         )
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
@@ -529,7 +528,7 @@ def parse_count(
                 paired=args.parity == 'paired',
                 genomebam=args.genomebam,
                 strand=args.strand,
-                umi_gene=args.umi_gene,
+                umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
                 em=args.em,
                 by_name=args.gene_names,
                 gtf_path=args.gtf,
@@ -593,7 +592,7 @@ def parse_count(
                 paired=args.parity == 'paired',
                 genomebam=args.genomebam,
                 strand=args.strand,
-                umi_gene=args.umi_gene,
+                umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
                 em=args.em,
                 by_name=args.gene_names,
                 gtf_path=args.gtf,
@@ -1060,11 +1059,6 @@ def setup_count_args(
     parser_count.add_argument(
         '--em',
         help='Estimate gene abundances using an EM algorithm.',
-        action='store_true'
-    )
-    parser_count.add_argument(
-        '--umi-gene',
-        help='Perform gene-level collapsing of UMIs.',
         action='store_true'
     )
 

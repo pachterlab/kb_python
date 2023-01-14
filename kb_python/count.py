@@ -362,7 +362,7 @@ def bustools_count(
     tcc: bool = False,
     mm: bool = False,
     cm: bool = False,
-    umi_gene: bool = False,
+    umi_gene: bool = True,
     em: bool = False,
 ) -> Dict[str, str]:
     """Runs `bustools count`.
@@ -379,7 +379,7 @@ def bustools_count(
             defaults to `False`
         cm: Count multiplicities instead of UMIs. Used for chemitries
             without UMIs, such as bulk and Smartseq2, defaults to `False`
-        umi_gene: Whether to use genes to deduplicate umis, defaults to `False`
+        umi_gene: Whether to use genes to deduplicate umis, defaults to `True`
         em: Whether to estimate gene abundances using EM algorithm, defaults
             to `False`
 
@@ -717,7 +717,7 @@ def filter_with_bustools(
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
-    umi_gene: bool = False,
+    umi_gene: bool = True,
     em: bool = False,
 ) -> Dict[str, str]:
     """Generate filtered count matrices with bustools.
@@ -750,7 +750,7 @@ def filter_with_bustools(
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
-            `False`
+            `True`
         em: Whether to estimate gene abundances using EM algorithm, defaults to
             `False`
 
@@ -978,7 +978,7 @@ def count(
     paired: bool = False,
     genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
-    umi_gene: bool = False,
+    umi_gene: bool = True,
     em: bool = False,
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
@@ -1026,7 +1026,7 @@ def count(
             `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
-            `False`
+            `True`
         em: Whether to estimate gene abundances using EM algorithm,
             defaults to `False`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
