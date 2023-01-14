@@ -860,9 +860,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '-t',
         metavar='THREADS',
-        help=(
-            'Number of threads to use (default: 8)'
-        ),
+        help=('Number of threads to use (default: 8)'),
         type=int,
         default=8
     )

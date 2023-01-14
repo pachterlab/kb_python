@@ -218,10 +218,11 @@ def create_t2c(fasta_path: str, t2c_path: str) -> Dict[str, str]:
     return {'t2c': t2c_path}
 
 
-def kallisto_index(fasta_path: str,
-                   index_path: str,
-                   k: int = 31,
-                   threads: int = 8) -> Dict[str, str]:
+def kallisto_index(
+    fasta_path: str,
+    index_path: str,
+    k: int = 31,
+    threads: int = 8) -> Dict[str, str]:
     """Runs `kallisto index`.
 
     Args:
@@ -772,14 +773,19 @@ def ref_lamanno(
         # if n = 2, make two indices, one for spliced and another for unspliced
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
         if n == 1:
-            index_result = kallisto_index(combined_path, index_path, k=k or 31, threads=threads)
+            index_result = kallisto_index(
+                combined_path, index_path, k=k or 31, threads=threads
+            )
         else:
             cdna_index_result = kallisto_index(
                 cdna_path, f'{index_path}_cdna', k=k or 31, threads=threads
             )
             if n == 2:
                 intron_index_result = kallisto_index(
-                    intron_path, f'{index_path}_intron', k=k or 31, threads=threads
+                    intron_path,
+                    f'{index_path}_intron',
+                    k=k or 31,
+                    threads=threads
                 )
                 index_result = {
                     'indices': [
