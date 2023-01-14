@@ -222,7 +222,8 @@ def kallisto_index(
     fasta_path: str,
     index_path: str,
     k: int = 31,
-    threads: int = 8) -> Dict[str, str]:
+    threads: int = 8
+) -> Dict[str, str]:
     """Runs `kallisto index`.
 
     Args:
