@@ -783,11 +783,19 @@ def ref_lamanno(
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
         if n == 1:
             index_result = kallisto_index(
-                combined_path, index_path, k=k or 31, threads=threads, dlist=dlist
+                combined_path,
+                index_path,
+                k=k or 31,
+                threads=threads,
+                dlist=dlist
             )
         else:
             cdna_index_result = kallisto_index(
-                cdna_path, f'{index_path}_cdna', k=k or 31, threads=threads, dlist=dlist
+                cdna_path,
+                f'{index_path}_cdna',
+                k=k or 31,
+                threads=threads,
+                dlist=dlist
             )
             if n == 2:
                 intron_index_result = kallisto_index(
