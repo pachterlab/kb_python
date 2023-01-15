@@ -211,6 +211,8 @@ def parse_ref(
             parser.error('K-mer length must be a positive odd integer.')
     if args.d_list is None:
         dlist = str(args.fasta)
+    else:
+        dlist = args.d_list
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
