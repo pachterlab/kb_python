@@ -552,7 +552,12 @@ def ref(
         index_result = split_and_index(
             cdna_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            cdna_path, index_path, k=k or 31, threads=threads, dlist=dlist, make_unique=make_unique
+            cdna_path,
+            index_path,
+            k=k or 31,
+            threads=threads,
+            dlist=dlist,
+            make_unique=make_unique
         )
         results.update(index_result)
     else:
