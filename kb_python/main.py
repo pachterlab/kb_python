@@ -265,6 +265,7 @@ def parse_ref(
             threads=args.t,
             dlist=dlist,
             overwrite=args.overwrite,
+            make_unique=args.make_unique,
             temp_dir=temp_dir
         )
     else:
@@ -311,6 +312,7 @@ def parse_ref(
                 threads=args.t,
                 dlist=dlist,
                 overwrite=args.overwrite,
+                make_unique=args.make_unique,
                 temp_dir=temp_dir
             )
 
@@ -888,6 +890,11 @@ def setup_ref_args(
         type=str,
         default='standard',
         choices=['standard', 'lamanno', 'nucleus', 'kite']
+    )
+    parser_ref.add_argument(
+        '--make-unique',
+        help='Replace repeated target names with unique names',
+        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',

@@ -223,7 +223,8 @@ def kallisto_index(
     index_path: str,
     k: int = 31,
     threads: int = 8,
-    dlist: str = None
+    dlist: str = None,
+    make_unique: bool = False
 ) -> Dict[str, str]:
     """Runs `kallisto index`.
 
@@ -233,6 +234,7 @@ def kallisto_index(
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
         dlist: D-list FASTA file(s)
+        make_unique: Replace repeated target names with unique names, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -243,6 +245,8 @@ def kallisto_index(
         command += ['-t', threads]
     if dlist:
         command += ['-d', dlist]
+    if make_unique:
+        command += ['--make-unique']
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
@@ -471,6 +475,7 @@ def ref(
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
     overwrite: bool = False,
+    make_unique: bool = False,
     threads: int = 8,
     dlist: str = None
 ) -> Dict[str, str]:
@@ -489,6 +494,7 @@ def ref(
             attributes to exclude
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
         dlist: D-list FASTA file(s)
 
@@ -546,7 +552,7 @@ def ref(
         index_result = split_and_index(
             cdna_path, index_path, n=n, k=k or 31, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            cdna_path, index_path, k=k or 31, threads=threads, dlist=dlist
+            cdna_path, index_path, k=k or 31, threads=threads, dlist=dlist, make_unique=make_unique
         )
         results.update(index_result)
     else:
@@ -637,6 +643,7 @@ def ref_lamanno(
     exclude: Optional[List[Dict[str, str]]] = None,
     temp_dir: str = 'tmp',
     overwrite: bool = False,
+    make_unique: bool = False,
     threads: int = 8,
     dlist: str = None
 ) -> Dict[str, str]:
@@ -661,6 +668,7 @@ def ref_lamanno(
             attributes to exclude
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
         dlist: D-list FASTA file(s)
 
@@ -787,7 +795,8 @@ def ref_lamanno(
                 index_path,
                 k=k or 31,
                 threads=threads,
-                dlist=dlist
+                dlist=dlist,
+                make_unique=make_unique
             )
         else:
             cdna_index_result = kallisto_index(
@@ -795,14 +804,16 @@ def ref_lamanno(
                 f'{index_path}_cdna',
                 k=k or 31,
                 threads=threads,
-                dlist=dlist
+                dlist=dlist,
+                make_unique=make_unique
             )
             if n == 2:
                 intron_index_result = kallisto_index(
                     intron_path,
                     f'{index_path}_intron',
                     k=k or 31,
-                    threads=threads
+                    threads=threads,
+                    make_unique=make_unique
                 )
                 index_result = {
                     'indices': [
