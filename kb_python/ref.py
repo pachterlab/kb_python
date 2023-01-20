@@ -469,6 +469,7 @@ def ref(
     cdna_path: str,
     index_path: str,
     t2g_path: str,
+    nucleus: bool = False,
     n: int = 1,
     k: Optional[int] = None,
     include: Optional[List[Dict[str, str]]] = None,
@@ -486,6 +487,7 @@ def ref(
         gtf_paths: List of paths to GTF files
         cdna_path: Path to generate the cDNA FASTA file
         t2g_path: Path to output transcript-to-gene mapping
+        nucleus: Whether to quantify single-nucleus RNA-seq, defaults to `False`
         n: Split the index into `n` files
         k: Override default kmer length 31, defaults to `None`
         include: List of dictionaries representing key-value pairs of
@@ -515,6 +517,9 @@ def ref(
 
     results = {}
     cdnas = []
+    target = "cDNA"
+    if nucleus:
+        target = "unprocessed transcript"
     if (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
@@ -526,19 +531,24 @@ def ref(
             # Split
             cdna_temp_path = get_temporary_filename(temp_dir)
             logger.info(
-                f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
+                f'Splitting genome {fasta_path} into {target} at {cdna_temp_path}'
             )
-            cdna_temp_path = ngs.fasta.split_genomic_fasta_to_cdna(
-                fasta_path, cdna_temp_path, gene_infos, transcript_infos
-            )
+            if not nucleus:
+                cdna_temp_path = ngs.fasta.split_genomic_fasta_to_cdna(
+                    fasta_path, cdna_temp_path, gene_infos, transcript_infos
+                )
+            else:
+                cdna_temp_path = ngs.fasta.split_genomic_fasta_to_nascent(
+                    fasta_path, cdna_temp_path, gene_infos
+                )
             cdnas.append(cdna_temp_path)
 
-        logger.info(f'Concatenating {len(cdnas)} cDNAs to {cdna_path}')
+        logger.info(f'Concatenating {len(cdnas)} {target}s to {cdna_path}')
         cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
         results.update({'cdna_fasta': cdna_path})
     else:
         logger.info(
-            f'Skipping cDNA FASTA generation because {cdna_path} already exists. Use --overwrite flag to overwrite'
+            f'Skipping {target} FASTA generation because {cdna_path} already exists. Use --overwrite flag to overwrite'
         )
 
     if not glob.glob(f'{index_path}*') or overwrite:
@@ -663,7 +673,7 @@ def ref_lamanno(
         t2g_path: Path to output transcript-to-gene mapping
         cdna_t2c_path: Path to generate the cDNA transcripts-to-capture file
         intron_t2c_path: Path to generate the intron transcripts-to-capture file
-        nascent: Whether to obtain nascent/mature/ambiguous matrices
+        nascent: Obtain nascent/mature/ambiguous matrices, defaults to `True`
         n: Split the index into `n` files
         k: Override default kmer length (31), defaults to `None`
         flank: Number of bases to include from the flanking regions
@@ -699,9 +709,9 @@ def ref_lamanno(
     introns = []
     cdna_t2cs = []
     intron_t2cs = []
-    target_name = "intron"
+    target = "intron"
     if nascent:
-        target_name = "unprocessed transcript"
+        target = "unprocessed transcript"
     if (not ngs.utils.all_exists(cdna_path, intron_path, t2g_path,
                                  cdna_t2c_path, intron_t2c_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
@@ -731,7 +741,7 @@ def ref_lamanno(
 
             # Split intron
             intron_temp_path = get_temporary_filename(temp_dir)
-            logger.info(f'Splitting genome into {target_name}s at {intron_temp_path}')
+            logger.info(f'Splitting genome into {target}s at {intron_temp_path}')
             if nascent:
                 intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
                     fasta_path,
@@ -753,7 +763,7 @@ def ref_lamanno(
             # intron t2c
             intron_t2c_temp_path = get_temporary_filename(temp_dir)
             logger.info(
-                f'Creating {target_name} transcripts-to-capture at {intron_t2c_temp_path}'
+                f'Creating {target} transcripts-to-capture at {intron_t2c_temp_path}'
             )
             intron_t2c_result = create_t2c(
                 intron_temp_path, intron_t2c_temp_path
@@ -768,11 +778,11 @@ def ref_lamanno(
         )
         cdna_t2c_path = concatenate_files(*cdna_t2cs, out_path=cdna_t2c_path)
         logger.info(
-            f'Concatenating {len(introns)} {target_name} FASTAs to {intron_path}'
+            f'Concatenating {len(introns)} {target} FASTAs to {intron_path}'
         )
         intron_path = concatenate_files(*introns, out_path=intron_path)
         logger.info(
-            f'Concatenating {len(intron_t2cs)} {target_name} transcripts-to-captures to {intron_t2c_path}'
+            f'Concatenating {len(intron_t2cs)} {target} transcripts-to-captures to {intron_t2c_path}'
         )
         intron_t2c_path = concatenate_files(
             *intron_t2cs, out_path=intron_t2c_path
@@ -786,13 +796,13 @@ def ref_lamanno(
 
     else:
         logger.info(
-            'Skipping cDNA and {target_name} FASTA generation because files already exist. Use --overwrite flag to overwrite'
+            'Skipping cDNA and {target} FASTA generation because files already exist. Use --overwrite flag to overwrite'
         )
 
     if not glob.glob(f'{index_path}*') or overwrite:
         # Concatenate cDNA and intron fastas to generate T2G and build index
         combined_path = get_temporary_filename(temp_dir)
-        logger.info(f'Concatenating cDNA and {target_name} FASTAs to {combined_path}')
+        logger.info(f'Concatenating cDNA and {target} FASTAs to {combined_path}')
         combined_path = concatenate_files(
             cdna_path, intron_path, out_path=combined_path
         )
