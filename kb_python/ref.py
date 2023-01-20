@@ -641,6 +641,7 @@ def ref_lamanno(
     t2g_path: str,
     cdna_t2c_path: str,
     intron_t2c_path: str,
+    nascent: bool = True,
     n: int = 1,
     k: Optional[int] = None,
     flank: Optional[int] = None,
@@ -658,10 +659,11 @@ def ref_lamanno(
         fasta_paths: List of paths to genomic FASTA files
         gtf_paths: List of paths to GTF files
         cdna_path: Path to generate the cDNA FASTA file
-        intron_path: Path to generate the intron FASTA file
+        intron_path: Path to generate the intron or nascent FASTA file
         t2g_path: Path to output transcript-to-gene mapping
         cdna_t2c_path: Path to generate the cDNA transcripts-to-capture file
         intron_t2c_path: Path to generate the intron transcripts-to-capture file
+        nascent: Whether to obtain nascent/mature/ambiguous matrices
         n: Split the index into `n` files
         k: Override default kmer length (31), defaults to `None`
         flank: Number of bases to include from the flanking regions
@@ -697,6 +699,9 @@ def ref_lamanno(
     introns = []
     cdna_t2cs = []
     intron_t2cs = []
+    target_name = "intron"
+    if nascent:
+        target_name = "unprocessed transcript"
     if (not ngs.utils.all_exists(cdna_path, intron_path, t2g_path,
                                  cdna_t2c_path, intron_t2c_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
@@ -726,21 +731,29 @@ def ref_lamanno(
 
             # Split intron
             intron_temp_path = get_temporary_filename(temp_dir)
-            logger.info(f'Splitting genome into introns at {intron_temp_path}')
-            intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
-                fasta_path,
-                intron_temp_path,
-                gene_infos,
-                transcript_infos,
-                flank=flank if flank is not None else k -
-                1 if k is not None else 30
-            )
+            logger.info(f'Splitting genome into {target_name}s at {intron_temp_path}')
+            if nascent:
+                intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
+                    fasta_path,
+                    intron_temp_path,
+                    gene_infos,
+                    transcript_infos,
+                    flank=flank if flank is not None else k -
+                    1 if k is not None else 30
+                )
+            else:
+                intron_temp_path = ngs.fasta.split_genomic_fasta_to_nascent(
+                    fasta_path,
+                    intron_temp_path,
+                    gene_infos
+                )
+
             introns.append(intron_temp_path)
 
             # intron t2c
             intron_t2c_temp_path = get_temporary_filename(temp_dir)
             logger.info(
-                f'Creating intron transcripts-to-capture at {intron_t2c_temp_path}'
+                f'Creating {target_name} transcripts-to-capture at {intron_t2c_temp_path}'
             )
             intron_t2c_result = create_t2c(
                 intron_temp_path, intron_t2c_temp_path
@@ -755,11 +768,11 @@ def ref_lamanno(
         )
         cdna_t2c_path = concatenate_files(*cdna_t2cs, out_path=cdna_t2c_path)
         logger.info(
-            f'Concatenating {len(introns)} intron FASTAs to {intron_path}'
+            f'Concatenating {len(introns)} {target_name} FASTAs to {intron_path}'
         )
         intron_path = concatenate_files(*introns, out_path=intron_path)
         logger.info(
-            f'Concatenating {len(intron_t2cs)} intron transcripts-to-captures to {intron_t2c_path}'
+            f'Concatenating {len(intron_t2cs)} {target_name} transcripts-to-captures to {intron_t2c_path}'
         )
         intron_t2c_path = concatenate_files(
             *intron_t2cs, out_path=intron_t2c_path
@@ -773,13 +786,13 @@ def ref_lamanno(
 
     else:
         logger.info(
-            'Skipping cDNA and intron FASTA generation because files already exist. Use --overwrite flag to overwrite'
+            'Skipping cDNA and {target_name} FASTA generation because files already exist. Use --overwrite flag to overwrite'
         )
 
     if not glob.glob(f'{index_path}*') or overwrite:
         # Concatenate cDNA and intron fastas to generate T2G and build index
         combined_path = get_temporary_filename(temp_dir)
-        logger.info(f'Concatenating cDNA and intron FASTAs to {combined_path}')
+        logger.info(f'Concatenating cDNA and {target_name} FASTAs to {combined_path}')
         combined_path = concatenate_files(
             cdna_path, intron_path, out_path=combined_path
         )
@@ -794,7 +807,17 @@ def ref_lamanno(
         # If n = 1, make single index
         # if n = 2, make two indices, one for spliced and another for unspliced
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
-        if n == 1:
+        # if nascent, make single index (nascent/mature/ambiguous)
+        if nascent:
+            index_result = kallisto_index(
+                combined_path,
+                index_path,
+                k=k or 31,
+                threads=threads,
+                dlist=dlist,
+                make_unique=make_unique
+            )
+        elif n == 1:
             index_result = kallisto_index(
                 combined_path,
                 index_path,
@@ -818,6 +841,7 @@ def ref_lamanno(
                     f'{index_path}_intron',
                     k=k or 31,
                     threads=threads,
+                    dlist=dlist,
                     make_unique=make_unique
                 )
                 index_result = {
