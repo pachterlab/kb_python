@@ -741,7 +741,9 @@ def ref_lamanno(
 
             # Split intron
             intron_temp_path = get_temporary_filename(temp_dir)
-            logger.info(f'Splitting genome into {target}s at {intron_temp_path}')
+            logger.info(
+                f'Splitting genome into {target}s at {intron_temp_path}'
+            )
             if nascent:
                 intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
                     fasta_path,
@@ -753,9 +755,7 @@ def ref_lamanno(
                 )
             else:
                 intron_temp_path = ngs.fasta.split_genomic_fasta_to_nascent(
-                    fasta_path,
-                    intron_temp_path,
-                    gene_infos
+                    fasta_path, intron_temp_path, gene_infos
                 )
 
             introns.append(intron_temp_path)
@@ -802,7 +802,9 @@ def ref_lamanno(
     if not glob.glob(f'{index_path}*') or overwrite:
         # Concatenate cDNA and intron fastas to generate T2G and build index
         combined_path = get_temporary_filename(temp_dir)
-        logger.info(f'Concatenating cDNA and {target} FASTAs to {combined_path}')
+        logger.info(
+            f'Concatenating cDNA and {target} FASTAs to {combined_path}'
+        )
         combined_path = concatenate_files(
             cdna_path, intron_path, out_path=combined_path
         )
