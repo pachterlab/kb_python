@@ -205,12 +205,13 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
-    dlist = ""
+    dlist = None
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
     if args.d_list is None:
-        dlist = str(args.fasta)
+        if args.workflow != 'lamanno':
+            dlist = str(args.fasta)
     else:
         dlist = args.d_list
     if args.fasta:
@@ -250,7 +251,7 @@ def parse_ref(
         download_reference(
             reference, files, overwrite=args.overwrite, temp_dir=temp_dir
         )
-    elif args.workflow in {'lamanno', 'nucleus'}:
+    elif args.workflow == 'lamanno':
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -308,6 +309,7 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
+                nucleus=args.workflow == 'nucleus',
                 k=args.k,
                 include=include,
                 exclude=exclude,
@@ -792,8 +794,8 @@ def setup_ref_args(
         '-f1',
         metavar='FASTA',
         help=(
-            '[Optional with -d] Path to the cDNA FASTA (lamanno, nucleus) '
-            'or mismatch FASTA (kite) to be generated '
+            '[Optional with -d] Path to the cDNA FASTA (standard, lamanno) or '
+            'unprocessed transcript FASTA (nucleus) or mismatch FASTA (kite) to be generated '
         ),
         type=str,
         required='-d' not in sys.argv
@@ -821,12 +823,12 @@ def setup_ref_args(
     )
 
     required_lamanno = parser_ref.add_argument_group(
-        'required arguments for `lamanno` and `nucleus` workflows'
+        'required arguments for `lamanno` workflow'
     )
     required_lamanno.add_argument(
         '-f2',
         metavar='FASTA',
-        help='Path to the intron FASTA to be generated',
+        help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
     )
@@ -840,7 +842,7 @@ def setup_ref_args(
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
-        help='Path to generate intron transcripts-to-capture',
+        help='Path to generate unprocessed transcripts-to-capture',
         type=str,
         required=workflow in {'lamanno', 'nucleus'}
     )
