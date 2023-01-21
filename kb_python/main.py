@@ -479,8 +479,8 @@ def parse_count(
                 '`BULK` and `SMARTSEQ2` technologies.'
             )
 
-    if args.workflow in {'lamanno', 'nucleus'}:
-        # Smartseq can not be used with lamanno or nucleus.
+    if args.workflow == 'lamanno':
+        # Smartseq can not be used with lamanno.
         if args.x.upper() in ('SMARTSEQ',):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
@@ -534,7 +534,6 @@ def parse_count(
                 cellranger=args.cellranger,
                 report=args.report,
                 inspect=not args.no_inspect,
-                nucleus=args.workflow == 'nucleus',
                 temp_dir=temp_dir,
                 fragment_l=args.fragment_l,
                 fragment_s=args.fragment_s,
