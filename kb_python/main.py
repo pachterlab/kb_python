@@ -829,21 +829,21 @@ def setup_ref_args(
         metavar='FASTA',
         help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno'}
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to generate unprocessed transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno'}
     )
 
     parser_ref.add_argument(
@@ -1116,21 +1116,21 @@ def setup_count_args(
         default=None,
     )
     required_lamanno = parser_count.add_argument_group(
-        'required arguments for `lamanno` and `nucleus` workflows'
+        'required arguments for `lamanno` workflow'
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'lamanno'}
     )
     parser_count.add_argument(
         '--overwrite',
