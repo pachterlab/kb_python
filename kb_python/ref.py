@@ -744,7 +744,7 @@ def ref_lamanno(
             logger.info(
                 f'Splitting genome into {target}s at {intron_temp_path}'
             )
-            if nascent:
+            if not nascent:
                 intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
                     fasta_path,
                     intron_temp_path,
