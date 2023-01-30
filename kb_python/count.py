@@ -266,7 +266,7 @@ def bustools_sort(
     out_path: str,
     temp_dir: str = 'tmp',
     threads: int = 8,
-    memory: str = '4G',
+    memory: str = '2G',
     flags: bool = False,
 ) -> Dict[str, str]:
     """Runs `bustools sort`.
@@ -276,7 +276,7 @@ def bustools_sort(
         out_dir: Path to output BUS path
         temp_dir: Path to temporary directory, defaults to `tmp`
         threads: Number of threads to use, defaults to `8`
-        memory: Amount of memory to use, defaults to `4G`
+        memory: Amount of memory to use, defaults to `2G`
         flags: Whether to supply the `--flags` argument to sort, defaults to
             `False`
 
@@ -711,7 +711,7 @@ def filter_with_bustools(
     kite: bool = False,
     temp_dir: str = 'tmp',
     threads: int = 8,
-    memory: str = '4G',
+    memory: str = '2G',
     count: bool = True,
     loom: bool = False,
     h5ad: bool = False,
@@ -739,7 +739,7 @@ def filter_with_bustools(
         kite: Whether this is a KITE workflow
         temp_dir: Path to temporary directory, defaults to `tmp`
         threads: Number of threads to use, defaults to `8`
-        memory: Amount of memory to use, defaults to `4G`
+        memory: Amount of memory to use, defaults to `2G`
         count: Whether to run `bustools count`, defaults to `True`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
@@ -965,7 +965,7 @@ def count(
     FB: bool = False,
     temp_dir: str = 'tmp',
     threads: int = 8,
-    memory: str = '4G',
+    memory: str = '2G',
     overwrite: bool = False,
     loom: bool = False,
     h5ad: bool = False,
@@ -1005,7 +1005,7 @@ def count(
             defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
         threads: Pumber of threads to use, defaults to `8`
-        memory: Amount of memory to use, defaults to `4G`
+        memory: Amount of memory to use, defaults to `2G`
         overwrite: Overwrite an existing index file, defaults to `False`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
@@ -1298,7 +1298,7 @@ def count_smartseq3(
     mm: bool = False,
     temp_dir: str = 'tmp',
     threads: int = 8,
-    memory: str = '4G',
+    memory: str = '2G',
     overwrite: bool = False,
     loom: bool = False,
     h5ad: bool = False,
@@ -1323,7 +1323,7 @@ def count_smartseq3(
             defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
         threads: Pumber of threads to use, defaults to `8`
-        memory: Amount of memory to use, defaults to `4G`
+        memory: Amount of memory to use, defaults to `2G`
         overwrite: Overwrite an existing index file, defaults to `False`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
@@ -1558,7 +1558,7 @@ def count_velocity(
     paired: bool = False,
     genomebam: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
-    umi_gene: bool = False,
+    umi_gene: bool = True,
     em: bool = False,
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
@@ -1608,7 +1608,7 @@ def count_velocity(
             `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
-            `False`
+            `True`
         em: Whether to estimate gene abundances using EM algorithm, defaults to
             `False`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
