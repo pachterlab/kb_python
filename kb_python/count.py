@@ -2,6 +2,7 @@ import os
 import re
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
+from typing import Union
 
 import scipy.io
 from typing_extensions import Literal
@@ -365,7 +366,7 @@ def bustools_count(
     umi_gene: bool = True,
     em: bool = False,
     nascent_path: str = None,
-) -> Dict[str, str]:
+) -> Union[Dict[str, str], List[Dict[str,str]]]:
     """Runs `bustools count`.
 
     Args:
@@ -1838,7 +1839,7 @@ def count_velocity(
         )
         prefixes = ['processed', 'unprocessed', 'ambiguous']
         for i in range(len(prefixes)):
-            prefix = prefixes[i];
+            prefix = prefixes[i]
             unfiltered_results[prefix] = {}
             unfiltered_results[prefix].update(count_result[i])
             if cellranger:
