@@ -364,6 +364,7 @@ def bustools_count(
     cm: bool = False,
     umi_gene: bool = True,
     em: bool = False,
+    nascent_path: str = None,
 ) -> Dict[str, str]:
     """Runs `bustools count`.
 
@@ -382,6 +383,8 @@ def bustools_count(
         umi_gene: Whether to use genes to deduplicate umis, defaults to `True`
         em: Whether to estimate gene abundances using EM algorithm, defaults
             to `False`
+        nascent_path: Path to list of nascent targets for obtaining
+            nascent/mature/ambiguous matrices, defaults to `None`
 
     Returns:
         Dictionary containing path to generated index
@@ -394,6 +397,8 @@ def bustools_count(
     command += ['-g', t2g_path]
     command += ['-e', ecmap_path]
     command += ['-t', txnames_path]
+    if nascent_path:
+        command += ['-s', nascent_path]
     if not tcc:
         command += ['--genecounts']
     if mm:
@@ -413,6 +418,31 @@ def bustools_count(
         remove_directory(out_prefix)
 
     run_executable(command)
+    if nascent_path:
+        return [{
+            'mtx':
+                f'{out_prefix}.mtx',
+            'ec' if tcc else 'genes':
+                f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
+            'barcodes':
+                f'{out_prefix}.barcodes.txt',
+        },
+        {
+            'mtx':
+                f'{out_prefix}.2.mtx',
+            'ec' if tcc else 'genes':
+                f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
+            'barcodes':
+                f'{out_prefix}.barcodes.txt',
+        },
+        {
+            'mtx':
+                f'{out_prefix}.ambiguous.mtx',
+            'ec' if tcc else 'genes':
+                f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
+            'barcodes':
+                f'{out_prefix}.barcodes.txt',
+        }]
     return {
         'mtx':
             f'{out_prefix}.mtx',
@@ -1557,6 +1587,7 @@ def count_velocity(
     fragment_s: Optional[int] = None,
     paired: bool = False,
     genomebam: bool = False,
+    nascent: bool = True,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = True,
     em: bool = False,
@@ -1606,6 +1637,7 @@ def count_velocity(
             batch file is provided. Defaults to `False`
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
+        nascent: Obtain nascent/mature/ambiguous matrices, defaults to `True`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
             `True`
@@ -1721,6 +1753,8 @@ def count_velocity(
     if quant:
         quant_dir = os.path.join(out_dir, UNFILTERED_QUANT_DIR)
         make_directory(quant_dir)
+    if nascent:
+        prefix_to_t2c.clear()
     for prefix, t2c_path in prefix_to_t2c.items():
         capture_result = bustools_capture(
             prev_result['bus'], os.path.join(temp_dir, '{}.bus'.format(prefix)),
@@ -1783,6 +1817,37 @@ def count_velocity(
                 os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
             )
             unfiltered_results[prefix].update({'cellranger': cr_result})
+
+    if nascent:
+        counts_prefix = os.path.join(
+            counts_dir,
+            TCC_PREFIX if tcc else COUNTS_PREFIX
+        )
+        count_result = bustools_count(
+            prev_result['bus'],
+            counts_prefix,
+            t2g_path,
+            bus_result['ecmap'],
+            bus_result['txnames'],
+            tcc=tcc,
+            mm=mm or tcc,
+            cm=cm,
+            umi_gene=umi_gene,
+            em=em,
+            nascent_path=intron_t2c_path,
+        )
+        prefixes = ['processed', 'unprocessed', 'ambiguous']
+        for i in range(len(prefixes)):
+            prefix = prefixes[i];
+            unfiltered_results[prefix] = {}
+            unfiltered_results[prefix].update(count_result[i])
+            if cellranger:
+                cr_result = matrix_to_cellranger(
+                    count_result[i]['mtx'], count_result[i]['barcodes'],
+                    count_result[i]['genes'], t2g_path,
+                    os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                )
+                unfiltered_results[prefix].update({'cellranger': cr_result})
 
     if loom or h5ad:
         name = GENE_NAME
@@ -1990,6 +2055,7 @@ def count_velocity_smartseq3(
     by_name: bool = False,
     inspect: bool = True,
     genomebam: bool = False,
+    nascent: bool = True,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
@@ -2020,6 +2086,7 @@ def count_velocity_smartseq3(
             the inspect.json
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
+        nascent: Obtain nascent/mature/ambiguous matrices, defaults to `True`
         strand: Strandedness, defaults to `None`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
             defaults to `None`
@@ -2158,6 +2225,8 @@ def count_velocity_smartseq3(
         if tcc:
             quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
             make_directory(quant_dir)
+        if nascent:
+            prefix_to_t2c.clear()
         for prefix, t2c_path in prefix_to_t2c.items():
             prefix_capture_result = bustools_capture(
                 capture_result['bus'],
@@ -2213,6 +2282,38 @@ def count_velocity_smartseq3(
                 )
                 update_results_with_suffix(prefix_results, quant_result, suffix)
 
+        if nascent:
+            sort_result = bustools_sort(
+                capture_result['bus'],
+                os.path.join(
+                    out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus'
+                ),
+                temp_dir=temp_dir,
+                threads=threads,
+                memory=memory
+            )
+            counts_prefix = os.path.join(
+                counts_dir,
+                TCC_PREFIX if tcc else COUNTS_PREFIX
+            )
+            count_result = bustools_count(
+                sort_result['bus'],
+                counts_prefix,
+                t2g_path,
+                bus_result['ecmap'],
+                bus_result['txnames'],
+                tcc=tcc,
+                mm=mm or tcc,
+                cm=suffix == INTERNAL_SUFFIX,
+                umi_gene=suffix == UMI_SUFFIX,
+                nascent_path=intron_t2c_path,
+            )
+            prefixes = ['processed', 'unprocessed', 'ambiguous']
+            for i in range(len(prefixes)):
+                prefix = prefixes[i]
+                prefix_results = unfiltered_results.setdefault(prefix, {})
+                update_results_with_suffix(prefix_results, sort_result, suffix)
+                update_results_with_suffix(prefix_results, count_result[i], suffix)
         # After internal/UMI is done, create anndata separately for each
         if loom or h5ad:
             name = GENE_NAME

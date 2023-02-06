@@ -1032,9 +1032,9 @@ def setup_count_args(
     parser_count.add_argument(
         '-m',
         metavar='MEMORY',
-        help='Maximum memory used (default: 2G)',
+        help='Maximum memory used (default: 2G for standard, 4G for others)',
         type=str,
-        default='2G'
+        default='2G' if workflow == 'standard' else '4G'
     )
     parser_count.add_argument(
         '--strand',
