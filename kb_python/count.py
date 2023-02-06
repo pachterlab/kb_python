@@ -2,7 +2,6 @@ import os
 import re
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
-from typing import Union
 
 import scipy.io
 from typing_extensions import Literal
@@ -366,7 +365,7 @@ def bustools_count(
     umi_gene: bool = True,
     em: bool = False,
     nascent_path: str = None,
-) -> Union[Dict[str, str], List[Dict[str,str]]]:
+) -> Dict[str, str]:
     """Runs `bustools count`.
 
     Args:
@@ -420,30 +419,26 @@ def bustools_count(
 
     run_executable(command)
     if nascent_path:
-        return [{
-            'mtx':
+        return {
+            'mtx0':
                 f'{out_prefix}.mtx',
-            'ec' if tcc else 'genes':
+            'ec0' if tcc else 'genes0':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
-            'barcodes':
+            'barcodes0':
                 f'{out_prefix}.barcodes.txt',
-        },
-        {
-            'mtx':
+            'mtx1':
                 f'{out_prefix}.2.mtx',
-            'ec' if tcc else 'genes':
+            'ec1' if tcc else 'genes1':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
-            'barcodes':
+            'barcodes1':
                 f'{out_prefix}.barcodes.txt',
-        },
-        {
-            'mtx':
+            'mtx2':
                 f'{out_prefix}.ambiguous.mtx',
-            'ec' if tcc else 'genes':
+            'ec2' if tcc else 'genes2':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
-            'barcodes':
+            'barcodes2':
                 f'{out_prefix}.barcodes.txt',
-        }]
+        }
     return {
         'mtx':
             f'{out_prefix}.mtx',
@@ -727,6 +722,30 @@ def convert_matrices(
         results.update({'h5ad': h5ad_path})
     return results
 
+def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
+    """Converts count result dict to list.
+
+    Args:
+        count_result: Count result object returned by bustools_count
+
+    Returns:
+        List of count result dicts
+    """
+    
+    new_count_result = []
+    res_size = len(count_result) // 3
+    for i in range(res_size):
+        new_count_result.append({
+            'mtx':
+                count_result[f'mtx{i}'],
+            'ec' if f'ec{i}' in count_result else 'genes':
+                count_result[
+                    f'ec{i}' if f'ec{i}' in count_result else f'genes{i}'
+                ],
+            'barcodes':
+                count_result[f'barcodes{i}']
+        })
+    return new_count_result
 
 def filter_with_bustools(
     bus_path: str,
@@ -1837,6 +1856,7 @@ def count_velocity(
             em=em,
             nascent_path=intron_t2c_path,
         )
+        count_result = count_result_to_dict(count_result)
         prefixes = ['processed', 'unprocessed', 'ambiguous']
         for i in range(len(prefixes)):
             prefix = prefixes[i]
@@ -2309,6 +2329,7 @@ def count_velocity_smartseq3(
                 umi_gene=suffix == UMI_SUFFIX,
                 nascent_path=intron_t2c_path,
             )
+            count_result = count_result_to_dict(count_result)
             prefixes = ['processed', 'unprocessed', 'ambiguous']
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
