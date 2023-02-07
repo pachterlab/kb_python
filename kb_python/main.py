@@ -1312,9 +1312,9 @@ def main():
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
-        if args.dry_run and (args.loom or args.h5ad):
+        if args.dry_run and (args.loom or args.h5ad or args.cellranger):
             raise parser.error(
-                '--dry-run can not be used with --loom or --h5ad'
+                '--dry-run can not be used with --loom, --h5ad, or --cellranger'
             )
 
         if args.dry_run:
