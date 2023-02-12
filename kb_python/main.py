@@ -355,15 +355,6 @@ def parse_count(
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
-    if args.tcc and args.em:
-        parser.error('`--tcc` may not be used with `--em`.')
-    if args.gene_names and not (args.loom or args.h5ad):
-        parser.error(
-            '`--gene-names` may only be used with `--h5ad` or `--loom`'
-        )
-    if args.tcc and args.gene_names:
-        parser.error('`--gene-names` may not be used with `--tcc`')
-
     if args.genomebam and not args.gtf:
         parser.error('`--gtf` must be provided when using `--genomebam`.')
     if args.genomebam and not args.chromosomes:
@@ -1159,7 +1150,7 @@ def setup_count_args(
         '--gene-names',
         help=(
             'Group counts by gene names instead of gene IDs when generating '
-            'the loom or h5ad file'
+            'the loom or h5ad file (and output gene names for count matrices)'
         ),
         action='store_true'
     )
@@ -1312,9 +1303,9 @@ def main():
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
-        if args.dry_run and (args.loom or args.h5ad or args.cellranger):
+        if args.dry_run and (args.loom or args.h5ad or args.cellranger or args.gene_names):
             raise parser.error(
-                '--dry-run can not be used with --loom, --h5ad, or --cellranger'
+                '--dry-run can not be used with --loom, --h5ad, --cellranger, or --gene-names'
             )
 
         if args.dry_run:

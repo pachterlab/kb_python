@@ -412,6 +412,67 @@ def read_t2g(t2g_path: str) -> Dict[str, Tuple[str, ...]]:
     return t2g
 
 
+def obtain_gene_names(
+    t2g_path: str,
+    gene_names_list: Union[str, List[str]],
+    verbose: Optional[bool] = True
+) -> List[str]:
+    """Given a transcript-to-gene mapping path and list of gene IDs,
+    return a list of cleaned-up gene names (wherein blank names are simply
+    replaced by the corresponding gene ID)
+
+    Args:
+        t2g_path: Path to t2g
+        gene_names_list: List of gene IDs or path to list of gene IDs
+        verbose: Whether to warn about the number of blank names, defaults to `True`
+
+    Returns:
+        List of gene names
+    """
+    is_geneid_path = isinstance(gene_names_list, str)
+    var_names = []
+    if is_gene_id_path:
+        with open_as_text(gene_names_list, 'r') as f:
+            var_names = [line.strip() for line in f]
+    else:
+        var_names = gene_names_list
+
+    t2g = read_t2g(t2g_path)
+    id_to_name = {}
+    for transcript, attributes in t2g.items():
+        if len(attributes) > 1:
+            id_to_name[attributes[0]] = attributes[1]
+    gene_names = []
+    for gene_id in var_names:
+        if id_to_name.get(gene_id):  # blank names are considered missing
+            gene_names.append(id_to_name[gene_id])
+        else:
+            gene_names.append(gene_id)
+            n_no_name += 1
+    if n_no_name > 0 and verbose:
+        logger.warning(
+            f'{n_no_name} gene IDs do not have corresponding gene names. '
+            'These genes will use their gene IDs instead.'
+        )
+    return gene_names
+
+
+def write_list_to_file(strings: List[str], str_path: str) -> str:
+    """Write out a list of strings.
+
+    Args:
+        strings: List of strings to output
+        str_path: Path to output
+
+    Returns:
+        Path to written file
+    """
+    with open_as_text(str_path, 'w') as out:
+        for s in strings:
+            out.write(f'{s}\n')
+    return str_path
+
+
 def collapse_anndata(
     adata: anndata.AnnData, by: Optional[str] = None
 ) -> anndata.AnnData:
@@ -568,27 +629,9 @@ def import_matrix_as_anndata(
     )
 
     name_column = f'{name}_name'
-    n_no_name = 0
     if t2g_path:
-        t2g = read_t2g(t2g_path)
-        id_to_name = {}
-        for transcript, attributes in t2g.items():
-            if len(attributes) > 1:
-                id_to_name[attributes[0]] = attributes[1]
-        gene_names = []
-        for gene_id in adata.var_names:
-            if id_to_name.get(gene_id):  # blank names are considered missing
-                gene_names.append(id_to_name[gene_id])
-            else:
-                gene_names.append(gene_id)
-                n_no_name += 1
+        gene_names = obtain_gene_names(t2g_path, adata.var_names.to_list(), False)
         adata.var[name_column] = pd.Categorical(gene_names)
-
-        if n_no_name > 0:
-            logger.warning(
-                f'{n_no_name} gene IDs do not have corresponding gene names. '
-                'These genes will use their gene IDs instead.'
-            )
 
     return (
         collapse_anndata(adata, by=name_column)

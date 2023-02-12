@@ -55,6 +55,7 @@ FLD_FILENAME = 'matrix.fld.tsv'
 CELLS_FILENAME = 'matrix.cells'
 GENE_DIR = 'counts_gene'
 GENES_FILENAME = 'genes.txt'
+GENE_NAMES_FILENAME = 'genes.names.txt'
 UNFILTERED_QUANT_DIR = 'quant_unfiltered'
 SAVED_INDEX_FILENAME = 'index.saved'
 

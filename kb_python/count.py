@@ -33,6 +33,7 @@ from .constants import (
     FLENS_FILENAME,
     GENE_NAME,
     GENES_FILENAME,
+    GENE_NAMES_FILENAME,
     GENOMEBAM_FILENAME,
     GENOMEBAM_INDEX_FILENAME,
     INSPECT_FILENAME,
@@ -75,6 +76,8 @@ from .utils import (
     sum_anndatas,
     update_filename,
     whitelist_provided,
+    obtain_gene_names,
+    write_list_to_file,
 )
 from .stats import STATS
 from .validate import validate_files
@@ -608,8 +611,7 @@ def convert_matrix(
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
         h5ad: Whether to generate h5ad file, defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         tcc: Whether the matrix is a TCC matrix, defaults to `False`
         threads: Number of threads to use, defaults to `8`
 
@@ -673,8 +675,7 @@ def convert_matrices(
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
         h5ad: Whether to generate h5ad file, defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         nucleus: Whether the matrices contain single nucleus counts, defaults to `False`
         tcc: Whether the matrix is a TCC matrix, defaults to `False`
         threads: Number of threads to use, defaults to `8`
@@ -795,8 +796,7 @@ def filter_with_bustools(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
@@ -845,6 +845,13 @@ def filter_with_bustools(
         )
         results.update(count_result)
 
+        if by_name and 'genes' in count_result:
+            genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+            logger.info(f'Writing gene names to file {genes_by_name_path}')
+            genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes')) 
+            results.update({
+                  'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+            })
         if loom or h5ad:
             results.update(
                 convert_matrix(
@@ -1061,8 +1068,7 @@ def count(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
@@ -1246,6 +1252,13 @@ def count(
 
     # Convert outputs.
     final_result = quant_result if quant else count_result
+    if by_name and 'genes' in unfiltered_results:
+        genes_by_name_path = os.path.join(quant_dir if quant else counts_dir, GENE_NAMES_FILENAME)
+        logger.info(f'Writing gene names to file {genes_by_name_path}')
+        genes_by_name = obtain_gene_names(t2g_path, unfiltered_results.get('genes'))
+        unfiltered_results.update({
+              'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+        })
     if loom or h5ad:
         name = GENE_NAME
         if kite:
@@ -1379,8 +1392,7 @@ def count_smartseq3(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
@@ -1547,6 +1559,13 @@ def count_smartseq3(
             )
             update_results_with_suffix(unfiltered_results, quant_result, suffix)
 
+        if by_name and 'genes' in unfiltered_results:
+            genes_by_name_path = os.path.join(quant_dir if quant else counts_dir, GENE_NAMES_FILENAME)
+            logger.info(f'Writing gene names to file {genes_by_name_path}')
+            genes_by_name = obtain_gene_names(t2g_path, unfiltered_results.get('genes'))
+            unfiltered_results.update({
+                  'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+            })
         if loom or h5ad:
             name = GENE_NAME
             if tcc:
@@ -1641,8 +1660,7 @@ def count_velocity(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
@@ -1828,8 +1846,15 @@ def count_velocity(
                 s=fragment_s,
                 threads=threads,
             )
-            unfiltered_results.update(quant_result)
+            unfiltered_results[prefix].update(quant_result)
 
+        if by_name and 'genes' in unfiltered_results[prefix]:
+            genes_by_name_path = os.path.join(quant_dir if quant else counts_dir, GENE_NAMES_FILENAME)
+            logger.info(f'Writing gene names to file {genes_by_name_path}')
+            genes_by_name = obtain_gene_names(t2g_path, unfiltered_results[prefix].get('genes')) 
+            unfiltered_results[prefix].update({
+                  'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+            })
         if cellranger:
             cr_result = matrix_to_cellranger(
                 count_result['mtx'], count_result['barcodes'],
@@ -1862,6 +1887,14 @@ def count_velocity(
             prefix = prefixes[i]
             unfiltered_results[prefix] = {}
             unfiltered_results[prefix].update(count_result[i])
+            if by_name and prefix == 'processed' and 'genes' in unfiltered_results[prefix]:
+                # Only need to write this once
+                genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+                logger.info(f'Writing gene names to file {genes_by_name_path}')
+                genes_by_name = obtain_gene_names(t2g_path, unfiltered_results[prefix].get('genes')) 
+                unfiltered_results[prefix].update({
+                      'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                })
             if cellranger:
                 cr_result = matrix_to_cellranger(
                     count_result[i]['mtx'], count_result[i]['barcodes'],
@@ -1967,13 +2000,55 @@ def count_velocity(
                                 f'{CELLRANGER_DIR}_{prefix}'
                             )
                         )
-                        unfiltered_results[prefix].update({
+                        filtered_results[prefix].update({
                             'cellranger': cr_result
                         })
                     else:
                         logger.warning(
                             'TCC matrices can not be converted to cellranger-compatible format.'
                         )
+
+            if nascent:
+                filtered_counts_dir = os.path.join(out_dir, FILTERED_COUNTS_DIR)
+                make_directory(filtered_counts_dir)
+                filtered_counts_prefix = os.path.join(
+                    filtered_counts_dir, prefix
+                )
+                count_result = bustools_count(
+                    filtered_results['bus_scs'],
+                    filtered_counts_prefix,
+                    t2g_path,
+                    bus_result['ecmap'],
+                    bus_result['txnames'],
+                    tcc=tcc,
+                    mm=mm or tcc,
+                    cm=cm,
+                    umi_gene=umi_gene,
+                    em=em,
+                    nascent_path=intron_t2c_path,
+                )
+                count_result = count_result_to_dict(count_result)
+                prefixes = ['processed', 'unprocessed', 'ambiguous']
+                for i in range(len(prefixes)):
+                    prefix = prefixes[i]
+                    filtered_results[prefix] = {}
+                    filtered_results[prefix].update(count_result[i])
+                    if by_name and prefix == 'processed' and 'genes' in filtered_results[prefix]:
+                        # Only need to write this once
+                        genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+                        logger.info(f'Writing gene names to file {genes_by_name_path}')
+                        genes_by_name = obtain_gene_names(t2g_path, filtered_results[prefix].get('genes')) 
+                        filtered_results[prefix].update({
+                              'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                        })
+                    if cellranger:
+                        cr_result = matrix_to_cellranger(
+                            count_result[i]['mtx'], count_result[i]['barcodes'],
+                            count_result['genes'], t2g_path,
+                            os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                        )
+                        filtered_results[prefix].update({'cellranger': cr_result})
+                    filtered_results[prefix].update(count_result)
 
         if loom or h5ad:
             filtered_results.update(
@@ -2014,18 +2089,8 @@ def count_velocity(
         logger.info(
             f'Writing report Jupyter notebook at {nb_path} and rendering it to {html_path}'
         )
-        report_result = render_report(
-            stats_path,
-            bus_result['info'],
-            unfiltered_results['inspect'],
-            nb_path,
-            html_path,
-            temp_dir=temp_dir
-        )
 
-        unfiltered_results.update(report_result)
-
-        for prefix in prefix_to_t2c:
+        for prefix in prefixes:
             nb_path = os.path.join(
                 out_dir, update_filename(REPORT_NOTEBOOK_FILENAME, prefix)
             )
@@ -2101,8 +2166,7 @@ def count_velocity_smartseq3(
             defaults to `False`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
-        by_name: Aggregate counts by name instead of ID. Only affects when
-            `tcc=False`.
+        by_name: Aggregate counts by name instead of ID.
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
@@ -2333,6 +2397,13 @@ def count_velocity_smartseq3(
             prefixes = ['processed', 'unprocessed', 'ambiguous']
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
+                if by_name and prefix == 'processed' and 'genes' in count_result[i]:
+                    genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+                    logger.info(f'Writing gene names to file {genes_by_name_path}')
+                    genes_by_name = obtain_gene_names(t2g_path, count_result[i].get('genes'))
+                    count_result[i].update({
+                        'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                    })
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
                 update_results_with_suffix(prefix_results, count_result[i], suffix)
