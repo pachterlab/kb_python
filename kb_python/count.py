@@ -1857,7 +1857,7 @@ def count_velocity(
         prefixes = ['processed', 'unprocessed', 'ambiguous']
         for i in range(len(prefixes)):
             prefix = prefixes[i]
-            if by_name and i==0 and 'genes' in count_results[i]:
+            if by_name and i==0 and 'genes' in count_result[i]:
                 # Only need to write this once
                 genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
                 logger.info(f'Writing gene names to file {genes_by_name_path}')
