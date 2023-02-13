@@ -640,7 +640,8 @@ def import_matrix_as_anndata(
 
 
 def overlay_anndatas(
-    adata_spliced: anndata.AnnData, adata_unspliced: anndata.AnnData
+    adata_spliced: anndata.AnnData, adata_unspliced: anndata.AnnData,
+    adata_ambiguous: anndata.AnnData = None
 ) -> anndata.AnnData:
     """'Overlays' anndata objects by taking the intersection of the obs and var
     of each anndata.
@@ -653,6 +654,7 @@ def overlay_anndatas(
     Args:
         adata_spliced: An Anndata object
         adata_unspliced: An Anndata object
+        adata_ambiguous: An Anndata object, default `None`
 
     Returns:
         A new Anndata object
@@ -661,15 +663,20 @@ def overlay_anndatas(
     var_idx = adata_spliced.var.index.intersection(adata_unspliced.var.index)
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
+    a_layers = {
+        'spliced': spliced_intersection.X,
+        'unspliced': unspliced_intersection.X
+    }
+    ambiguous_intersection = None
+    if adata_ambiguous is not None:
+        ambiguous_intersection = adata_ambiguous[obs_idx][:, var_idx]
+        a_layers.update({'ambiguous': ambiguous_intersection.X})
 
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
     return anndata.AnnData(
         X=spliced_intersection.X,
-        layers={
-            'spliced': spliced_intersection.X,
-            'unspliced': unspliced_intersection.X
-        },
+        layers=a_layers,
         obs=df_obs,
         var=df_var
     )
