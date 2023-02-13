@@ -1879,7 +1879,7 @@ def count_velocity(
             name = GENE_NAME
             if quant:
                 name = TRANSCRIPT_NAME
-                
+
             convert_result = convert_matrices(
                 quant_dir if quant else counts_dir,
                 [
@@ -1890,7 +1890,7 @@ def count_velocity(
                     unfiltered_results[prefix][f'barcodes{suffix}']
                     for prefix in prefixes
                 ],
-                genes_path=[
+                genes_paths=[
                     unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
                     unfiltered_results[prefix].get(f'genes{suffix}')
                     for prefix in prefixes
