@@ -431,7 +431,7 @@ def obtain_gene_names(
     """
     is_geneid_path = isinstance(gene_names_list, str)
     var_names = []
-    if is_gene_id_path:
+    if is_geneid_path:
         with open_as_text(gene_names_list, 'r') as f:
             var_names = [line.strip() for line in f]
     else:
@@ -629,7 +629,7 @@ def import_matrix_as_anndata(
     )
 
     name_column = f'{name}_name'
-    if t2g_path:
+    if t2g_path and by_name:
         gene_names = obtain_gene_names(t2g_path, adata.var_names.to_list(), False)
         adata.var[name_column] = pd.Categorical(gene_names)
 
