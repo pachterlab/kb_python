@@ -211,7 +211,11 @@ def parse_ref(
             parser.error('K-mer length must be a positive odd integer.')
     if args.d_list is None:
         if args.workflow != 'lamanno':
+            # Use whole genome for dlist
             dlist = str(args.fasta)
+        if args.workflow == 'nucleus':
+            # Use cDNA FASTA for dlist
+            dlist = str(args.f1)
     else:
         dlist = args.d_list
     if args.fasta:
