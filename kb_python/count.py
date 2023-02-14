@@ -591,6 +591,7 @@ def convert_matrix(
     txnames_path: Optional[str] = None,
     name: str = 'gene',
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     tcc: bool = False,
@@ -610,6 +611,8 @@ def convert_matrix(
         txnames_path: Path to transcripts.txt, defaults to `None`
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to generate h5ad file, defaults to `False`
         by_name: Aggregate counts by name instead of ID.
         tcc: Whether the matrix is a TCC matrix, defaults to `False`
@@ -621,14 +624,17 @@ def convert_matrix(
     results = {}
     logger.info(f'Reading matrix {matrix_path}')
     adata = import_tcc_matrix_as_anndata(
-        matrix_path, barcodes_path, ec_path, txnames_path, threads=threads
+        matrix_path, barcodes_path, ec_path, txnames_path, threads=threads,
+        loom=loom, loom_names=loom_names
     ) if tcc else import_matrix_as_anndata(
         matrix_path,
         barcodes_path,
         genes_path,
         t2g_path=t2g_path,
         name=name,
-        by_name=by_name
+        by_name=by_name,
+        loom=loom,
+        loom_names=loom_names
     )
     if loom:
         loom_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.loom')
@@ -654,6 +660,7 @@ def convert_matrices(
     txnames_path: Optional[str] = None,
     name: str = 'gene',
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     nucleus: bool = False,
@@ -674,6 +681,8 @@ def convert_matrices(
         txnames_path: List of paths to transcripts.txt, defaults to `None`
         name: Name of the columns, defaults to "gene"
         loom: Whether to generate loom file, defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to generate h5ad file, defaults to `False`
         by_name: Aggregate counts by name instead of ID.
         nucleus: Whether the matrices contain single nucleus counts, defaults to `False`
@@ -699,14 +708,18 @@ def convert_matrices(
                 barcodes_path,
                 genes_ec_path,
                 txnames_path,
-                threads=threads
+                threads=threads,
+                loom=loom,
+                loom_names=loom_names
             ) if tcc else import_matrix_as_anndata(
                 matrix_path,
                 barcodes_path,
                 genes_ec_path,
                 t2g_path=t2g_path,
                 name=name,
-                by_name=by_name
+                by_name=by_name,
+                loom=loom,
+                loom_names=loom_names
             )
         )
     logger.info('Combining matrices')
@@ -765,6 +778,7 @@ def filter_with_bustools(
     memory: str = '2G',
     count: bool = True,
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -794,6 +808,8 @@ def filter_with_bustools(
         count: Whether to run `bustools count`, defaults to `True`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
         by_name: Aggregate counts by name instead of ID.
@@ -864,6 +880,7 @@ def filter_with_bustools(
                     txnames_path=txnames_path,
                     name=FEATURE_NAME if kite else GENE_NAME,
                     loom=loom,
+                    loom_names=loom_names,
                     h5ad=h5ad,
                     by_name=by_name,
                     tcc=tcc,
@@ -1025,6 +1042,7 @@ def count(
     memory: str = '2G',
     overwrite: bool = False,
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -1066,6 +1084,8 @@ def count(
         overwrite: Overwrite an existing index file, defaults to `False`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
         by_name: Aggregate counts by name instead of ID.
@@ -1277,6 +1297,7 @@ def count(
                 txnames_path=bus_result['txnames'],
                 name=name,
                 loom=loom,
+                loom_names=loom_names,
                 h5ad=h5ad,
                 by_name=by_name,
                 tcc=tcc and not quant,
@@ -1317,6 +1338,7 @@ def count(
             threads=threads,
             memory=memory,
             loom=loom,
+            loom_names=loom_names,
             h5ad=h5ad,
             by_name=by_name,
             umi_gene=umi_gene,
@@ -1364,6 +1386,7 @@ def count_smartseq3(
     memory: str = '2G',
     overwrite: bool = False,
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     inspect: bool = True,
@@ -1390,6 +1413,8 @@ def count_smartseq3(
         overwrite: Overwrite an existing index file, defaults to `False`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
         by_name: Aggregate counts by name instead of ID.
@@ -1582,6 +1607,7 @@ def count_smartseq3(
                 txnames_path=bus_result['txnames'],
                 name=name,
                 loom=loom,
+                loom_names=loom_names,
                 h5ad=h5ad,
                 by_name=by_name,
                 tcc=False,
@@ -1616,6 +1642,7 @@ def count_velocity(
     memory: str = '4G',
     overwrite: bool = False,
     loom: bool = False,
+    loom_names: List[str] = ['barcode','target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -1657,6 +1684,8 @@ def count_velocity(
         overwrite: Overwrite an existing index file, defaults to `False`
         loom: Whether to convert the final count matrix into a loom file,
             defaults to `False`
+        loom_names: Names for col_attrs and row_attrs in loom file,
+            defaults to `['barcode','target_name']`
         h5ad: Whether to convert the final count matrix into a h5ad file,
             defaults to `False`
         by_name: Aggregate counts by name instead of ID.
@@ -1903,6 +1932,7 @@ def count_velocity(
                 txnames_path=bus_result['txnames'],
                 name=name,
                 loom=loom,
+                loom_names=loom_names,
                 h5ad=h5ad,
                 by_name=by_name,
                 tcc=False,
@@ -1982,7 +2012,7 @@ def count_velocity(
                         os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
                     )
                     filtered_results[prefix].update({'cellranger': cr_result})
-                filtered_results[prefix].update(count_result)
+                filtered_results[prefix].update(count_result[i])
 
         if loom or h5ad:
             filtered_results.update(
@@ -2004,6 +2034,7 @@ def count_velocity(
                     ],
                     txnames_path=bus_result['txnames'],
                     loom=loom,
+                    loom_names=loom_names,
                     h5ad=h5ad,
                     by_name=by_name,
                     tcc=tcc,

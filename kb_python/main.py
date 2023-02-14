@@ -470,6 +470,14 @@ def parse_count(
                 '`BULK` and `SMARTSEQ2` technologies.'
             )
 
+    from .constants import VELOCYTO_LOOM_NAMES
+    loom_names = ''
+    if args.loom_names.upper().strip() == 'VELOCYTO':
+        loom_names = VELOCYTO_LOOM_NAMES
+    loom_names = [x.strip() for x in loom_names.split(',')]
+    if '' in loom_names or len(loom_names) != 2:
+        parser.error('`--loom-names` is invalid')
+
     if args.workflow == 'lamanno':
         # Smartseq can not be used with lamanno.
         if args.x.upper() in ('SMARTSEQ',):
@@ -494,6 +502,7 @@ def parse_count(
             memory=args.m,
             overwrite=args.overwrite,
             loom=args.loom,
+            loom_names=loom_names,
             h5ad=args.h5ad,
             cellranger=args.cellranger,
             report=args.report,
@@ -531,6 +540,7 @@ def parse_count(
                 memory=args.m,
                 overwrite=args.overwrite,
                 loom=args.loom,
+                loom_names=loom_names,
                 h5ad=args.h5ad,
                 inspect=not args.no_inspect,
                 genomebam=args.genomebam,
@@ -558,6 +568,7 @@ def parse_count(
                 memory=args.m,
                 overwrite=args.overwrite,
                 loom=args.loom,
+                loom_names=loom_names,
                 h5ad=args.h5ad,
                 cellranger=args.cellranger,
                 report=args.report,
@@ -1113,6 +1124,16 @@ def setup_count_args(
         '--h5ad',
         help='Generate h5ad file from count matrix',
         action='store_true'
+    )
+    parser_count.add_argument(
+        '--loom-names',
+        metavar='col_attrs/{name},row_attrs/{name}',
+        help=(
+            'Names for col_attrs and row_attrs in loom file (default: barcode,target_name)'
+            'Use --loom-names=velocyto for velocyto-compatible loom files'
+        ),
+        type=str,
+        default="barcode,target_name",
     )
     parser_count.add_argument(
         '--cellranger',

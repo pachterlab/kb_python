@@ -75,3 +75,6 @@ CORRECT_CODE = 'c'
 FILTERED_CODE = 'filtered'
 UNFILTERED_CODE = 'unfiltered'
 PROJECT_CODE = 'p'
+
+# Loom
+VELOCYTO_LOOM_NAMES = 'CellID,Name'
