@@ -77,4 +77,4 @@ UNFILTERED_CODE = 'unfiltered'
 PROJECT_CODE = 'p'
 
 # Loom
-VELOCYTO_LOOM_NAMES = 'CellID,Name'
+VELOCYTO_LOOM_NAMES = 'CellID,Gene'
