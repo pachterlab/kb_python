@@ -475,7 +475,7 @@ def parse_count(
             )
 
     from .constants import VELOCYTO_LOOM_NAMES
-    loom_names = ''
+    loom_names = args.loom_names
     if args.loom_names.upper().strip() == 'VELOCYTO':
         loom_names = VELOCYTO_LOOM_NAMES
     loom_names = [x.strip() for x in loom_names.split(',')]
