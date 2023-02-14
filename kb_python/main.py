@@ -1133,7 +1133,7 @@ def setup_count_args(
         '--loom-names',
         metavar='col_attrs/{name},row_attrs/{name}',
         help=(
-            'Names for col_attrs and row_attrs in loom file (default: barcode,target_name)'
+            'Names for col_attrs and row_attrs in loom file (default: barcode,target_name). '
             'Use --loom-names=velocyto for velocyto-compatible loom files'
         ),
         type=str,
