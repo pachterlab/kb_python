@@ -846,7 +846,7 @@ def filter_with_bustools(
         results.update(count_result)
 
         if by_name and 'genes' in count_result:
-            genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+            genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
             logger.info(f'Writing gene names to file {genes_by_name_path}')
             genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes')) 
             results.update({
@@ -1234,8 +1234,8 @@ def count(
         em=em,
     )
     unfiltered_results.update(count_result)
+    quant_dir = os.path.join(out_dir, UNFILTERED_QUANT_DIR)
     if quant:
-        quant_dir = os.path.join(out_dir, UNFILTERED_QUANT_DIR)
         make_directory(quant_dir)
         quant_result = kallisto_quant_tcc(
             count_result['mtx'],
@@ -1253,7 +1253,7 @@ def count(
     # Convert outputs.
     final_result = quant_result if quant else count_result
     if by_name and 'genes' in unfiltered_results:
-        genes_by_name_path = os.path.join(quant_dir if quant else counts_dir, GENE_NAMES_FILENAME)
+        genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}' if not quant else os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
         logger.info(f'Writing gene names to file {genes_by_name_path}')
         genes_by_name = obtain_gene_names(t2g_path, unfiltered_results.get('genes'))
         unfiltered_results.update({
@@ -1545,8 +1545,8 @@ def count_smartseq3(
         )
         update_results_with_suffix(unfiltered_results, count_result, suffix)
 
+        quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
         if tcc:
-            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
             make_directory(quant_dir)
             quant_result = kallisto_quant_tcc(
                 count_result['mtx'],
@@ -1560,7 +1560,7 @@ def count_smartseq3(
             update_results_with_suffix(unfiltered_results, quant_result, suffix)
 
         if by_name and 'genes' in unfiltered_results:
-            genes_by_name_path = os.path.join(quant_dir if quant else counts_dir, GENE_NAMES_FILENAME)
+            genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}' if not quant else os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
             logger.info(f'Writing gene names to file {genes_by_name_path}')
             genes_by_name = obtain_gene_names(t2g_path, unfiltered_results.get('genes'))
             unfiltered_results.update({
@@ -1721,7 +1721,7 @@ def count_velocity(
             _technology,
             out_dir,
             threads=threads,
-            paired=paired, ### TODO: IF SMARTSEQ3 paired
+            paired=paired,
             genomebam=genomebam,
             strand=strand,
             gtf_path=gtf_path,
@@ -1833,8 +1833,8 @@ def count_velocity(
             sort_result = prev_result
         counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}')
         make_directory(counts_dir)
+        quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
         if quant:
-            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
             make_directory(quant_dir)
         counts_prefix = os.path.join(
             counts_dir,
@@ -1859,7 +1859,7 @@ def count_velocity(
             prefix = prefixes[i]
             if by_name and i==0 and 'genes' in count_result[i]:
                 # Only need to write this once
-                genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+                genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
                 logger.info(f'Writing gene names to file {genes_by_name_path}')
                 genes_by_name = obtain_gene_names(t2g_path, count_result[i].get('genes'))
                 count_result[i].update({
@@ -1969,7 +1969,7 @@ def count_velocity(
                 filtered_results[prefix].update(count_result[i])
                 if by_name and i==0 and 'genes' in filtered_results[prefix]:
                     # Only need to write this once
-                    genes_by_name_path = os.path.join(counts_dir, GENE_NAMES_FILENAME)
+                    genes_by_name_path = f'{filtered_counts_prefix}.{GENE_NAMES_FILENAME}'
                     logger.info(f'Writing gene names to file {genes_by_name_path}')
                     genes_by_name = obtain_gene_names(t2g_path, filtered_results[prefix].get('genes')) 
                     filtered_results[prefix].update({
