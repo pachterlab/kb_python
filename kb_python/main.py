@@ -520,6 +520,7 @@ def parse_count(
             umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
             em=args.em,
             by_name=args.gene_names,
+            sum_matrices=args.sum,
             gtf_path=args.gtf,
             chromosomes_path=args.chromosomes,
         )
@@ -1138,6 +1139,20 @@ def setup_count_args(
         ),
         type=str,
         default="barcode,target_name",
+    )
+    parser_count.add_argument(
+        '--sum',
+        metavar='TYPE',
+        help=(
+            'Produced summed count matrices (Options: none, cell, nucleus, total). '
+            'Use `cell` to add ambiguous and processed transcript matrices. '
+            'Use `nucleus` to add ambiguous and unprocessed transcript matrices. '
+            'Use `total` to add all three matrices together. '
+            '(Default: none)'
+        ),
+        type=str,
+        default="none",
+        choices=['none', 'cell', 'nucleus', 'total']
     )
     parser_count.add_argument(
         '--cellranger',

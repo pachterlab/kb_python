@@ -1656,6 +1656,7 @@ def count_velocity(
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = True,
     em: bool = False,
+    sum_matrices: Optional[Literal['none', 'cell', 'nucleus', 'total']] = None,
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
 ) -> Dict[str, Union[Dict[str, str], str]]:
@@ -1708,6 +1709,7 @@ def count_velocity(
             `True`
         em: Whether to estimate gene abundances using EM algorithm, defaults to
             `False`
+        sum_matrices: How to sum output matrices, defaults to `None`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
             defaults to `None`
         chromosomes_path: Tab separated file with chromosome names and lengths
