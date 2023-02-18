@@ -840,7 +840,6 @@ def do_sum_matrices(
             data = []
             with open(out_path, 'r') as file:
                 data = file.readlines()
-            print(f'{n} {total_n}')
             data[2] = f'{header[0]} {header[1]} {n}\n'
             with open(out_path, 'w') as file:
                 file.writelines(data)
