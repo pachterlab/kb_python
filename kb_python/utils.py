@@ -738,6 +738,7 @@ def do_sum_matrices(
     Returns:
         Output file path
     """
+    logger.info('Summing matrices into {}'.format(out_path))
     with open_as_text(mtx1_path, 'r') as f1, open_as_text(
         mtx2_path, 'r') as f2, open(out_path, 'w') as out:
         eof1 = eof2 = False

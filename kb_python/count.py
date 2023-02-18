@@ -1913,16 +1913,15 @@ def count_velocity(
             updated_prefixes = []
             if sum_matrices == 'cell' or sum_matrices == 'total':
                 sums['cell'] = do_sum_matrices(
-                    count_result[sums[prefixes.index('processed')]]['mtx'],
-                    count_result[sums[prefixes.index('ambiguous')]]['mtx'],
+                    count_result[prefixes.index('processed')]['mtx'],
+                    count_result[prefixes.index('ambiguous')]['mtx'],
                     f'{counts_prefix}.cell.mtx'
                 )
-                sums['cell'] = ([prefixes.index('processed'),prefixes.index('ambiguous')])
                 updated_prefixes = ['cell', 'unprocessed']
             if sum_matrices == 'nucleus' or sum_matrices == 'total':
                 sums['nucleus'] = do_sum_matrices(
-                    count_result[sums[prefixes.index('unprocessed')]]['mtx'],
-                    count_result[sums[prefixes.index('ambiguous')]]['mtx'],
+                    count_result[prefixes.index('unprocessed')]['mtx'],
+                    count_result[prefixes.index('ambiguous')]['mtx'],
                     f'{counts_prefix}.nucleus.mtx'
                 )
                 updated_prefixes = ['processed', 'nucleus']
