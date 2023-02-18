@@ -725,7 +725,7 @@ def sum_anndatas(
     )
 
 
-def sum_matrices(
+def do_sum_matrices(
     mtx1_path, mtx2_path, out_path
 ) -> str:
     """Sums up two matrices given two matrix files.

@@ -78,6 +78,7 @@ from .utils import (
     whitelist_provided,
     obtain_gene_names,
     write_list_to_file,
+    do_sum_matrices,
 )
 from .stats import STATS
 from .validate import validate_files
@@ -1885,7 +1886,7 @@ def count_velocity(
             nascent_path=intron_t2c_path,
         )
         count_result = count_result_to_dict(count_result)
-        prefixes = ['processed', 'unprocessed', 'ambiguous']
+        prefixes = ['processed', 'unprocessed', 'ambiguous'] # 0,1,2
         for i in range(len(prefixes)):
             prefix = prefixes[i]
             if by_name and i==0 and 'genes' in count_result[i]:
@@ -1906,6 +1907,45 @@ def count_velocity(
                     os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
                 )
                 update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
+        if sum_matrices and sum_matrices != 'none':
+            # Sum up multiple matrices
+            sums = {}
+            updated_prefixes = []
+            if sum_matrices == 'cell' or sum_matrices == 'total':
+                sums['cell'] = do_sum_matrices(
+                    count_result[sums[prefixes.index('processed')]]['mtx'],
+                    count_result[sums[prefixes.index('ambiguous')]]['mtx'],
+                    f'{counts_prefix}.cell.mtx'
+                )
+                sums['cell'] = ([prefixes.index('processed'),prefixes.index('ambiguous')])
+                updated_prefixes = ['cell', 'unprocessed']
+            if sum_matrices == 'nucleus' or sum_matrices == 'total':
+                sums['nucleus'] = do_sum_matrices(
+                    count_result[sums[prefixes.index('unprocessed')]]['mtx'],
+                    count_result[sums[prefixes.index('ambiguous')]]['mtx'],
+                    f'{counts_prefix}.nucleus.mtx'
+                )
+                updated_prefixes = ['processed', 'nucleus']
+            if sum_matrices == 'total':
+                sums['total'] = do_sum_matrices(
+                    f'{counts_prefix}.cell.mtx,
+                    f'{counts_prefix}.nucleus.mtx',
+                    f'{counts_prefix}.total.mtx'
+                )
+                updated_prefixes = prefixes
+            prefixes = updated_prefixes
+            for prefix, res in sums:
+                prefix_results = unfiltered_results.setdefault(prefix, {})
+                update_results_with_suffix(prefix_results, sort_result, suffix)
+                update_results_with_suffix(prefix_results, res, suffix)
+                if cellranger:
+                    cr_result = matrix_to_cellranger(
+                        res, count_result[0]['barcodes'],
+                        count_result[0]['genes'], t2g_path,
+                        os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                    )
+                    update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
+              
         if loom or h5ad:
             name = GENE_NAME
             if quant:
