@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 from typing import Dict, List, Optional, Union
 from urllib.parse import urlparse
 
@@ -1933,14 +1934,16 @@ def count_velocity(
                 )
                 updated_prefixes = prefixes
             prefixes = updated_prefixes
-            for prefix, res in sums.items():
+            for prefix, f in sums.items():
+                res = copy.deepcopy(count_result[0])
+                res['mtx'] = f
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
                 update_results_with_suffix(prefix_results, res, suffix)
                 if cellranger:
                     cr_result = matrix_to_cellranger(
-                        res, count_result[0]['barcodes'],
-                        count_result[0]['genes'], t2g_path,
+                        res['mtx'], res['barcodes'],
+                        res['genes'], t2g_path,
                         os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
                     )
                     update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
