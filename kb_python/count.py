@@ -1933,7 +1933,7 @@ def count_velocity(
                 )
                 updated_prefixes = prefixes
             prefixes = updated_prefixes
-            for prefix, res in sums:
+            for prefix, res in sums.items():
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
                 update_results_with_suffix(prefix_results, res, suffix)
