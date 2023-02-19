@@ -2052,7 +2052,7 @@ def count_velocity(
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
-                        os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                        os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
                     )
                     filtered_results[prefix].update({'cellranger': cr_result})
                 filtered_results[prefix].update(count_result[i])
@@ -2065,21 +2065,21 @@ def count_velocity(
                     sums['cell'] = do_sum_matrices(
                         count_result[prefixes.index('processed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{counts_prefix}.cell.mtx'
+                        f'{filtered_counts_prefix}.cell.mtx'
                     )
                     updated_prefixes = ['cell', 'unprocessed']
                 if sum_matrices == 'nucleus' or sum_matrices == 'total':
                     sums['nucleus'] = do_sum_matrices(
                         count_result[prefixes.index('unprocessed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{counts_prefix}.nucleus.mtx'
+                        f'{filtered_counts_prefix}.nucleus.mtx'
                     )
                     updated_prefixes = ['processed', 'nucleus']
                 if sum_matrices == 'total':
                     sums['total'] = do_sum_matrices(
-                        f'{counts_prefix}.mtx',
-                        f'{counts_prefix}.nucleus.mtx',
-                        f'{counts_prefix}.total.mtx'
+                        f'{filtered_counts_prefix}.mtx',
+                        f'{filtered_counts_prefix}.nucleus.mtx',
+                        f'{filtered_counts_prefix}.total.mtx'
                     )
                     updated_prefixes = prefixes
                 prefixes = updated_prefixes
@@ -2091,7 +2091,7 @@ def count_velocity(
                         cr_result = matrix_to_cellranger(
                             res['mtx'], res['barcodes'],
                             res['genes'], t2g_path,
-                            os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                            os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
                         )
                         filtered_results[prefix].update({'cellranger': cr_result})
                     filtered_results[prefix].update(res)
