@@ -1928,7 +1928,7 @@ def count_velocity(
                 updated_prefixes = ['processed', 'nucleus']
             if sum_matrices == 'total':
                 sums['total'] = do_sum_matrices(
-                    f'{counts_prefix}.cell.mtx',
+                    f'{counts_prefix}.mtx',
                     f'{counts_prefix}.nucleus.mtx',
                     f'{counts_prefix}.total.mtx'
                 )
