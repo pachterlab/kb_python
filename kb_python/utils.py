@@ -415,16 +415,18 @@ def read_t2g(t2g_path: str) -> Dict[str, Tuple[str, ...]]:
 def obtain_gene_names(
     t2g_path: str,
     gene_names_list: Union[str, List[str]],
-    verbose: Optional[bool] = True
+    verbose: Optional[bool] = True,
+    clean_dups: Optional[bool] = True
 ) -> List[str]:
     """Given a transcript-to-gene mapping path and list of gene IDs,
     return a list of cleaned-up gene names (wherein blank names are simply
-    replaced by the corresponding gene ID)
+    replaced by the corresponding gene ID, as are duplicate names if specified)
 
     Args:
         t2g_path: Path to t2g
         gene_names_list: List of gene IDs or path to list of gene IDs
         verbose: Whether to warn about the number of blank names, defaults to `True`
+        clean_dups: Whether to convert duplicate names to gene IDs, defaults to `True`
 
     Returns:
         List of gene names
@@ -442,17 +444,27 @@ def obtain_gene_names(
     for transcript, attributes in t2g.items():
         if len(attributes) > 1:
             id_to_name[attributes[0]] = attributes[1]
+    # Locate duplicates:
+    names_set = set([])
+    duplicates_set = set([])
+    if clean_dups:
+        for gene_id in var_names:
+            if id_to_name.get(gene_id):
+                if id_to_name[gene_id] in names_set:
+                    duplicates_set.add(id_to_name[gene_id])
+                names_set.add(id_to_name[gene_id])
+    # Now make list of cleaned-up gene names:
     gene_names = []
     n_no_name = 0
     for gene_id in var_names:
-        if id_to_name.get(gene_id):  # blank names are considered missing
+        if id_to_name.get(gene_id) and not (id_to_name[gene_id] in duplicates_set):
             gene_names.append(id_to_name[gene_id])
-        else:
+        else: # blank names and duplicate names are considered missing
             gene_names.append(gene_id)
             n_no_name += 1
     if n_no_name > 0 and verbose:
         logger.warning(
-            f'{n_no_name} gene IDs do not have corresponding gene names. '
+            f'{n_no_name} gene IDs do not have corresponding valid gene names. '
             'These genes will use their gene IDs instead.'
         )
     return gene_names
