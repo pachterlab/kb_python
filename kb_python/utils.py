@@ -751,16 +751,16 @@ def do_sum_matrices(
         Output file path
     """
     logger.info('Summing matrices into {}'.format(out_path))
+    n = 0
+    total_n = 0
+    header = []
     with open_as_text(mtx1_path, 'r') as f1, open_as_text(
         mtx2_path, 'r') as f2, open(out_path, 'w') as out:
         eof1 = eof2 = False
         nums = [0,0,0]
         nums1 = nums2 = None
         pause1 = pause2 = False
-        header = []
         to_write = None
-        n = 0
-        total_n = 0
         out.write("%%MatrixMarket matrix coordinate real general\n%\n")
         while not eof1 or not eof2:
             s1 = f1.readline() if not eof1 and not pause1 else '%'
@@ -848,13 +848,13 @@ def do_sum_matrices(
         if to_write:
             out.write(to_write)
             n += 1
-        if n != total_n:
-            data = []
-            with open(out_path, 'r') as file:
-                data = file.readlines()
-            data[2] = f'{header[0]} {header[1]} {n}\n'
-            with open(out_path, 'w') as file:
-                file.writelines(data)
+    if n != total_n:
+        data = []
+        with open(out_path, 'r') as file:
+            data = file.readlines()
+        data[2] = f'{header[0]} {header[1]} {n}\n'
+        with open(out_path, 'w') as file:
+            file.writelines(data)
     return out_path
 
 
