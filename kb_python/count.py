@@ -2040,7 +2040,6 @@ def count_velocity(
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
                 filtered_results[prefix] = {}
-                filtered_results[prefix].update(count_result[i])
                 if by_name and i==0 and 'genes' in filtered_results[prefix]:
                     # Only need to write this once
                     genes_by_name_path = f'{filtered_counts_prefix}.{GENE_NAMES_FILENAME}'
@@ -2057,6 +2056,45 @@ def count_velocity(
                     )
                     filtered_results[prefix].update({'cellranger': cr_result})
                 filtered_results[prefix].update(count_result[i])
+
+            if sum_matrices and sum_matrices != 'none':
+                # Sum up multiple matrices
+                sums = {}
+                updated_prefixes = []
+                if sum_matrices == 'cell' or sum_matrices == 'total':
+                    sums['cell'] = do_sum_matrices(
+                        count_result[prefixes.index('processed')]['mtx'],
+                        count_result[prefixes.index('ambiguous')]['mtx'],
+                        f'{counts_prefix}.cell.mtx'
+                    )
+                    updated_prefixes = ['cell', 'unprocessed']
+                if sum_matrices == 'nucleus' or sum_matrices == 'total':
+                    sums['nucleus'] = do_sum_matrices(
+                        count_result[prefixes.index('unprocessed')]['mtx'],
+                        count_result[prefixes.index('ambiguous')]['mtx'],
+                        f'{counts_prefix}.nucleus.mtx'
+                    )
+                    updated_prefixes = ['processed', 'nucleus']
+                if sum_matrices == 'total':
+                    sums['total'] = do_sum_matrices(
+                        f'{counts_prefix}.mtx',
+                        f'{counts_prefix}.nucleus.mtx',
+                        f'{counts_prefix}.total.mtx'
+                    )
+                    updated_prefixes = prefixes
+                prefixes = updated_prefixes
+                for prefix, f in sums.items():
+                    res = copy.deepcopy(count_result[0])
+                    res['mtx'] = f
+                    filtered_results[prefix] = {}
+                    if cellranger:
+                        cr_result = matrix_to_cellranger(
+                            res['mtx'], res['barcodes'],
+                            res['genes'], t2g_path,
+                            os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                        )
+                        filtered_results[prefix].update({'cellranger': cr_result})
+                    filtered_results[prefix].update(res)
 
         if loom or h5ad:
             filtered_results.update(
