@@ -833,7 +833,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--d-list',
         metavar='FASTA',
-        help=('D-list file(s) (default: the Genomic FASTA file(s))'),
+        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow, the cDNA FASTA for nucleus workflow)'),
         type=str,
         default=None
     )
