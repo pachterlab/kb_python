@@ -833,7 +833,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--d-list',
         metavar='FASTA',
-        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow, the cDNA FASTA for nucleus workflow)'),
+        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow, the cDNA FASTA for lamanno workflow)'),
         type=str,
         default=None
     )
@@ -841,8 +841,7 @@ def setup_ref_args(
         '--workflow',
         help=(
             'Type of workflow to prepare files for. '
-            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
-            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
@@ -1025,8 +1024,7 @@ def setup_count_args(
         '--workflow',
         help=(
             'Type of workflow. '
-            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
-            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
             'Use `kite` for feature barcoding. '
             'Use `kite:10xFB` for 10x Genomics Feature Barcoding technology. '
             '(default: standard)'
