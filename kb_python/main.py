@@ -392,6 +392,14 @@ def parse_count(
                     batch_path = args.fastqs[0]
         except Exception:
             pass
+          
+    if args.inleaved:
+        batch_path = None
+        
+    demultiplexed = False
+    if args.x.upper() == 'DEFAULT':
+        args.x = 'BULK'
+        demultiplexed = True
 
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
         parser.error(f'`--em` may not be used for technology {args.x}')
@@ -409,13 +417,13 @@ def parse_count(
                 f'`--parity` must be provided for technology `{args.x}`.'
             )
 
-        if not batch_path:
+        if not batch_path and not demultiplexed:
             logger.warning(
                 f'FASTQs were provided for technology `{args.x}`. '
                 'Assuming multiplexed samples. For demultiplexed samples, provide '
-                'a batch textfile.'
+                'a batch textfile or specify `default` as the technology.'
             )
-        else:
+        elif batch_path:
             # If `single`, then each row must contain 2 columns. If `paired`,
             # each row must contain 3 columns.
             target = 2 + (args.parity == 'paired')
@@ -474,7 +482,7 @@ def parse_count(
                 )
     else:
         # Check unsupported options
-        unsupported = ['parity', 'fragment-l', 'fragment-s']
+        unsupported = ['fragment-l', 'fragment-s']
         for arg in unsupported:
             if getattr(args, arg.replace('-', '_')):
                 parser.error(
@@ -540,6 +548,8 @@ def parse_count(
             sum_matrices=args.sum,
             gtf_path=args.gtf,
             chromosomes_path=args.chromosomes,
+            inleaved=args.inleaved,
+            demultiplexed=demultiplexed
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -581,6 +591,8 @@ def parse_count(
             by_name=args.gene_names,
             gtf_path=args.gtf,
             chromosomes_path=args.chromosomes,
+            inleaved=args.inleaved,
+            demultiplexed=demultiplexed
         )
 
 
@@ -1015,6 +1027,11 @@ def setup_count_args(
         type=str,
         default=None,
         choices=['unstranded', 'forward', 'reverse']
+    )
+    parser_count.add_argument(
+        '--inleaved',
+        help='Specifies that input is an interleaved FASTQ file',
+        action='store_true'
     )
     parser_count.add_argument(
         '--genomebam',
