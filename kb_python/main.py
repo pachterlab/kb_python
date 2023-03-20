@@ -862,7 +862,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--d-list',
         metavar='FASTA',
-        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow, the cDNA FASTA for lamanno workflow)'),
+        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow)'),
         type=str,
         default=None
     )
@@ -872,7 +872,7 @@ def setup_ref_args(
             'Type of workflow to prepare files for. '
             'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
             'Use `kmers` for extracting k-mers unique to each FASTA. '
-            '(Note: for `kmers`, supply a name identifying each FASTA file in lieu of GTF files)'
+            '(Note: for `kmers`, supply a name identifying each FASTA file in lieu of GTF files). '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
