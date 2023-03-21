@@ -489,10 +489,6 @@ def parse_count(
                     f'Argument `{arg}` is not supported for technology `{args.x}`.'
                 )
 
-        # Batch file not supported
-        if batch_path:
-            parser.error(f'Technology {args.x} does not support a batch file.')
-
         if args.fragment_l is not None or args.fragment_s is not None:
             parser.error(
                 '`--fragment-l` and `--fragment-s` may only be provided with '
