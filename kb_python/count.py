@@ -149,6 +149,8 @@ def kallisto_bus(
     command += ['-o', out_dir]
     if not is_batch and not demultiplexed:
         command += ['-x', technology]
+    elif is_batch and technology.upper() not in ('BULK'):
+        command += ['-x', technology]
     command += ['-t', threads]
     if n:
         command += ['--num']
