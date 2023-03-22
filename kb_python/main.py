@@ -401,6 +401,10 @@ def parse_count(
         args.x = 'BULK'
         demultiplexed = True
 
+    if args.batch_barcodes and batch_path is None:
+        parser.error('`--batch-barcodes` can only be used if batch file supplied')
+    if args.batch_barcodes and demultiplexed:
+        parser.error(f'`--batch-barcodes` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
         parser.error(f'`--em` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
@@ -1123,6 +1127,11 @@ def setup_count_args(
         action='store_true'
     )
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
+    parser_count.add_argument(
+        '--batch-barcodes',
+        help='When a batch file is supplied, store the sample identifiers in barcodes',
+        action='store_true'
+    )
 
     conversion_group = parser_count.add_mutually_exclusive_group()
     conversion_group.add_argument(
