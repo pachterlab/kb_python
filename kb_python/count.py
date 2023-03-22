@@ -102,7 +102,8 @@ def kallisto_bus(
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
     inleaved: bool = False,
-    demultiplexed: bool = False
+    demultiplexed: bool = False,
+    batch_barcodes: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -127,6 +128,7 @@ def kallisto_bus(
             (optional for --genomebam, but recommended), defaults to `None`
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
+        batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -147,9 +149,7 @@ def kallisto_bus(
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
-    if not is_batch and not demultiplexed:
-        command += ['-x', technology]
-    elif is_batch and technology.upper() not in ('BULK'):
+    if not demultiplexed:
         command += ['-x', technology]
     command += ['-t', threads]
     if n:
@@ -177,6 +177,8 @@ def kallisto_bus(
         command += ['--rf-stranded']
     if inleaved:
         command += ['--inleaved']
+    if batch_barcodes:
+        command += ['--batch-barcodes']
     if is_batch:
         command += ['--batch', fastqs]
     else:
@@ -1068,7 +1070,8 @@ def count(
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
     inleaved: bool = False,
-    demultiplexed: bool = False
+    demultiplexed: bool = False,
+    batch_barcodes: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1123,6 +1126,7 @@ def count(
             (optional for --genomebam, but recommended), defaults to `None`
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
+        batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1169,7 +1173,8 @@ def count(
             gtf_path=gtf_path,
             chromosomes_path=chromosomes_path,
             inleaved=inleaved,
-            demultiplexed=demultiplexed
+            demultiplexed=demultiplexed,
+            batch_barcodes=batch_barcodes,
         )
     else:
         logger.info(
@@ -1495,7 +1500,8 @@ def count_velocity(
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
     inleaved: bool = False,
-    demultiplexed: bool = False
+    demultiplexed: bool = False,
+    batch_barcodes: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1553,6 +1559,7 @@ def count_velocity(
             (optional for --genomebam, but recommended), defaults to `None`
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
+        batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -1597,7 +1604,8 @@ def count_velocity(
             gtf_path=gtf_path,
             chromosomes_path=chromosomes_path,
             inleaved=inleaved,
-            demultiplexed=demultiplexed
+            demultiplexed=demultiplexed,
+            batch_barcodes=batch_barcodes,
         )
     else:
         logger.info(
