@@ -549,7 +549,8 @@ def parse_count(
             gtf_path=args.gtf,
             chromosomes_path=args.chromosomes,
             inleaved=args.inleaved,
-            demultiplexed=demultiplexed
+            demultiplexed=demultiplexed,
+            batch_barcodes=args.batch_barcodes
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -592,7 +593,8 @@ def parse_count(
             gtf_path=args.gtf,
             chromosomes_path=args.chromosomes,
             inleaved=args.inleaved,
-            demultiplexed=demultiplexed
+            demultiplexed=demultiplexed,
+            batch_barcodes=args.batch_barcodes
         )
 
 
