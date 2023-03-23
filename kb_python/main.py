@@ -33,6 +33,7 @@ from .utils import (
     make_directory,
     open_as_text,
     remove_directory,
+    whitelist_provided,
 )
 
 
@@ -400,11 +401,14 @@ def parse_count(
     if args.x.upper() == 'DEFAULT':
         args.x = 'BULK'
         demultiplexed = True
+        
 
     if args.batch_barcodes and batch_path is None:
         parser.error('`--batch-barcodes` can only be used if batch file supplied')
     if args.batch_barcodes and demultiplexed:
         parser.error(f'`--batch-barcodes` may not be used for technology {args.x}')
+    if args.batch_barcodes and args.w is None and not whitelist_provided(args.x.upper()):
+        parser.error(f'`--batch-barcodes` may not be used for technology {args.x} without whitelist')
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
         parser.error(f'`--em` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
