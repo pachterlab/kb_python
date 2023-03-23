@@ -1192,7 +1192,7 @@ def count(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path and not is_batch:
+    if not whitelist_path and not demultiplexed:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology if not FB else '10xFB', sort_result['bus'], out_dir
@@ -1207,7 +1207,7 @@ def count(
             whitelist_path=whitelist_path,
         )
         unfiltered_results.update(inspect_result)
-    if not is_batch:
+    if not demultiplexed:
         prev_result = bustools_correct(
             prev_result['bus'],
             os.path.join(
@@ -1623,7 +1623,7 @@ def count_velocity(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path and not is_batch:
+    if not whitelist_path and not demultiplexed:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
@@ -1639,7 +1639,7 @@ def count_velocity(
         unfiltered_results.update(inspect_result)
 
     prev_result = sort_result
-    if not is_batch:
+    if not demultiplexed:
         prev_result = bustools_correct(
             prev_result['bus'],
             os.path.join(
