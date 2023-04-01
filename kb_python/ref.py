@@ -194,7 +194,7 @@ def get_kmers_from_fasta(kmer_set, fasta_path, k) -> int:
     return len(kmer_set)
     
 
-def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
+def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag=False) -> Dict[str, str]:
     """Parse FASTA headers to get transcripts-to-gene mapping.
 
     Args:
@@ -205,45 +205,43 @@ def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
         Dictionary containing path to generated t2g mapping
     """
     logger.info(f'Creating transcript-to-gene mapping at {t2g_path}')
-    with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
-                                                                'w') as f_out:
-        for entry in f_in:
-            print("fasta_path:")
-            print(fasta_path)
 
-            print("f_in:")
-            print(f_in)
+    if aa_flag:
+        with open(fasta_path, 'r') as f_in, open_as_text(t2g_path, 'w') as f_out:
+            fasta_lines = f_in.readlines()
+            for line in fasta_lines:
+                if ">" in line:
+                    label = line.split(">")[-1].split(" ")[0]
+                    f_out.write(f'{label}\t{label}\n')
 
-            attributes = entry.attributes
+    else:
+        with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
+                                                                    'w') as f_out:
+            for entry in f_in:
+                attributes = entry.attributes
 
-            print("entry:")
-            print(entry)
-
-            print("entry.attributes:")
-            print(entry.attributes)
-
-            # if 'feature_id' in attributes:
-            #     feature_id = attributes['feature_id']
-            #     row = [entry.name, feature_id, feature_id]
-            # else:
-            #     gene_id = attributes['gene_id']
-            #     gene_name = attributes.get('gene_name', '')
-            #     transcript_name = attributes.get('transcript_name', '')
-            #     chromosome = attributes['chr']
-            #     start = attributes['start']
-            #     end = attributes['end']
-            #     strand = attributes['strand']
-            #     row = [
-            #         entry.name,
-            #         gene_id,
-            #         gene_name,
-            #         transcript_name,
-            #         chromosome,
-            #         start,
-            #         end,
-            #         strand,
-            #     ]
-            # f_out.write('\t'.join(str(item) for item in row) + '\n')
+                if 'feature_id' in attributes:
+                    feature_id = attributes['feature_id']
+                    row = [entry.name, feature_id, feature_id]
+                else:
+                    gene_id = attributes['gene_id']
+                    gene_name = attributes.get('gene_name', '')
+                    transcript_name = attributes.get('transcript_name', '')
+                    chromosome = attributes['chr']
+                    start = attributes['start']
+                    end = attributes['end']
+                    strand = attributes['strand']
+                    row = [
+                        entry.name,
+                        gene_id,
+                        gene_name,
+                        transcript_name,
+                        chromosome,
+                        start,
+                        end,
+                        strand,
+                    ]
+                f_out.write('\t'.join(str(item) for item in row) + '\n')
 
     return {'t2g': t2g_path}
 
@@ -624,7 +622,7 @@ def ref(
         )
 
     if not glob.glob(f'{index_path}*') or overwrite:
-        t2g_result = create_t2g_from_fasta(cdna_path, t2g_path)
+        t2g_result = create_t2g_from_fasta(cdna_path, t2g_path, aa_flag=aa)
         results.update(t2g_result)
 
         if k and k != 31:
