@@ -757,13 +757,30 @@ def setup_ref_args(
     bustools_path = get_bustools_binary_path()
 
     workflow = 'standard'
+    aa_flag = False
+    aa_done = False
+    w_done = False
     for i, arg in enumerate(sys.argv):
+        if arg.startswith('--aa'):
+            aa_flag = True
+            aa_done = True
+            print("arg:")
+            print(arg)
+
         if arg.startswith('--workflow'):
             if '=' in arg:
                 workflow = arg[arg.index('=') + 1:].strip('\'\"')
             else:
                 workflow = sys.argv[i + 1]
+            w_done = True
+
+        if aa_done and w_done:
             break
+
+    print("aa_flag:")
+    print(aa_flag)
+    print("sys.argv:")
+    print(sys.argv)
 
     parser_ref = parser.add_parser(
         'ref',
@@ -794,9 +811,10 @@ def setup_ref_args(
         help=(
             '[Optional with -d] Path to the cDNA FASTA (standard, lamanno) or '
             'mismatch FASTA (kite) or k-mer FASTA (kmers) to be generated '
+            '[Optional with --aa when no GTF files are provided]'
         ),
         type=str,
-        required='-d' not in sys.argv
+        required='-d' not in sys.argv or ('--aa' not in sys.argv and 'gtf' not in sys.argv)
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(

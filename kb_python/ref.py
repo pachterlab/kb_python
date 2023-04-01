@@ -565,7 +565,14 @@ def ref(
     target = "cDNA"
     if nucleus:
         target = "unprocessed transcript"
-    if (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
+
+    if aa and not gtf_paths:
+        logger.info(
+            f'Skipping {target} FASTA generation because `--aa` was called without providing a GTF filepath.'
+        )
+        cdna_path = fasta_path
+
+    elif (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
             logger.info(f'Preparing {fasta_path}, {gtf_path}')
             # Parse GTF for gene and transcripts
@@ -591,12 +598,6 @@ def ref(
         logger.info(f'Concatenating {len(cdnas)} {target}s to {cdna_path}')
         cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
         results.update({'cdna_fasta': cdna_path})
-
-    elif aa and not gtf_paths:
-        logger.info(
-            f'Skipping {target} FASTA generation because `--aa` was called without providing a gtf.'
-        )
-        cdna_path = fasta_path
 
     else:
         logger.info(
