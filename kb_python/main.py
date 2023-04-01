@@ -207,6 +207,7 @@ def parse_ref(
         args: Parsed command-line arguments
     """
     dlist = None
+    aa = False
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
@@ -219,6 +220,8 @@ def parse_ref(
             dlist = str(args.f1)
     else:
         dlist = args.d_list
+    if args.aa:
+        aa = args.aa
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
@@ -337,6 +340,7 @@ def parse_ref(
                 exclude=exclude,
                 threads=args.t,
                 dlist=dlist,
+                aa=aa,
                 overwrite=args.overwrite,
                 make_unique=args.make_unique,
                 temp_dir=temp_dir
