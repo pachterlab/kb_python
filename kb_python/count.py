@@ -1073,6 +1073,7 @@ def count(
     fragment_s: Optional[int] = None,
     paired: bool = False,
     genomebam: bool = False,
+    aa: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = True,
     em: bool = False,
@@ -1124,6 +1125,8 @@ def count(
             batch file is provided. Defaults to `False`
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
+        aa: Align to index generated from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
             `True`
@@ -1178,6 +1181,7 @@ def count(
             threads=threads,
             paired=paired,
             genomebam=genomebam,
+            aa=aa,
             strand=strand,
             gtf_path=gtf_path,
             chromosomes_path=chromosomes_path,

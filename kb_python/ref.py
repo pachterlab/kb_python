@@ -194,7 +194,7 @@ def get_kmers_from_fasta(kmer_set, fasta_path, k) -> int:
     return len(kmer_set)
     
 
-def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag=False) -> Dict[str, str]:
+def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag: bool = False) -> Dict[str, str]:
     """Parse FASTA headers to get transcripts-to-gene mapping.
 
     Args:
