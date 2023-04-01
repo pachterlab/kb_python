@@ -211,7 +211,7 @@ def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag=False) -> Dict
             fasta_lines = f_in.readlines()
             for line in fasta_lines:
                 if ">" in line:
-                    label = line.split(">")[-1].split(" ")[0]
+                    label = line.split(">")[-1].split(" ")[0].replace("\n", "")
                     f_out.write(f'{label}\t{label}\n')
 
     else:
