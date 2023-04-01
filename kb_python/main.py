@@ -796,9 +796,10 @@ def setup_ref_args(
         help=(
             '[Optional with -d] Path to the cDNA FASTA (standard, lamanno) or '
             'mismatch FASTA (kite) or k-mer FASTA (kmers) to be generated '
+            '[Optional with --aa when no GTF file(s) provided]'
         ),
         type=str,
-        required='-d' not in sys.argv
+        required='-d' not in sys.argv and '--aa' not in sys.argv
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(
