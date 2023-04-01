@@ -226,6 +226,8 @@ def parse_ref(
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
+    elif not args.gtf and args.aa:
+        args.gtf = []
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         if args.workflow != 'kmers':
             parser.error(
@@ -933,8 +935,7 @@ def setup_ref_args(
         'gtf',
         help='Reference GTF file(s), comma-delimited [not required with --aa]',
         type=str,
-        nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?',
-        required='--aa' not in sys.argv
+        nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
     )
     parser_ref.add_argument(
         'feature',
