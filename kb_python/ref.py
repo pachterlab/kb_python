@@ -259,7 +259,8 @@ def kallisto_index(
     k: int = 31,
     threads: int = 8,
     dlist: str = None,
-    make_unique: bool = False
+    make_unique: bool = False,
+    aa: bool = False
 ) -> Dict[str, str]:
     """Runs `kallisto index`.
 
@@ -268,8 +269,11 @@ def kallisto_index(
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
-        dlist: D-list FASTA file(s)
+        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+            defaults to `None`
         make_unique: Replace repeated target names with unique names, defaults to `False`
+        aa: Generate index from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -282,6 +286,8 @@ def kallisto_index(
         command += ['-d', dlist]
     if make_unique:
         command += ['--make-unique']
+    if aa:
+        command += ['--aa']
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
@@ -513,7 +519,8 @@ def ref(
     overwrite: bool = False,
     make_unique: bool = False,
     threads: int = 8,
-    dlist: str = None
+    dlist: str = None,
+    aa: bool = False,
 ) -> Dict[str, str]:
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
@@ -533,7 +540,10 @@ def ref(
         overwrite: Overwrite an existing index file, defaults to `False`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
-        dlist: D-list FASTA file(s)
+        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+            defaults to `None`
+        aa: Generate index from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -602,6 +612,7 @@ def ref(
             k=k or 31,
             threads=threads,
             dlist=dlist,
+            aa=aa,
             make_unique=make_unique
         )
         results.update(index_result)
@@ -818,7 +829,8 @@ def ref_lamanno(
         overwrite: Overwrite an existing index file, defaults to `False`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
-        dlist: D-list FASTA file(s)
+        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+            defaults to `None`
 
     Returns:
         Dictionary containing paths to generated file(s)

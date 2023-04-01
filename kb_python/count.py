@@ -98,6 +98,7 @@ def kallisto_bus(
     k: bool = False,
     paired: bool = False,
     genomebam: bool = False,
+    aa: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     gtf_path: Optional[str] = None,
     chromosomes_path: Optional[str] = None,
@@ -121,6 +122,8 @@ def kallisto_bus(
             bulk and smartseq2 samples, defaults to `False`
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
+        aa: Align to index generated from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
         strand: Strandedness, defaults to `None`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
             defaults to `None`
@@ -156,7 +159,7 @@ def kallisto_bus(
         command += ['--num']
     if k:
         command += ['--kmer']
-    if paired:
+    if paired and not aa:
         command += ['--paired']
         results['flens'] = os.path.join(out_dir, FLENS_FILENAME)
     if genomebam:
@@ -169,6 +172,12 @@ def kallisto_bus(
         results['genomebam_index'] = os.path.join(
             out_dir, GENOMEBAM_INDEX_FILENAME
         )
+    if aa:
+        command += ['--aa']
+        if paired:
+            logger.warning(
+                f'`--paired` ignored since `--aa` only supports single-end reads'
+            )
     if strand == 'unstranded':
         command += ['--unstranded']
     elif strand == 'forward':
