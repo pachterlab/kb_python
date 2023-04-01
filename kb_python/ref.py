@@ -208,8 +208,11 @@ def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
     with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
                                                                 'w') as f_out:
         for entry in f_in:
-            print("entry:")
-            print(entry)
+            print("fasta_path:")
+            print(fasta_path)
+
+            print("f_in:")
+            print(f_in)
 
             attributes = entry.attributes
 
