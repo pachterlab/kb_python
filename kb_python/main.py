@@ -521,6 +521,10 @@ def parse_count(
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
+        if args.aa:
+            parser.error(
+                f'Option `--aa` cannot be used with workflow {args.workflow}.'
+            )
         from .count import count_velocity
         count_velocity(
             args.i,
@@ -594,6 +598,7 @@ def parse_count(
             fragment_s=args.fragment_s,
             paired=args.parity == 'paired',
             genomebam=args.genomebam,
+            aa=args.aa,
             strand=args.strand,
             umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
             em=args.em,
@@ -877,6 +882,12 @@ def setup_ref_args(
         default=None
     )
     parser_ref.add_argument(
+        '--aa',
+        help='Generate index from a FASTA-file containing amino acid sequences',
+        action='store_true',
+        default=False
+    )
+    parser_ref.add_argument(
         '--workflow',
         help=(
             'Type of workflow to prepare files for. '
@@ -1048,6 +1059,12 @@ def setup_count_args(
         help='Project pseudoalignments to genome sorted BAM file.',
         action='store_true',
         default=False,
+    )
+    parser_count.add_argument(
+        '--aa',
+        help='Align to index generated from a FASTA-file containing amino acid sequences',
+        action='store_true',
+        default=False
     )
     parser_count.add_argument(
         '--gtf',
