@@ -932,7 +932,7 @@ def setup_ref_args(
         'gtf',
         help='Reference GTF file(s), comma-delimited [not required with --aa]',
         type=str,
-        nargs=None if '-d' not in sys.argv or '--aa' in sys.argv and workflow != 'kite' else '?'
+        nargs=None if ('-d' not in sys.argv or '--aa' not in sys.argv) and workflow != 'kite' else '?'
     )
     parser_ref.add_argument(
         'feature',
