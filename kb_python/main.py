@@ -226,11 +226,8 @@ def parse_ref(
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
-
-    print(args.gtf)
     if not args.gtf and args.aa:
         args.gtf = []
-    print(args.gtf)
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         if args.workflow != 'kmers':
             parser.error(

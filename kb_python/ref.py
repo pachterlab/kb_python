@@ -568,9 +568,12 @@ def ref(
 
     if aa and not gtf_paths:
         logger.info(
-            f'Skipping {target} FASTA generation because `--aa` was called without providing a GTF filepath.'
+            f'Skipping {target} FASTA generation because flag `--aa` was called without providing GTF file(s).'
         )
-        cdna_path = fasta_path
+
+        for fasta_path in fasta_paths:
+            cdnas.append(fasta_path)
+        cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
 
     elif (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
