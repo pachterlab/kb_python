@@ -222,28 +222,28 @@ def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
             print("entry.attributes:")
             print(entry.attributes)
 
-            if 'feature_id' in attributes:
-                feature_id = attributes['feature_id']
-                row = [entry.name, feature_id, feature_id]
-            else:
-                gene_id = attributes['gene_id']
-                gene_name = attributes.get('gene_name', '')
-                transcript_name = attributes.get('transcript_name', '')
-                chromosome = attributes['chr']
-                start = attributes['start']
-                end = attributes['end']
-                strand = attributes['strand']
-                row = [
-                    entry.name,
-                    gene_id,
-                    gene_name,
-                    transcript_name,
-                    chromosome,
-                    start,
-                    end,
-                    strand,
-                ]
-            f_out.write('\t'.join(str(item) for item in row) + '\n')
+            # if 'feature_id' in attributes:
+            #     feature_id = attributes['feature_id']
+            #     row = [entry.name, feature_id, feature_id]
+            # else:
+            #     gene_id = attributes['gene_id']
+            #     gene_name = attributes.get('gene_name', '')
+            #     transcript_name = attributes.get('transcript_name', '')
+            #     chromosome = attributes['chr']
+            #     start = attributes['start']
+            #     end = attributes['end']
+            #     strand = attributes['strand']
+            #     row = [
+            #         entry.name,
+            #         gene_id,
+            #         gene_name,
+            #         transcript_name,
+            #         chromosome,
+            #         start,
+            #         end,
+            #         strand,
+            #     ]
+            # f_out.write('\t'.join(str(item) for item in row) + '\n')
 
     return {'t2g': t2g_path}
 
