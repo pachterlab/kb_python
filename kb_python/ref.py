@@ -210,6 +210,8 @@ def create_t2g_from_fasta(fasta_path: str, t2g_path: str) -> Dict[str, str]:
         for entry in f_in:
             attributes = entry.attributes
 
+            print(attributes)
+
             if 'feature_id' in attributes:
                 feature_id = attributes['feature_id']
                 row = [entry.name, feature_id, feature_id]
@@ -569,11 +571,13 @@ def ref(
     if aa and not gtf_paths:
         logger.info(
             f'Skipping {target} FASTA generation because flag `--aa` was called without providing GTF file(s).'
+            f'{target} FASTA will be a copy of input FASTA file(s).'
         )
 
         for fasta_path in fasta_paths:
             cdnas.append(fasta_path)
         cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
+        results.update({'cdna_fasta': cdna_path})
 
     elif (not ngs.utils.all_exists(cdna_path, t2g_path)) or overwrite:
         for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
