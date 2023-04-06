@@ -719,7 +719,7 @@ def ref_kite(
 def ref_kmers(
     fasta_paths: Union[List[str], str],
     fasta_ids: Union[List[str], str],
-    out_fasta_path: str = None,
+    out_fasta_path: Optional[str] = None,
     index_path: str,
     t2g_path: str,
     k: Optional[int] = 31,
