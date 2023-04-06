@@ -158,40 +158,6 @@ def generate_kite_fasta(
                 f.write(entry)
 
     return out_path, min(lengths)
-
-
-def get_kmers_from_fasta(kmer_set, fasta_path, k) -> int:
-    """Extract k-mers from a FASTA file
-
-    Args:
-        kmer_set: Set to which extract k-mers will be added
-        fasta_path: Path to FASTA file from which k-mers will be extracted
-        k: Length of k-mer
-        no_mismatches: Whether to generate hamming distance 1 variants,
-            defaults to `False`
-
-    Returns:
-        Cardinality of set of k-mers
-    """
-    base_for = "ACGT"
-    base_rev = "TGCA"
-    comp_tab = str.maketrans(base_for, base_rev)
-    # Adapted from https://github.com/lh3/kmer-cnt/blob/master/kc-py1.py
-    # Uses set instead of dict
-    def count_kmer(h, k, seq):
-        l = len(seq)
-        if l < k: return
-        for i in range(l - k + 1):
-            kmer_for = seq[i:(i+k)]
-            if 'N' in kmer_for: continue
-            kmer_rev = kmer_for.translate(comp_tab)[::-1]
-            if kmer_for < kmer_rev: kmer = kmer_for
-            else: kmer = kmer_rev
-            h.add(kmer)
-    with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
-        for entry in f_in:
-            count_kmer(kmer_set, k, entry.sequence)
-    return len(kmer_set)
     
 
 def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag: bool = False) -> Dict[str, str]:
@@ -299,6 +265,33 @@ def kallisto_index(
     if aa:
         command += ['--aa']
     command += [fasta_path]
+    run_executable(command)
+    return {'index': index_path}
+
+
+def kallisto_index_distinguish(
+    fasta_paths: List[str],
+    index_path: str,
+    k: int = 31,
+    threads: int = 8
+) -> Dict[str, str]:
+    """Runs `kallisto index --distinguish`.
+
+    Args:
+        fasta_paths: path to FASTA files
+        index_path: path to output kallisto index
+        k: k-mer length, defaults to 31
+        threads: Number of threads to use, defaults to `8`
+
+    Returns:
+        Dictionary containing path to generated index
+    """
+    logger.info(f'Creating index: {index_path}')
+    command = [get_kallisto_binary_path(), 'index', '--distinguish', '-i', index_path, '-k', k]
+    if threads > 1:
+        command += ['-t', threads]
+    for fasta_path in fasta_paths:
+        command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
 
@@ -754,51 +747,23 @@ def ref_kmers(
 
     results = {}
     
-    if (not ngs.utils.all_exists(out_fasta_path, t2g_path)) or overwrite:
-        kmer_sets = {}
+    if not glob.glob(f'{index_path}*') or overwrite:
+        t2g_list = []
+        i = 0
         for fasta_path, fasta_id in zip(fasta_paths, fasta_ids):
             logger.info(f'Extracting k-mers from {fasta_path} with id {fasta_id}')
-            # TODO: Read FASTA into GTF
-            if fasta_id not in kmer_sets:
-                kmer_sets[fasta_id] = set()
-            n = get_kmers_from_fasta(kmer_sets[fasta_id], fasta_path, k)
-            logger.info(f'Extracted {n} k-mers from {fasta_path}')
-        # Get id-specific k-mers and write them out:
-        with ngs.fasta.Fasta(out_fasta_path, 'w') as f, open(t2g_path, 'w') as t:
-            for fasta_id in fasta_ids:
-                other_sets = set()
-                for fasta_id_2 in fasta_ids:
-                    if fasta_id != fasta_id_2:
-                        other_sets = other_sets.union(kmer_sets[fasta_id_2])
-                unique_kmers = kmer_sets[fasta_id]-other_sets
-                logger.info(
-                    f'Number of k-mers unique to {fasta_id}: {len(unique_kmers)}'
-                )
-                for i,uk in enumerate(unique_kmers):
-                    entry_id = f'{fasta_id}_{i}'
-                    entry_header = f'>{entry_id}'
-                    entry = ngs.fasta.FastaEntry(entry_header, uk)
-                    f.write(entry)
-                    t.write('\t'.join(str(item) for item in [entry_id,fasta_id]) + '\n')
-
-        results.update({'t2g': t2g_path})
-        results.update({'kmer_fasta': out_fasta_path})
-    else:
-        logger.info(
-            f'Skipping k-mer FASTA generation because files already exist. Use --overwrite flag to overwrite'
-        )
-
-    if not glob.glob(f'{index_path}*') or overwrite:
-        t2g_result = read_t2g(t2g_path)
-        results.update({'t2g': t2g_path})
-
-        index_result = kallisto_index(
-            out_fasta_path,
+            t2g_list.append(f'{i}\t{fasta_id}')
+            i = i + 1
+        index_result = kallisto_index_distinguish(
+            fasta_paths,
             index_path,
-            k=k or 31,
+            k = k,
             threads=threads
         )
+        write_list_to_file(t2g_list, t2g_path)
+        logger.info('Finished creating unique k-mer index')
         results.update(index_result)
+        results.update({'t2g': t2g_path})
     else:
         logger.info(
             'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
