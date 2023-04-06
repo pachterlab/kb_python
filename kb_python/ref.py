@@ -748,7 +748,8 @@ def ref_kmers(
         fasta_paths = [fasta_paths]
     if not isinstance(fasta_ids, list):
         fasta_ids = [fasta_ids]
-
+    if len(fasta_paths) != len(fasta_ids):
+        fasta_ids = fasta_paths.copy()
     if k and k != 31:
         logger.warning(
             f'Using provided k-mer length {k} instead of optimal length 31'
