@@ -231,14 +231,18 @@ def parse_ref(
     if not args.gtf and args.aa:
         args.gtf = []
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
-        if args.workflow != 'kmers':
+        if args.workflow != 'distinguish':
             parser.error(
                 'There must be the same number of FASTAs as there are GTFs.'
             )
         else:
-            parser.error(
-                'There must be the same number of FASTAs as there are FASTA IDs.'
-            )
+            # For --workflow=distinguish, args.gtf are technically FASTA IDs
+            if (len(args.gtf) == 0):
+                args.gtf = args.fasta
+            else:
+                parser.error(
+                    'There must be the same number of FASTAs as there are FASTA IDs.'
+                )
 
     # Parse include/exclude KEY:VALUE pairs
     include = []
@@ -319,7 +323,7 @@ def parse_ref(
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
-        elif args.workflow == 'kmers':
+        elif args.workflow == 'distinguish':
             ref_kmers(
                 args.fasta,
                 args.gtf, # Technically, the FASTA IDs
@@ -797,11 +801,12 @@ def setup_ref_args(
         metavar='FASTA',
         help=(
             '[Optional with -d] Path to the cDNA FASTA (standard, lamanno) or '
-            'mismatch FASTA (kite) or k-mer FASTA (kmers) to be generated '
-            '[Optional with --aa when no GTF file(s) provided]'
+            'mismatch FASTA (kite) or k-mer FASTA (distinguish) to be generated '
+            '[Optional with --aa when no GTF file(s) provided] '
+            '[Optional with --workflow=distinguish]'
         ),
         type=str,
-        required='-d' not in sys.argv and '--aa' not in sys.argv
+        required='-d' not in sys.argv and '--aa' not in sys.argv and workflow not in {'distinguish'}
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(
@@ -897,13 +902,13 @@ def setup_ref_args(
         help=(
             'Type of workflow to prepare files for. '
             'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
-            'Use `kmers` for extracting k-mers unique to each FASTA. '
-            '(Note: for `kmers`, supply a name identifying each FASTA file in lieu of GTF files). '
+            'Use `distinguish` for extracting k-mers unique to each FASTA. '
+            '(Note: for `distinguish`, supply a name identifying each FASTA file in lieu of GTF files). '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kmers']
+        choices=['standard', 'lamanno', 'nucleus', 'kite', 'distinguish']
     )
     parser_ref.add_argument(
         '--make-unique',
