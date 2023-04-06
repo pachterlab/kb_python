@@ -273,7 +273,8 @@ def kallisto_index_distinguish(
     fasta_paths: List[str],
     index_path: str,
     k: int = 31,
-    threads: int = 8
+    threads: int = 8,
+    out_fasta_path: str = None,
 ) -> Dict[str, str]:
     """Runs `kallisto index --distinguish`.
 
@@ -282,18 +283,27 @@ def kallisto_index_distinguish(
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
+        out_fasta_path: Path to generate the k-mer FASTA file
 
     Returns:
         Dictionary containing path to generated index
     """
     logger.info(f'Creating index: {index_path}')
-    command = [get_kallisto_binary_path(), 'index', '--distinguish', '-i', index_path, '-k', k]
+    command = [get_kallisto_binary_path(), 'index']
+    if out_fasta_path:
+        command += [f'--distinguish={out_fasta_path}']
+    else:
+        command += ['--distinguish']
+    command += ['-i', index_path, '-k', k]
     if threads > 1:
         command += ['-t', threads]
     for fasta_path in fasta_paths:
         command += [fasta_path]
     run_executable(command)
-    return {'index': index_path}
+    ret_dict = {'index': index_path}
+    if out_fasta_path:
+        ret_dict['distinguish_fasta'] = out_fasta_path
+    return ret_dict
 
 
 def split_and_index(
@@ -709,7 +719,7 @@ def ref_kite(
 def ref_kmers(
     fasta_paths: Union[List[str], str],
     fasta_ids: Union[List[str], str],
-    out_fasta_path: str,
+    out_fasta_path: str = None,
     index_path: str,
     t2g_path: str,
     k: Optional[int] = 31,
@@ -758,7 +768,8 @@ def ref_kmers(
             fasta_paths,
             index_path,
             k = k,
-            threads=threads
+            threads=threads,
+            out_fasta_path=out_fasta_path
         )
         write_list_to_file(t2g_list, t2g_path)
         logger.info('Finished creating unique k-mer index')
