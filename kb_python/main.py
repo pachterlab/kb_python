@@ -228,7 +228,7 @@ def parse_ref(
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
-    if not args.gtf and args.aa:
+    if not args.gtf and (args.aa or args.workflow == 'distinguish'):
         args.gtf = []
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
         if args.workflow != 'distinguish':
