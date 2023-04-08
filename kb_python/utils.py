@@ -554,6 +554,7 @@ def import_tcc_matrix_as_anndata(
     threads: int = 8,
     loom: bool = False,
     loom_names: List[str] = None,
+    batch_barcodes_path: Optional[str] = None,
 ) -> anndata.AnnData:
     """Import a TCC matrix as an Anndata object.
 
@@ -565,6 +566,8 @@ def import_tcc_matrix_as_anndata(
         threads: Number of threads, defaults to `8`
         loom: Whether to prepare anndata for loom file, defaults to `False`
         loom_names: Names for cols and rows in anndata, defaults to `None`
+        batch_barcodes_path: Path to barcodes prefixed with sample ID,
+            defaults to `None`
 
     Returns:
         A new Anndata object
@@ -618,6 +621,7 @@ def import_matrix_as_anndata(
     by_name: bool = False,
     loom: bool = False,
     loom_names: List[str] = None,
+    batch_barcodes_path: Optional[str] = None,
 ) -> anndata.AnnData:
     """Import a matrix as an Anndata object.
 
@@ -633,6 +637,8 @@ def import_matrix_as_anndata(
             provided and contain names.
         loom: Whether to prepare anndata for loom file, defaults to `False`
         loom_names: Names for cols and rows in anndata, defaults to `None`
+        batch_barcodes_path: Path to barcodes prefixed with sample ID,
+            defaults to `None`
 
     Returns:
         A new Anndata object
