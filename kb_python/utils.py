@@ -573,9 +573,15 @@ def import_tcc_matrix_as_anndata(
         A new Anndata object
     """
     name_column='transcript_ids' if not loom else loom_names[1]
+    bc_name = 'barcode' if not loom else loom_names[0]
     df_barcodes = pd.read_csv(
-        barcodes_path, index_col=0, header=None, names=['barcode' if not loom else loom_names[0]]
+        barcodes_path, index_col=0, header=None, names=[bc_name]
     )
+    if (batch_barcodes_path):
+        df_barcodes_path = pd.read_csv(
+            barcodes_path, index_col=0, header=None, names=[bc_name]
+        )
+        df_barcodes[bc_name] = df_barcodes[bc_name] + df_barcodes_path[bc_name]
     df_ec = pd.read_csv(
         ec_path,
         index_col=0,
@@ -644,9 +650,15 @@ def import_matrix_as_anndata(
         A new Anndata object
     """
     name_column=f'{name}_id' if not loom else loom_names[1]
+    bc_name = 'barcode' if not loom else loom_names[0]
     df_barcodes = pd.read_csv(
-        barcodes_path, index_col=0, header=None, names=['barcode' if not loom else loom_names[0]]
+        barcodes_path, index_col=0, header=None, names=[bc_name]
     )
+    if (batch_barcodes_path):
+        df_barcodes_path = pd.read_csv(
+            barcodes_path, index_col=0, header=None, names=[bc_name]
+        )
+        df_barcodes[bc_name] = df_barcodes[bc_name] + df_barcodes_path[bc_name]
     df_genes = pd.read_csv(
         genes_path, header=None, index_col=0, names=[name_column], sep='\t'
     )
