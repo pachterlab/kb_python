@@ -389,6 +389,7 @@ def bustools_count(
     umi_gene: bool = True,
     em: bool = False,
     nascent_path: str = None,
+    batch_barcodes: bool = False,
 ) -> Dict[str, str]:
     """Runs `bustools count`.
 
@@ -409,6 +410,7 @@ def bustools_count(
             to `False`
         nascent_path: Path to list of nascent targets for obtaining
             nascent/mature/ambiguous matrices, defaults to `None`
+        batch_barcodes: If sample ID is barcoded, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -450,18 +452,24 @@ def bustools_count(
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
             'barcodes0':
                 f'{out_prefix}.barcodes.txt',
+            'batch_barcodes0':
+                f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
             'mtx1':
                 f'{out_prefix}.2.mtx',
             'ec1' if tcc else 'genes1':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
             'barcodes1':
                 f'{out_prefix}.barcodes.txt',
+            'batch_barcodes1':
+                f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
             'mtx2':
                 f'{out_prefix}.ambiguous.mtx',
             'ec2' if tcc else 'genes2':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
             'barcodes2':
                 f'{out_prefix}.barcodes.txt',
+            'batch_barcodes2':
+                f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
         }
     return {
         'mtx':
@@ -470,6 +478,8 @@ def bustools_count(
             f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
         'barcodes':
             f'{out_prefix}.barcodes.txt',
+        'batch_barcodes':
+            f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
     }
 
 
@@ -606,6 +616,7 @@ def convert_matrix(
     counts_dir: str,
     matrix_path: str,
     barcodes_path: str,
+    batch_barcodes_path: Optional[str] = None,
     genes_path: Optional[str] = None,
     ec_path: Optional[str] = None,
     t2g_path: Optional[str] = None,
@@ -624,6 +635,8 @@ def convert_matrix(
         counts_dir: Path to counts directory
         matrix_path: Path to matrix
         barcodes_path: List of paths to barcodes.txt
+        batch_barcodes_path: Path to barcodes prefixed with sample ID,
+            defaults to `None`
         genes_path: Path to genes.txt, defaults to `None`
         ec_path: Path to ec.txt, defaults to `None`
         t2g_path: Path to transcript-to-gene mapping. If this is provided,
@@ -646,7 +659,7 @@ def convert_matrix(
     logger.info(f'Reading matrix {matrix_path}')
     adata = import_tcc_matrix_as_anndata(
         matrix_path, barcodes_path, ec_path, txnames_path, threads=threads,
-        loom=loom, loom_names=loom_names
+        loom=loom, loom_names=loom_names, batch_barcodes_path=batch_barcodes_path
     ) if tcc else import_matrix_as_anndata(
         matrix_path,
         barcodes_path,
@@ -655,7 +668,8 @@ def convert_matrix(
         name=name,
         by_name=by_name,
         loom=loom,
-        loom_names=loom_names
+        loom_names=loom_names,
+        batch_barcodes_path=batch_barcodes_path
     )
     if loom:
         loom_path = os.path.join(counts_dir, f'{ADATA_PREFIX}.loom')
@@ -675,6 +689,7 @@ def convert_matrices(
     counts_dir: str,
     matrix_paths: List[str],
     barcodes_paths: List[str],
+    batch_barcodes_paths: Optional[List[str]] = None,
     genes_paths: Optional[List[str]] = None,
     ec_paths: Optional[List[str]] = None,
     t2g_path: Optional[str] = None,
@@ -694,6 +709,8 @@ def convert_matrices(
         counts_dir: Path to counts directory
         matrix_paths: List of paths to matrices
         barcodes_paths: List of paths to barcodes.txt
+        batch_barcodes_path: Paths to barcodes prefixed with sample ID,
+            defaults to `None`
         genes_paths: List of paths to genes.txt, defaults to `None`
         ec_paths: List of path to ec.txt, defaults to `None`
         t2g_path: Path to transcript-to-gene mapping. If this is provided,
@@ -719,8 +736,8 @@ def convert_matrices(
     barcodes_paths = barcodes_paths or []
     genes_paths = genes_paths or []
     ec_paths = ec_paths or []
-    for matrix_path, barcodes_path, genes_ec_path in zip(
-            matrix_paths, barcodes_paths, ec_paths
+    for matrix_path, barcodes_path, batch_barcodes_path, genes_ec_path in zip(
+            matrix_paths, barcodes_paths, batch_barcodes_paths, ec_paths
             if not genes_paths or None in genes_paths else genes_paths):
         logger.info(f'Reading matrix {matrix_path}')
         adatas.append(
@@ -731,7 +748,8 @@ def convert_matrices(
                 txnames_path,
                 threads=threads,
                 loom=loom,
-                loom_names=loom_names
+                loom_names=loom_names,
+                batch_barcodes_path=batch_barcodes_path
             ) if tcc else import_matrix_as_anndata(
                 matrix_path,
                 barcodes_path,
@@ -740,7 +758,8 @@ def convert_matrices(
                 name=name,
                 by_name=by_name,
                 loom=loom,
-                loom_names=loom_names
+                loom_names=loom_names,
+                batch_barcodes_path=batch_barcodes_path
             )
         )
     logger.info('Combining matrices')
@@ -778,7 +797,9 @@ def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
                     f'ec{i}' if f'ec{i}' in count_result else f'genes{i}'
                 ],
             'barcodes':
-                count_result[f'barcodes{i}']
+                count_result[f'barcodes{i}'],
+            'batch_barcodes':
+                count_result[f'batch_barcodes{i}'],
         })
     return new_count_result
 
@@ -895,6 +916,7 @@ def filter_with_bustools(
                     counts_dir,
                     count_result['mtx'],
                     count_result['barcodes'],
+                    batch_barcodes_path=count_result['batch_barcodes'],
                     genes_path=count_result.get('genes'),
                     t2g_path=t2g_path,
                     ec_path=count_result.get('ec'),
@@ -905,7 +927,7 @@ def filter_with_bustools(
                     h5ad=h5ad,
                     by_name=by_name,
                     tcc=tcc,
-                    threads=threads
+                    threads=threads,
                 )
             )
         if cellranger:
@@ -1343,6 +1365,7 @@ def count(
             cm=(suffix == INTERNAL_SUFFIX) if use_suffixes else cm,
             umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
             em=em,
+            batch_barcodes=batch_barcodes,
         )
         update_results_with_suffix(unfiltered_results, count_result, suffix)
         quant_result = None
@@ -1388,6 +1411,7 @@ def count(
                     quant_dir if quant else counts_dir,
                     final_result['mtx'],
                     count_result['barcodes'],
+                    batch_barcodes_path=count_result['batch_barcodes'],
                     genes_path=final_result['txnames']
                     if quant else final_result.get('genes'),
                     t2g_path=t2g_path,
@@ -1745,6 +1769,7 @@ def count_velocity(
             umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
             em=em,
             nascent_path=intron_t2c_path,
+            batch_barcodes=batch_barcodes,
         )
         count_result = count_result_to_dict(count_result)
         prefixes = ['processed', 'unprocessed', 'ambiguous'] # 0,1,2
@@ -1821,6 +1846,10 @@ def count_velocity(
                 ],
                 [
                     unfiltered_results[prefix][f'barcodes{suffix}']
+                    for prefix in prefixes
+                ],
+                [
+                    unfiltered_results[prefix][f'batch_barcodes{suffix}']
                     for prefix in prefixes
                 ],
                 genes_paths=[
@@ -1963,6 +1992,10 @@ def count_velocity(
                     [filtered_results[prefix]['mtx'] for prefix in prefixes],
                     [
                         filtered_results[prefix]['barcodes']
+                        for prefix in prefixes
+                    ],
+                    [
+                        filtered_results[prefix]['batch_barcodes']
                         for prefix in prefixes
                     ],
                     genes_paths=[
