@@ -419,6 +419,8 @@ def parse_count(
         parser.error(f'`--batch-barcodes` may not be used for technology {args.x}')
     if args.batch_barcodes and args.w is None and not whitelist_provided(args.x.upper()):
         parser.error(f'`--batch-barcodes` may not be used for technology {args.x} without whitelist')
+    if args.batch_barcodes and args.filter:
+        parser.error('`--batch-barcodes` may not be used with --filter')
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
         parser.error(f'`--em` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
