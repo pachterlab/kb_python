@@ -578,10 +578,10 @@ def import_tcc_matrix_as_anndata(
         barcodes_path, index_col=0, header=None, names=[bc_name]
     )
     if (batch_barcodes_path):
-        df_barcodes_path = pd.read_csv(
-            barcodes_path, index_col=0, header=None, names=[bc_name]
+        df_batch_barcodes = pd.read_csv(
+            batch_barcodes_path, index_col=0, header=None, names=[bc_name]
         )
-        df_barcodes[bc_name] = df_barcodes[bc_name] + df_barcodes_path[bc_name]
+        df_barcodes[bc_name] = df_batch_barcodes[bc_name] + df_barcodes[bc_name]
     df_ec = pd.read_csv(
         ec_path,
         index_col=0,
@@ -655,10 +655,10 @@ def import_matrix_as_anndata(
         barcodes_path, index_col=0, header=None, names=[bc_name]
     )
     if (batch_barcodes_path):
-        df_barcodes_path = pd.read_csv(
-            barcodes_path, index_col=0, header=None, names=[bc_name]
+        df_batch_barcodes = pd.read_csv(
+            batch_barcodes_path, index_col=0, header=None, names=[bc_name]
         )
-        df_barcodes[bc_name] = df_barcodes[bc_name] + df_barcodes_path[bc_name]
+        df_barcodes[bc_name] = df_batch_barcodes[bc_name] + df_barcodes[bc_name]
     df_genes = pd.read_csv(
         genes_path, header=None, index_col=0, names=[name_column], sep='\t'
     )
