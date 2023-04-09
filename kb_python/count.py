@@ -734,6 +734,7 @@ def convert_matrices(
     adatas = []
     matrix_paths = matrix_paths or []
     barcodes_paths = barcodes_paths or []
+    batch_barcodes_paths = batch_barcodes_paths or []
     genes_paths = genes_paths or []
     ec_paths = ec_paths or []
     for matrix_path, barcodes_path, batch_barcodes_path, genes_ec_path in zip(
