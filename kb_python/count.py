@@ -445,7 +445,7 @@ def bustools_count(
 
     run_executable(command)
     if nascent_path:
-        return {
+        ret = {
             'mtx0':
                 f'{out_prefix}.mtx',
             'ec0' if tcc else 'genes0':
@@ -471,7 +471,12 @@ def bustools_count(
             'batch_barcodes2':
                 f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
         }
-    return {
+        if not batch_barcodes:
+            del ret['batch_barcodes0']
+            del ret['batch_barcodes1']
+            del ret['batch_barcodes2']
+        return ret
+    ret = {
         'mtx':
             f'{out_prefix}.mtx',
         'ec' if tcc else 'genes':
@@ -481,6 +486,9 @@ def bustools_count(
         'batch_barcodes':
             f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
     }
+    if not batch_barcodes:
+        del ret['batch_barcodes']
+    return ret
 
 
 @validate_files(pre=False)
