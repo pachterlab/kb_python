@@ -212,7 +212,7 @@ def parse_ref(
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
     if args.d_list is None:
-        if args.aa:
+        if args.aa or args.workflow == 'distinguish':
             dlist = None
         elif args.workflow != 'lamanno':
             # Use whole genome for dlist
@@ -330,6 +330,7 @@ def parse_ref(
                 args.g,
                 k=args.k,
                 threads=args.t,
+                dlist=dlist,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
