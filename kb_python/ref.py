@@ -275,6 +275,7 @@ def kallisto_index_distinguish(
     index_path: str,
     k: int = 31,
     threads: int = 8,
+    dlist: str = None,
     out_fasta_path: str = None,
 ) -> Dict[str, str]:
     """Runs `kallisto index --distinguish`.
@@ -284,6 +285,8 @@ def kallisto_index_distinguish(
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
+        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+            defaults to `None`
         out_fasta_path: Path to generate the k-mer FASTA file
 
     Returns:
@@ -295,6 +298,8 @@ def kallisto_index_distinguish(
         command += [f'--distinguish={out_fasta_path}']
     else:
         command += ['--distinguish']
+    if dlist:
+        command += ['-d', dlist]
     command += ['-i', index_path, '-k', k]
     if threads > 1:
         command += ['-t', threads]
