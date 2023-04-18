@@ -730,6 +730,7 @@ def ref_kmers(
     t2g_path: str,
     k: Optional[int] = 31,
     threads: int = 8,
+    dlist: str = None,
     overwrite: bool = False,
     temp_dir: str = 'tmp'
 ) -> Dict[str, str]:
@@ -743,6 +744,8 @@ def ref_kmers(
         t2g_path: Path to output kmer-to-fasta_id mapping
         k: Override calculated optimal kmer length, defaults to `31`
         threads: Number of threads to use, defaults to `8`
+        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+            defaults to `None`
         overwrite: Overwrite an existing index file, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
 
@@ -776,6 +779,7 @@ def ref_kmers(
             index_path,
             k = k,
             threads=threads,
+            dlist=dlist,
             out_fasta_path=out_fasta_path
         )
         write_list_to_file(t2g_list, t2g_path)
