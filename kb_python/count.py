@@ -1420,7 +1420,7 @@ def count(
                     quant_dir if quant else counts_dir,
                     final_result['mtx'],
                     count_result['barcodes'],
-                    batch_barcodes_path=count_result['batch_barcodes'],
+                    batch_barcodes_path=count_result['batch_barcodes'] if batch_barcodes else None,
                     genes_path=final_result['txnames']
                     if quant else final_result.get('genes'),
                     t2g_path=t2g_path,
@@ -1858,7 +1858,7 @@ def count_velocity(
                     for prefix in prefixes
                 ],
                 [
-                    unfiltered_results[prefix][f'batch_barcodes{suffix}']
+                    unfiltered_results[prefix][f'batch_barcodes{suffix}'] if batch_barcodes else None
                     for prefix in prefixes
                 ],
                 genes_paths=[
