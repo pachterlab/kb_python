@@ -1329,6 +1329,7 @@ def count(
             UMI_SUFFIX: INSPECT_UMI_FILENAME,
         }
     use_suffixes = len(suffix_to_inspect_filename) > 1
+    replacement = replacement_path
     if use_suffixes:
         # Can't do replacements when there are suffixes (e.g. smart-seq3)
         replacement = None
@@ -1762,6 +1763,7 @@ def count_velocity(
             UMI_SUFFIX: INSPECT_UMI_FILENAME,
         }
     use_suffixes = len(suffix_to_inspect_filename) > 1
+    replacement = replacement_path
     if use_suffixes:
         # Can't do replacements when there are suffixes (e.g. smart-seq3)
         replacement = None
