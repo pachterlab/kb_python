@@ -544,6 +544,7 @@ def parse_count(
             args.o,
             batch_path or args.fastqs,
             args.w,
+            args.r,
             tcc=args.tcc,
             mm=args.mm,
             filter=args.filter,
@@ -587,6 +588,7 @@ def parse_count(
             args.o,
             batch_path or args.fastqs,
             args.w,
+            args.r,
             tcc=args.tcc,
             mm=args.mm,
             filter=args.filter,
@@ -1029,15 +1031,25 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '-w',
-        metavar='WHITELIST',
+        metavar='ONLIST',
         help=(
-            'Path to file of whitelisted barcodes to correct to. '
+            'Path to file of on-listed barcodes to correct to. '
             'If not provided and bustools supports the technology, '
-            'a pre-packaged whitelist is used. Otherwise, or if \'None\', is '
+            'a pre-packaged on-list is used. Otherwise, or if \'None\', is '
             'provided, the bustools whitelist command is used. '
-            '(`kb --list` to view whitelists)'
+            '(`kb --list` to view on-lists)'
         ),
         type=str
+    )
+    parser_count.add_argument(
+        '-r',
+        metavar='REPLACEMENT',
+        help=(
+            'Path to file of a replacement list to correct to. '
+            'In the file, the first column is the original barcode and second is the replacement sequence'
+        ),
+        type=str,
+        default=None
     )
     parser_count.add_argument(
         '-t',

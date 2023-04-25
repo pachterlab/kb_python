@@ -352,13 +352,14 @@ def bustools_inspect(
 
 @validate_files(pre=False)
 def bustools_correct(bus_path: str, out_path: str,
-                     whitelist_path: str) -> Dict[str, str]:
+                     whitelist_path: str, replace: bool = False) -> Dict[str, str]:
     """Runs `bustools correct`.
 
     Args:
         bus_path: Path to BUS file to correct
         out_path: Path to output corrected BUS file
         whitelist_path: Path to whitelist
+        replace: If whitelist is a replacement file, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -372,6 +373,8 @@ def bustools_correct(bus_path: str, out_path: str,
     command += ['-o', out_path]
     command += ['-w', whitelist_path]
     command += [bus_path]
+    if replace:
+        command += ['--replace']
     run_executable(command)
     return {'bus': out_path}
 
@@ -796,8 +799,9 @@ def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
     """
     
     new_count_result = []
-    res_size = len(count_result) // 3
-    for i in range(res_size):
+    for i in range(len(count_result)):
+        if f'mtx{i}' not in count_result:
+            break
         new_count_result.append({
             'mtx':
                 count_result[f'mtx{i}'],
@@ -808,7 +812,7 @@ def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
             'barcodes':
                 count_result[f'barcodes{i}'],
             'batch_barcodes':
-                count_result[f'batch_barcodes{i}'],
+                count_result[f'batch_barcodes{i}'] if f'batch_barcodes{i}' in count_result else None,
         })
     return new_count_result
 
@@ -1083,6 +1087,7 @@ def count(
     out_dir: str,
     fastqs: List[str],
     whitelist_path: Optional[str] = None,
+    replacement_path: Optional[str] = None,
     tcc: bool = False,
     mm: bool = False,
     filter: Optional[Literal['bustools']] = None,
@@ -1123,6 +1128,7 @@ def count(
         out_dir: Path to output directory
         fastqs: List of FASTQ file paths or a single batch definition file
         whitelist_path: Path to whitelist, defaults to `None`
+        replacement_path: Path to replacement list, defaults to `None`
         tcc: Whether to generate a TCC matrix instead of a gene count matrix,
             defaults to `False`
         mm: Whether to include BUS records that pseudoalign to multiple genes,
@@ -1323,6 +1329,10 @@ def count(
             UMI_SUFFIX: INSPECT_UMI_FILENAME,
         }
     use_suffixes = len(suffix_to_inspect_filename) > 1
+    if use_suffixes:
+        # Can't do replacements when there are suffixes (e.g. smart-seq3)
+        replacement = None
+    modifications = [''] if not replacement else ['', '_modified']
     for suffix, inspect_filename in suffix_to_inspect_filename.items():
         if use_suffixes:
             capture_result = bustools_capture(
@@ -1353,89 +1363,112 @@ def count(
             )
         else:
             sort_result = prev_result
-        counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}')
-        make_directory(counts_dir)
-        quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
-        if quant:
-            make_directory(quant_dir)
-        counts_prefix = os.path.join(
-            counts_dir,
-            TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
-        )
-
-        count_result = bustools_count(
-            sort_result['bus'],
-            counts_prefix,
-            t2g_path,
-            bus_result['ecmap'],
-            bus_result['txnames'],
-            tcc=tcc,
-            mm=mm or tcc,
-            cm=(suffix == INTERNAL_SUFFIX) if use_suffixes else cm,
-            umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
-            em=em,
-            batch_barcodes=batch_barcodes,
-        )
-        update_results_with_suffix(unfiltered_results, count_result, suffix)
-        quant_result = None
-        if quant:
-            quant_result = kallisto_quant_tcc(
-                count_result['mtx'],
-                bus_result['saved_index'],
-                bus_result['ecmap'],
-                t2g_path,
-                quant_dir,
-                flens_path=bus_result.get('flens'),
-                l=fragment_l,
-                s=fragment_s,
-                threads=threads,
-            )
-            update_results_with_suffix(unfiltered_results, quant_result, suffix)
-
-        # Convert outputs.
-        if by_name and 'genes' in count_result:
-            genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}' if not quant else os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
-            logger.info(f'Writing gene names to file {genes_by_name_path}')
-            genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes'))
-            count_result.update({
-                  'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
-            })
-        update_results_with_suffix(unfiltered_results, count_result, suffix)
-        final_result = quant_result if quant else count_result
-        if cellranger:
-            cr_result = matrix_to_cellranger(
-                count_result['mtx'], count_result['barcodes'],
-                count_result['genes'], t2g_path,
-                os.path.join(counts_dir, f'{CELLRANGER_DIR}{suffix}')
-            )
-            update_results_with_suffix(unfiltered_results, {'cellranger': cr_result}, suffix)
-        if loom or h5ad:
-            name = GENE_NAME
-            if kite:
-                name = FEATURE_NAME
-            elif quant:
-                name = TRANSCRIPT_NAME
-            update_results_with_suffix(unfiltered_results,
-                convert_matrix(
-                    quant_dir if quant else counts_dir,
-                    final_result['mtx'],
-                    count_result['barcodes'],
-                    batch_barcodes_path=count_result['batch_barcodes'] if batch_barcodes else None,
-                    genes_path=final_result['txnames']
-                    if quant else final_result.get('genes'),
-                    t2g_path=t2g_path,
-                    ec_path=count_result.get('ec'),
-                    txnames_path=bus_result['txnames'],
-                    name=name,
-                    loom=loom,
-                    loom_names=loom_names,
-                    h5ad=h5ad,
-                    by_name=by_name,
-                    tcc=tcc and not quant,
+        for modified in modifications:
+            if replacement and modified:
+                # Replacement time, let's just replace the corrected file
+                replaced_result = bustools_correct(
+                    sort_result['bus'],
+                    os.path.join(
+                        temp_dir,
+                        update_filename(
+                            os.path.basename(sort_result['bus']), CORRECT_CODE
+                        )
+                    ), replacement, True
+                )
+                # Now let's create a new sort file
+                sort_result = bustools_sort(
+                    replaced_result['bus'],
+                    os.path.join(
+                        out_dir, f'output{modified}.{UNFILTERED_CODE}.bus'
+                    ),
+                    temp_dir=temp_dir,
                     threads=threads,
-                ),
-                suffix
+                    memory=memory
+                )
+                prev_result = sort_result
+            counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}{modified}')
+            make_directory(counts_dir)
+            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}{modified}')
+            if quant:
+                make_directory(quant_dir)
+            counts_prefix = os.path.join(
+                counts_dir,
+                TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
             )
+    
+            count_result = bustools_count(
+                sort_result['bus'],
+                counts_prefix,
+                t2g_path,
+                bus_result['ecmap'],
+                bus_result['txnames'],
+                tcc=tcc,
+                mm=mm or tcc,
+                cm=(suffix == INTERNAL_SUFFIX) if use_suffixes else cm,
+                umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
+                em=em,
+                batch_barcodes=batch_barcodes,
+            )
+            update_results_with_suffix(unfiltered_results, count_result, suffix)
+            quant_result = None
+            if quant:
+                quant_result = kallisto_quant_tcc(
+                    count_result['mtx'],
+                    bus_result['saved_index'],
+                    bus_result['ecmap'],
+                    t2g_path,
+                    quant_dir,
+                    flens_path=bus_result.get('flens'),
+                    l=fragment_l,
+                    s=fragment_s,
+                    threads=threads,
+                )
+                update_results_with_suffix(unfiltered_results, quant_result, suffix)
+    
+            # Convert outputs.
+            if by_name and 'genes' in count_result:
+                genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}' if not quant else os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
+                logger.info(f'Writing gene names to file {genes_by_name_path}')
+                genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes'))
+                count_result.update({
+                      'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                })
+            update_results_with_suffix(unfiltered_results, count_result, suffix)
+            final_result = quant_result if quant else count_result
+            if cellranger:
+                cr_result = matrix_to_cellranger(
+                    count_result['mtx'], count_result['barcodes'],
+                    count_result['genes'], t2g_path,
+                    os.path.join(counts_dir, f'{CELLRANGER_DIR}{suffix}')
+                )
+                update_results_with_suffix(unfiltered_results, {'cellranger': cr_result}, suffix)
+            if loom or h5ad:
+                name = GENE_NAME
+                if kite:
+                    name = FEATURE_NAME
+                elif quant:
+                    name = TRANSCRIPT_NAME
+                update_results_with_suffix(unfiltered_results,
+                    convert_matrix(
+                        quant_dir if quant else counts_dir,
+                        final_result['mtx'],
+                        count_result['barcodes'],
+                        batch_barcodes_path=count_result['batch_barcodes'] if batch_barcodes else None,
+                        genes_path=final_result['txnames']
+                        if quant else final_result.get('genes'),
+                        t2g_path=t2g_path,
+                        ec_path=count_result.get('ec'),
+                        txnames_path=bus_result['txnames'],
+                        name=name,
+                        loom=loom,
+                        loom_names=loom_names,
+                        h5ad=h5ad,
+                        by_name=by_name,
+                        tcc=tcc and not quant,
+                        threads=threads,
+                    ),
+                    suffix
+                )
 
     # NOTE: bulk/smartseq2 does not support filtering, so everything here
     # assumes technology is not bulk/smartseq2
@@ -1519,6 +1552,7 @@ def count_velocity(
     out_dir: str,
     fastqs: List[str],
     whitelist_path: Optional[str] = None,
+    replacement_path: Optional[str] = None,
     tcc: bool = False,
     mm: bool = False,
     filter: Optional[Literal['bustools']] = None,
@@ -1560,6 +1594,7 @@ def count_velocity(
         out_dir: Path to output directory
         fastqs: List of FASTQ file paths or a single batch definition file
         whitelist_path: Path to whitelist, defaults to `None`
+        replacement_path: Path to replacement list, defaults to `None`
         tcc: Whether to generate a TCC matrix instead of a gene count matrix,
             defaults to `False`
         mm: Whether to include BUS records that pseudoalign to multiple genes,
@@ -1727,6 +1762,10 @@ def count_velocity(
             UMI_SUFFIX: INSPECT_UMI_FILENAME,
         }
     use_suffixes = len(suffix_to_inspect_filename) > 1
+    if use_suffixes:
+        # Can't do replacements when there are suffixes (e.g. smart-seq3)
+        replacement = None
+    modifications = [''] if not replacement else ['', '_modified']
     for suffix, inspect_filename in suffix_to_inspect_filename.items():
         if use_suffixes:
             capture_result = bustools_capture(
@@ -1749,7 +1788,7 @@ def count_velocity(
             sort_result = bustools_sort(
                 capture_result['bus'],
                 os.path.join(
-                    out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus'
+                    out_dir, f'output.{UNFILTERED_CODE}.bus'
                 ),
                 temp_dir=temp_dir,
                 threads=threads,
@@ -1757,132 +1796,155 @@ def count_velocity(
             )
         else:
             sort_result = prev_result
-        counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}')
-        make_directory(counts_dir)
-        quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}')
-        if quant:
-            make_directory(quant_dir)
-        counts_prefix = os.path.join(
-            counts_dir,
-            TCC_PREFIX if tcc else COUNTS_PREFIX
-        )
-        count_result = bustools_count(
-            sort_result['bus'],
-            counts_prefix,
-            t2g_path,
-            bus_result['ecmap'],
-            bus_result['txnames'],
-            tcc=tcc,
-            mm=mm or tcc,
-            cm=(suffix == INTERNAL_SUFFIX) if use_suffixes else cm,
-            umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
-            em=em,
-            nascent_path=intron_t2c_path,
-            batch_barcodes=batch_barcodes,
-        )
-        count_result = count_result_to_dict(count_result)
-        prefixes = ['processed', 'unprocessed', 'ambiguous'] # 0,1,2
-        for i in range(len(prefixes)):
-            prefix = prefixes[i]
-            if by_name and i==0 and 'genes' in count_result[i]:
-                # Only need to write this once
-                genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
-                logger.info(f'Writing gene names to file {genes_by_name_path}')
-                genes_by_name = obtain_gene_names(t2g_path, count_result[i].get('genes'))
-                count_result[i].update({
-                    'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
-                })
-            prefix_results = unfiltered_results.setdefault(prefix, {})
-            update_results_with_suffix(prefix_results, sort_result, suffix)
-            update_results_with_suffix(prefix_results, count_result[i], suffix)
-            if cellranger:
-                cr_result = matrix_to_cellranger(
-                    count_result[i]['mtx'], count_result[i]['barcodes'],
-                    count_result[i]['genes'], t2g_path,
-                    os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+        for modified in modifications:
+            if replacement and modified:
+                # Replacement time, let's just replace the corrected file
+                replaced_result = bustools_correct(
+                    sort_result['bus'],
+                    os.path.join(
+                        temp_dir,
+                        update_filename(
+                            os.path.basename(sort_result['bus']), CORRECT_CODE
+                        )
+                    ), replacement, True
                 )
-                update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
-        if sum_matrices and sum_matrices != 'none':
-            # Sum up multiple matrices
-            sums = {}
-            updated_prefixes = []
-            if sum_matrices == 'cell' or sum_matrices == 'total':
-                sums['cell'] = do_sum_matrices(
-                    count_result[prefixes.index('processed')]['mtx'],
-                    count_result[prefixes.index('ambiguous')]['mtx'],
-                    f'{counts_prefix}.cell.mtx'
+                # Now let's create a new sort file
+                sort_result = bustools_sort(
+                    replaced_result['bus'],
+                    os.path.join(
+                        out_dir, f'output{modified}.{UNFILTERED_CODE}.bus'
+                    ),
+                    temp_dir=temp_dir,
+                    threads=threads,
+                    memory=memory
                 )
-                updated_prefixes = ['cell', 'unprocessed']
-            if sum_matrices == 'nucleus' or sum_matrices == 'total':
-                sums['nucleus'] = do_sum_matrices(
-                    count_result[prefixes.index('unprocessed')]['mtx'],
-                    count_result[prefixes.index('ambiguous')]['mtx'],
-                    f'{counts_prefix}.nucleus.mtx'
-                )
-                updated_prefixes = ['processed', 'nucleus']
-            if sum_matrices == 'total':
-                sums['total'] = do_sum_matrices(
-                    f'{counts_prefix}.mtx',
-                    f'{counts_prefix}.nucleus.mtx',
-                    f'{counts_prefix}.total.mtx'
-                )
-                updated_prefixes = prefixes
-            prefixes = updated_prefixes
-            for prefix, f in sums.items():
-                res = copy.deepcopy(count_result[0])
-                res['mtx'] = f
+                prev_result = sort_result
+            counts_dir = os.path.join(out_dir, f'{UNFILTERED_COUNTS_DIR}{suffix}{modified}')
+            make_directory(counts_dir)
+            quant_dir = os.path.join(out_dir, f'{UNFILTERED_QUANT_DIR}{suffix}{modified}')
+            if quant:
+                make_directory(quant_dir)
+            counts_prefix = os.path.join(
+                counts_dir,
+                TCC_PREFIX if tcc else COUNTS_PREFIX
+            )
+            count_result = bustools_count(
+                sort_result['bus'],
+                counts_prefix,
+                t2g_path,
+                bus_result['ecmap'],
+                bus_result['txnames'],
+                tcc=tcc,
+                mm=mm or tcc,
+                cm=(suffix == INTERNAL_SUFFIX) if use_suffixes else cm,
+                umi_gene=(suffix == UMI_SUFFIX) if use_suffixes else umi_gene,
+                em=em,
+                nascent_path=intron_t2c_path,
+                batch_barcodes=batch_barcodes,
+            )
+            count_result = count_result_to_dict(count_result)
+            prefixes = ['processed', 'unprocessed', 'ambiguous'] # 0,1,2
+            for i in range(len(prefixes)):
+                prefix = prefixes[i]
+                if by_name and i==0 and 'genes' in count_result[i]:
+                    # Only need to write this once
+                    genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
+                    logger.info(f'Writing gene names to file {genes_by_name_path}')
+                    genes_by_name = obtain_gene_names(t2g_path, count_result[i].get('genes'))
+                    count_result[i].update({
+                        'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                    })
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
-                update_results_with_suffix(prefix_results, res, suffix)
+                update_results_with_suffix(prefix_results, count_result[i], suffix)
                 if cellranger:
                     cr_result = matrix_to_cellranger(
-                        res['mtx'], res['barcodes'],
-                        res['genes'], t2g_path,
+                        count_result[i]['mtx'], count_result[i]['barcodes'],
+                        count_result[i]['genes'], t2g_path,
                         os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
                     )
                     update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
-              
-        if loom or h5ad:
-            name = GENE_NAME
-            if quant:
-                name = TRANSCRIPT_NAME
-
-            convert_result = convert_matrices(
-                quant_dir if quant else counts_dir,
-                [
-                    unfiltered_results[prefix][f'mtx{suffix}']
-                    for prefix in prefixes
-                ],
-                [
-                    unfiltered_results[prefix][f'barcodes{suffix}']
-                    for prefix in prefixes
-                ],
-                [
-                    unfiltered_results[prefix][f'batch_barcodes{suffix}'] if batch_barcodes else None
-                    for prefix in prefixes
-                ],
-                genes_paths=[
-                    unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
-                    unfiltered_results[prefix].get(f'genes{suffix}')
-                    for prefix in prefixes
-                ],
-                t2g_path=t2g_path,
-                ec_paths=[
-                    unfiltered_results[prefix].get(f'ec{suffix}')
-                    for prefix in prefixes
-                ],
-                txnames_path=bus_result['txnames'],
-                name=name,
-                loom=loom,
-                loom_names=loom_names,
-                h5ad=h5ad,
-                by_name=by_name,
-                tcc=False,
-                threads=threads,
-            )
-            update_results_with_suffix(
-                unfiltered_results, convert_result, suffix
-            )
+            if sum_matrices and sum_matrices != 'none':
+                # Sum up multiple matrices
+                sums = {}
+                updated_prefixes = []
+                if sum_matrices == 'cell' or sum_matrices == 'total':
+                    sums['cell'] = do_sum_matrices(
+                        count_result[prefixes.index('processed')]['mtx'],
+                        count_result[prefixes.index('ambiguous')]['mtx'],
+                        f'{counts_prefix}.cell.mtx'
+                    )
+                    updated_prefixes = ['cell', 'unprocessed']
+                if sum_matrices == 'nucleus' or sum_matrices == 'total':
+                    sums['nucleus'] = do_sum_matrices(
+                        count_result[prefixes.index('unprocessed')]['mtx'],
+                        count_result[prefixes.index('ambiguous')]['mtx'],
+                        f'{counts_prefix}.nucleus.mtx'
+                    )
+                    updated_prefixes = ['processed', 'nucleus']
+                if sum_matrices == 'total':
+                    sums['total'] = do_sum_matrices(
+                        f'{counts_prefix}.mtx',
+                        f'{counts_prefix}.nucleus.mtx',
+                        f'{counts_prefix}.total.mtx'
+                    )
+                    updated_prefixes = prefixes
+                prefixes = updated_prefixes
+                for prefix, f in sums.items():
+                    res = copy.deepcopy(count_result[0])
+                    res['mtx'] = f
+                    prefix_results = unfiltered_results.setdefault(prefix, {})
+                    update_results_with_suffix(prefix_results, sort_result, suffix)
+                    update_results_with_suffix(prefix_results, res, suffix)
+                    if cellranger:
+                        cr_result = matrix_to_cellranger(
+                            res['mtx'], res['barcodes'],
+                            res['genes'], t2g_path,
+                            os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                        )
+                        update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
+                  
+            if loom or h5ad:
+                name = GENE_NAME
+                if quant:
+                    name = TRANSCRIPT_NAME
+    
+                convert_result = convert_matrices(
+                    quant_dir if quant else counts_dir,
+                    [
+                        unfiltered_results[prefix][f'mtx{suffix}']
+                        for prefix in prefixes
+                    ],
+                    [
+                        unfiltered_results[prefix][f'barcodes{suffix}']
+                        for prefix in prefixes
+                    ],
+                    [
+                        unfiltered_results[prefix][f'batch_barcodes{suffix}'] if batch_barcodes else None
+                        for prefix in prefixes
+                    ],
+                    genes_paths=[
+                        unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
+                        unfiltered_results[prefix].get(f'genes{suffix}')
+                        for prefix in prefixes
+                    ],
+                    t2g_path=t2g_path,
+                    ec_paths=[
+                        unfiltered_results[prefix].get(f'ec{suffix}')
+                        for prefix in prefixes
+                    ],
+                    txnames_path=bus_result['txnames'],
+                    name=name,
+                    loom=loom,
+                    loom_names=loom_names,
+                    h5ad=h5ad,
+                    by_name=by_name,
+                    tcc=False,
+                    threads=threads,
+                )
+                update_results_with_suffix(
+                    unfiltered_results, convert_result, suffix
+                )
 
     # NOTE: bulk/smartseq2 does not support filtering, so everything here
     # assumes technology is not bulk/smartseq2
