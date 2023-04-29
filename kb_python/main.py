@@ -618,7 +618,8 @@ def parse_count(
             chromosomes_path=args.chromosomes,
             inleaved=args.inleaved,
             demultiplexed=demultiplexed,
-            batch_barcodes=args.batch_barcodes
+            batch_barcodes=args.batch_barcodes,
+            distinguish_workflow='distinguish' in args.workflow
         )
 
 
@@ -1117,7 +1118,7 @@ def setup_count_args(
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB']
+        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB', 'distinguish']
     )
     parser_count.add_argument(
         '--em',
