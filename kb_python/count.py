@@ -105,6 +105,7 @@ def kallisto_bus(
     inleaved: bool = False,
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
+    distinguish: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -132,6 +133,7 @@ def kallisto_bus(
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
+        distinguish: Whether we set run kallisto specific for distinguishing, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -186,6 +188,8 @@ def kallisto_bus(
         command += ['--rf-stranded']
     if inleaved:
         command += ['--inleaved']
+    if distinguish:
+        command += ['--union']
     if batch_barcodes:
         command += ['--batch-barcodes']
     if is_batch:
@@ -393,6 +397,7 @@ def bustools_count(
     em: bool = False,
     nascent_path: str = None,
     batch_barcodes: bool = False,
+    distinguish: bool = False
 ) -> Dict[str, str]:
     """Runs `bustools count`.
 
@@ -1118,6 +1123,7 @@ def count(
     inleaved: bool = False,
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
+    distinguish_workflow: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1176,6 +1182,7 @@ def count(
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
+        distinguish_workflow: If we use workflow=distinguish, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1225,6 +1232,7 @@ def count(
             inleaved=inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
+            distinguish=distinguish_workflow,
         )
     else:
         logger.info(
