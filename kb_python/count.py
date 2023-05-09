@@ -249,15 +249,17 @@ def kallisto_quant_tcc(
         command += ['-s', s]
     command += [mtx_path]
     run_executable(command)
-    return {
+    ret_dict = {
         'genes': os.path.join(out_dir, GENES_FILENAME),
         'gene_mtx': os.path.join(out_dir, ABUNDANCE_GENE_FILENAME),
         'gene_tpm_mtx': os.path.join(out_dir, ABUNDANCE_GENE_TPM_FILENAME),
         'mtx': os.path.join(out_dir, ABUNDANCE_FILENAME),
         'tpm_mtx': os.path.join(out_dir, ABUNDANCE_TPM_FILENAME),
-        'fld': os.path.join(out_dir, FLD_FILENAME),
         'txnames': os.path.join(out_dir, TXNAMES_FILENAME),
     }
+    if flens_path or l or s:
+        ret_dict['fld'] = os.path.join(out_dir, FLD_FILENAME)
+    return ret_dict
 
 
 @validate_files(pre=False)
