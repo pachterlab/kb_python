@@ -332,7 +332,8 @@ def parse_ref(
                 threads=args.t,
                 dlist=dlist,
                 overwrite=args.overwrite,
-                temp_dir=temp_dir
+                temp_dir=temp_dir,
+                distinguish_range=args.distinguish_range
             )
         else:
             ref(
@@ -892,6 +893,12 @@ def setup_ref_args(
         '--d-list',
         metavar='FASTA',
         help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow)'),
+        type=str,
+        default=None
+    )
+    parser_ref.add_argument(
+        '--distinguish-range',
+        help=argparse.SUPPRESS,
         type=str,
         default=None
     )
