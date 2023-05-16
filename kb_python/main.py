@@ -237,7 +237,7 @@ def parse_ref(
             )
         else:
             # For --workflow=distinguish, args.gtf are technically FASTA IDs
-            if (len(args.gtf) != 0):
+            if (len(args.gtf) != 0 and len(args.fasta) != 1):
                 parser.error(
                     'There must be the same number of FASTAs as there are FASTA IDs.'
                 )
