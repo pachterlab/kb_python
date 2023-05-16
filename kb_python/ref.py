@@ -777,7 +777,7 @@ def ref_kmers(
     if not glob.glob(f'{index_path}*') or overwrite:
         t2g_list = []
         i = 0
-        if len(fasta_ids) == 1:
+        if len(fasta_paths) == 1:
             logger.info(f'Extracting k-mers from {fasta_paths[0]}')
             for fasta_id in fasta_ids:
                 t2g_list.append(f'{i}\t{fasta_id}')
