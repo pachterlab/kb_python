@@ -763,7 +763,8 @@ def ref_kmers(
     if not isinstance(fasta_ids, list):
         fasta_ids = [fasta_ids]
     if len(fasta_paths) != len(fasta_ids):
-        fasta_ids = fasta_paths.copy()
+        if len(fasta_ids) != 1:
+            fasta_ids = fasta_paths.copy()
     if k and k != 31:
         logger.warning(
             f'Using provided k-mer length {k} instead of optimal length 31'
@@ -776,10 +777,17 @@ def ref_kmers(
     if not glob.glob(f'{index_path}*') or overwrite:
         t2g_list = []
         i = 0
-        for fasta_path, fasta_id in zip(fasta_paths, fasta_ids):
-            logger.info(f'Extracting k-mers from {fasta_path} with id {fasta_id}')
-            t2g_list.append(f'{i}\t{fasta_id}')
-            i = i + 1
+        if len(fasta_ids) == 1:
+            logger.info(f'Extracting k-mers from {fasta_path} with ids {fasta_ids}')
+            fasta_ids = fasta_ids.split(',')
+            for fasta_id fasta_ids:
+                t2g_list.append(f'{i}\t{fasta_id}')
+                i = i + 1
+        else:
+            for fasta_path, fasta_id in zip(fasta_paths, fasta_ids):
+                logger.info(f'Extracting k-mers from {fasta_path} with id {fasta_id}')
+                t2g_list.append(f'{i}\t{fasta_id}')
+                i = i + 1
         index_result = kallisto_index_distinguish(
             fasta_paths,
             index_path,
