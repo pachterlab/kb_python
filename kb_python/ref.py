@@ -780,7 +780,7 @@ def ref_kmers(
         if len(fasta_ids) == 1:
             logger.info(f'Extracting k-mers from {fasta_path} with ids {fasta_ids}')
             fasta_ids = fasta_ids.split(',')
-            for fasta_id fasta_ids:
+            for fasta_id in fasta_ids:
                 t2g_list.append(f'{i}\t{fasta_id}')
                 i = i + 1
         else:
