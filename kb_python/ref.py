@@ -320,6 +320,32 @@ def kallisto_index_distinguish(
     return ret_dict
 
 
+def get_dlist_fasta(
+    fasta_path: str = None,
+    temp_dir: str = 'tmp'
+) -> str:
+    """Downloads the D-list FASTA to temporary file if URL supplied
+
+    Args:
+        fasta_path: Path to FASTA file
+        temp_dir: Path to temporary directory, defaults to `tmp`
+
+    Returns:
+        Path to D-list FASTA
+    """
+    
+    if not fasta_path:
+        return fasta_path
+    if "://" not in fasta_path: # Not a URL
+        return fasta_path
+    new_fasta_path = get_temporary_filename(temp_dir)
+    with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
+        with ngs.fasta.Fasta(new_fasta_path, 'w') as f_out:
+            for entry in f_in:
+                f_out.write(entry)
+    return new_fasta_path
+
+
 def split_and_index(
     fasta_path: str,
     index_prefix: str,
@@ -575,6 +601,7 @@ def ref(
     Returns:
         Dictionary containing paths to generated file(s)
     """
+    dlist = get_dlist_fasta(dlist)
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]
     if not isinstance(gtf_paths, list):
@@ -764,6 +791,7 @@ def ref_kmers(
     Returns:
         Dictionary containing paths to generated file(s)
     """
+    dlist = get_dlist_fasta(dlist)
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]
     if not isinstance(fasta_ids, list):
@@ -868,6 +896,7 @@ def ref_lamanno(
     Returns:
         Dictionary containing paths to generated file(s)
     """
+    dlist = get_dlist_fasta(dlist)
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]
     if not isinstance(gtf_paths, list):
