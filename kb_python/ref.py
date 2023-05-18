@@ -277,7 +277,8 @@ def kallisto_index_distinguish(
     threads: int = 8,
     dlist: str = None,
     out_fasta_path: str = None,
-    distinguish_range: str = None
+    distinguish_range: str = None,
+    skip_index: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto index --distinguish`.
 
@@ -290,6 +291,7 @@ def kallisto_index_distinguish(
             defaults to `None`
         out_fasta_path: Path to generate the k-mer FASTA file
         distinguish_range: Length range of sequences to index: min,max
+        skip_index: Skip index generation, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -304,6 +306,8 @@ def kallisto_index_distinguish(
         command += ['-d', dlist]
     if distinguish_range:
         command += [f'--distinguish-range={distinguish_range}']
+    if skip_index:
+        command += ['--skip-index']
     command += ['-i', index_path, '-k', k]
     if threads > 1:
         command += ['-t', threads]
@@ -737,7 +741,8 @@ def ref_kmers(
     dlist: str = None,
     overwrite: bool = False,
     temp_dir: str = 'tmp',
-    distinguish_range: str = None
+    distinguish_range: str = None,
+    skip_index: bool = False
 ) -> Dict[str, str]:
     """Generates files necessary for extracting k-mers unique to each FASTA.
 
@@ -754,6 +759,7 @@ def ref_kmers(
         overwrite: Overwrite an existing index file, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
         distinguish_range: Length range of sequences to index: min,max
+        skip_index: Skip index generation, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -794,7 +800,8 @@ def ref_kmers(
             threads=threads,
             dlist=dlist,
             out_fasta_path=out_fasta_path,
-            distinguish_range=distinguish_range
+            distinguish_range=distinguish_range,
+            skip_index=skip_index
         )
         write_list_to_file(t2g_list, t2g_path)
         logger.info('Finished creating unique k-mer index')

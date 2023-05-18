@@ -333,7 +333,8 @@ def parse_ref(
                 dlist=dlist,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir,
-                distinguish_range=args.distinguish_range
+                distinguish_range=args.distinguish_range,
+                skip_index=args.skip_index
             )
         else:
             ref(
@@ -901,6 +902,11 @@ def setup_ref_args(
         help=argparse.SUPPRESS,
         type=str,
         default=None
+    )
+    parser_ref.add_argument(
+        '--skip-index',
+        help=argparse.SUPPRESS,
+        action='store_true'
     )
     parser_ref.add_argument(
         '--aa',
