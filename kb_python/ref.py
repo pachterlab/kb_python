@@ -339,6 +339,9 @@ def get_dlist_fasta(
     if "://" not in fasta_path: # Not a URL
         return fasta_path
     new_fasta_path = get_temporary_filename(temp_dir)
+    logger.info(
+        f'Extracting {fasta_path} into {new_fasta_path}'
+    )
     with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
         with ngs.fasta.Fasta(new_fasta_path, 'w') as f_out:
             for entry in f_in:
