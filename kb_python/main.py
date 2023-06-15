@@ -411,7 +411,7 @@ def parse_count(
         batch_path = None
         
     demultiplexed = False
-    if args.x.upper() == 'DEFAULT':
+    if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
         args.x = 'BULK'
         demultiplexed = True
         
@@ -444,7 +444,7 @@ def parse_count(
             logger.warning(
                 f'FASTQs were provided for technology `{args.x}`. '
                 'Assuming multiplexed samples. For demultiplexed samples, provide '
-                'a batch textfile or specify `default` as the technology.'
+                'a batch textfile or specify `bulk` as the technology.'
             )
         elif batch_path:
             # If `single`, then each row must contain 2 columns. If `paired`,

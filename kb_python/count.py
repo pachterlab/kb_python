@@ -156,6 +156,8 @@ def kallisto_bus(
     command += ['-o', out_dir]
     if not demultiplexed:
         command += ['-x', technology]
+    else:
+        command += ['-x', 'BULK']
     command += ['-t', threads]
     if n:
         command += ['--num']
