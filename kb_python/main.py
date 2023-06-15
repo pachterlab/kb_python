@@ -26,7 +26,7 @@ from .config import (
 from .compile import compile
 from .constants import INFO_FILENAME
 from .logging import logger
-from .ref import download_reference, ref, ref_kite, ref_lamanno, ref_kmers
+from .ref import download_reference, ref, ref_kite, ref_lamanno, ref_custom
 from .utils import (
     get_bustools_version,
     get_kallisto_version,
@@ -212,7 +212,7 @@ def parse_ref(
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
     if args.d_list is None:
-        if args.aa or args.workflow == 'distinguish':
+        if args.aa or args.workflow == 'custom':
             dlist = None
         else:
             # Use whole genome for dlist
@@ -225,10 +225,10 @@ def parse_ref(
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
-    if not args.gtf and (args.aa or args.workflow == 'distinguish'):
+    if not args.gtf and (args.aa or args.workflow == 'custom'):
         args.gtf = []
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
-        if args.workflow != 'distinguish':
+        if args.workflow != 'custom':
             parser.error(
                 'There must be the same number of FASTAs as there are GTFs.'
             )
@@ -312,20 +312,17 @@ def parse_ref(
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
             )
-        elif args.workflow == 'distinguish':
-            ref_kmers(
+        elif args.workflow == 'custom':
+            ref_custom(
                 args.fasta,
-                args.gtf, # Technically, the FASTA IDs
-                args.f1,
                 args.i,
-                args.g,
                 k=args.k,
                 threads=args.t,
                 dlist=dlist,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir,
-                distinguish_range=args.distinguish_range,
-                skip_index=args.skip_index
+                make_unique=make_unique,
+                distinguish=args.distinguish
             )
         else:
             ref(
@@ -615,7 +612,6 @@ def parse_count(
             inleaved=args.inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=args.batch_barcodes,
-            distinguish_workflow='distinguish' in args.workflow
         )
 
 
@@ -803,10 +799,10 @@ def setup_ref_args(
             '[Optional with -d] Path to the cDNA FASTA (standard, nac) or '
             'mismatch FASTA (kite) to be generated '
             '[Optional with --aa when no GTF file(s) provided] '
-            '[Not used with --workflow=distinguish]'
+            '[Not used with --workflow=custom]'
         ),
         type=str,
-        required='-d' not in sys.argv and '--aa' not in sys.argv and workflow not in {'distinguish'}
+        required='-d' not in sys.argv and '--aa' not in sys.argv and workflow not in {'custom'}
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(
@@ -892,17 +888,6 @@ def setup_ref_args(
         default=None
     )
     parser_ref.add_argument(
-        '--distinguish-range',
-        help=argparse.SUPPRESS,
-        type=str,
-        default=None
-    )
-    parser_ref.add_argument(
-        '--skip-index',
-        help=argparse.SUPPRESS,
-        action='store_true'
-    )
-    parser_ref.add_argument(
         '--aa',
         help='Generate index from a FASTA-file containing amino acid sequences',
         action='store_true',
@@ -913,12 +898,17 @@ def setup_ref_args(
         help=(
             'Type of workflow to prepare files for. '
             'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
-            'Use `distinguish` indexing sequences by their shared name. '
+            'Use `custom` for indexing targets directly. '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'nac', 'kite', 'distinguish']
+        choices=['standard', 'nac', 'kite', 'custom']
+    )
+    parser_ref.add_argument(
+        '--distinguish',
+        help=argparse.SUPPRESS,
+        action='store_true'
     )
     parser_ref.add_argument(
         '--make-unique',
@@ -952,7 +942,7 @@ def setup_ref_args(
         'gtf',
         help='Reference GTF file(s), comma-delimited [not required with --aa]',
         type=str,
-        nargs=None if ('-d' not in sys.argv and '--aa' not in sys.argv) and workflow not in {'distinguish', 'kite'} else '?'
+        nargs=None if ('-d' not in sys.argv and '--aa' not in sys.argv) and workflow not in {'custom', 'kite'} else '?'
     )
     parser_ref.add_argument(
         'feature',

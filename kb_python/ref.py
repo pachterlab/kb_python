@@ -237,7 +237,8 @@ def kallisto_index(
     threads: int = 8,
     dlist: str = None,
     make_unique: bool = False,
-    aa: bool = False
+    aa: bool = False,
+    distinguish: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto index`.
 
@@ -250,6 +251,8 @@ def kallisto_index(
             defaults to `None`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         aa: Generate index from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
+        distinguish: Generate a color-based-on-target-name index, 
             defaults to `False`
 
     Returns:
@@ -265,59 +268,11 @@ def kallisto_index(
         command += ['--make-unique']
     if aa:
         command += ['--aa']
+    if distinguish:
+        command += ['--distinguish']
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
-
-
-def kallisto_index_distinguish(
-    fasta_paths: List[str],
-    index_path: str,
-    k: int = 31,
-    threads: int = 8,
-    dlist: str = None,
-    out_fasta_path: str = None,
-    distinguish_range: str = None,
-    skip_index: bool = False,
-) -> Dict[str, str]:
-    """Runs `kallisto index --distinguish`.
-
-    Args:
-        fasta_paths: path to FASTA files
-        index_path: path to output kallisto index
-        k: k-mer length, defaults to 31
-        threads: Number of threads to use, defaults to `8`
-        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
-            defaults to `None`
-        out_fasta_path: Path to generate the k-mer FASTA file
-        distinguish_range: Length range of sequences to index: min,max
-        skip_index: Skip index generation, defaults to `False`
-
-    Returns:
-        Dictionary containing path to generated index
-    """
-    logger.info(f'Creating index: {index_path}')
-    command = [get_kallisto_binary_path(), 'index']
-    if out_fasta_path:
-        command += [f'--distinguish={out_fasta_path}']
-    else:
-        command += ['--distinguish']
-    if dlist:
-        command += ['-d', dlist]
-    if distinguish_range:
-        command += [f'--distinguish-range={distinguish_range}']
-    if skip_index:
-        command += ['--skip-index']
-    command += ['-i', index_path, '-k', k]
-    if threads > 1:
-        command += ['-t', threads]
-    for fasta_path in fasta_paths:
-        command += [fasta_path]
-    run_executable(command)
-    ret_dict = {'index': index_path}
-    if out_fasta_path:
-        ret_dict['distinguish_fasta'] = out_fasta_path
-    return ret_dict
 
 
 def get_dlist_fasta(
@@ -759,37 +714,32 @@ def ref_kite(
     return results
 
 
-@logger.namespaced('ref_kmers')
-def ref_kmers(
+@logger.namespaced('ref_custom')
+def ref_custom(
     fasta_paths: Union[List[str], str],
-    fasta_ids: Union[List[str], str],
-    out_fasta_path: str,
     index_path: str,
-    t2g_path: str,
     k: Optional[int] = 31,
     threads: int = 8,
     dlist: str = None,
     overwrite: bool = False,
     temp_dir: str = 'tmp',
-    distinguish_range: str = None,
-    skip_index: bool = False
+    make_unique: bool = False,
+    distinguish: bool = False,
 ) -> Dict[str, str]:
-    """Generates files necessary for extracting k-mers unique to each FASTA.
+    """Generates files necessary for indexing custom targets.
 
     Args:
         fasta_paths: List of paths to FASTA files from which to extract k-mers
-        fasta_ids: Names/identifiers for each FASTA file
-        out_fasta_path: Path to generate the k-mer FASTA file
         index_path: Path to output kallisto index
-        t2g_path: Path to output kmer-to-fasta_id mapping
         k: Override calculated optimal kmer length, defaults to `31`
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification, 
             defaults to `None`
         overwrite: Overwrite an existing index file, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
-        distinguish_range: Length range of sequences to index: min,max
+        make_unique: Replace repeated target names with unique names, defaults to `False`
         skip_index: Skip index generation, defaults to `False`
+        distinguish: Whether to index sequences by their shared name, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -797,11 +747,6 @@ def ref_kmers(
     dlist = get_dlist_fasta(dlist)
     if not isinstance(fasta_paths, list):
         fasta_paths = [fasta_paths]
-    if not isinstance(fasta_ids, list):
-        fasta_ids = [fasta_ids]
-    if len(fasta_paths) != len(fasta_ids):
-        if len(fasta_paths) != 1:
-            fasta_ids = fasta_paths.copy()
     if k and k != 31:
         logger.warning(
             f'Using provided k-mer length {k} instead of optimal length 31'
@@ -812,32 +757,17 @@ def ref_kmers(
     results = {}
     
     if not glob.glob(f'{index_path}*') or overwrite:
-        t2g_list = []
-        i = 0
-        if len(fasta_paths) == 1:
-            logger.info(f'Extracting k-mers from {fasta_paths[0]}')
-            for fasta_id in fasta_ids:
-                t2g_list.append(f'{i}\t{fasta_id}')
-                i = i + 1
-        else:
-            for fasta_path, fasta_id in zip(fasta_paths, fasta_ids):
-                logger.info(f'Extracting k-mers from {fasta_path} with id {fasta_id}')
-                t2g_list.append(f'{i}\t{fasta_id}')
-                i = i + 1
-        index_result = kallisto_index_distinguish(
-            fasta_paths,
+        index_result = kallisto_index(
+            ' '.join(fasta_paths),
             index_path,
-            k = k,
+            k=k or 31,
             threads=threads,
             dlist=dlist,
-            out_fasta_path=out_fasta_path,
-            distinguish_range=distinguish_range,
-            skip_index=skip_index
-        )
-        write_list_to_file(t2g_list, t2g_path)
-        logger.info('Finished creating unique k-mer index')
+            aa=False,
+            make_unique=make_unique,
+            distinguish=distinguish)
+        logger.info('Finished creating custom index')
         results.update(index_result)
-        results.update({'t2g': t2g_path})
     else:
         logger.info(
             'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
