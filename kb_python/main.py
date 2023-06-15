@@ -381,6 +381,9 @@ def parse_count(
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
+    # Note: We are currently not supporting --genomebam
+    if args.genomebam:
+        parser.error('--genomebam is not currently supported')
     if args.genomebam and not args.gtf:
         parser.error('`--gtf` must be provided when using `--genomebam`.')
     if args.genomebam and not args.chromosomes:
@@ -1083,7 +1086,7 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--genomebam',
-        help='Project pseudoalignments to genome sorted BAM file.',
+        help=argparse.SUPPRESS,
         action='store_true',
         default=False,
     )
@@ -1095,18 +1098,14 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--gtf',
-        help=(
-            'GTF file for transcriptome information (required for --genomebam).'
-        ),
+        help=argparse.SUPPRESS,
         type=str,
         default=None,
     )
     parser_count.add_argument(
         '--chromosomes',
         metavar='chrom.sizes',
-        help=(
-            'Tab separated file with chromosome names and lengths (optional for --genomebam, but recommended).'
-        ),
+        help=argparse.SUPPRESS,
         type=str,
         default=None,
     )
