@@ -321,7 +321,7 @@ def parse_ref(
                 dlist=dlist,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir,
-                make_unique=make_unique,
+                make_unique=args.make_unique,
                 distinguish=args.distinguish
             )
         else:
@@ -790,7 +790,7 @@ def setup_ref_args(
         metavar='T2G',
         help='Path to transcript-to-gene mapping to be generated',
         type=str,
-        required=True
+        required=workflow not in {'custom'}
     )
     required_ref.add_argument(
         '-f1',
