@@ -214,13 +214,10 @@ def parse_ref(
     if args.d_list is None:
         if args.aa or args.workflow == 'distinguish':
             dlist = None
-        elif args.workflow != 'lamanno':
+        else:
             # Use whole genome for dlist
             dlist = str(args.fasta)
-        elif args.workflow == 'nucleus':
-            # Use cDNA FASTA for dlist
-            dlist = str(args.f1)
-    else:
+    elif args.d_list.upper() != 'NONE':
         dlist = args.d_list
     if args.aa:
         aa = args.aa
@@ -235,12 +232,6 @@ def parse_ref(
             parser.error(
                 'There must be the same number of FASTAs as there are GTFs.'
             )
-        else:
-            # For --workflow=distinguish, args.gtf are technically FASTA IDs
-            if (len(args.gtf) != 0 and len(args.fasta) != 1):
-                parser.error(
-                    'There must be the same number of FASTAs as there are FASTA IDs.'
-                )
 
     # Parse include/exclude KEY:VALUE pairs
     include = []
@@ -270,7 +261,7 @@ def parse_ref(
         download_reference(
             reference, files, overwrite=args.overwrite, temp_dir=temp_dir
         )
-    elif args.workflow == 'lamanno':
+    elif args.workflow == 'nac':
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -526,7 +517,7 @@ def parse_count(
     if '' in loom_names or len(loom_names) != 2:
         parser.error('`--loom-names` is invalid')
 
-    if args.workflow == 'lamanno':
+    if args.workflow == 'nac':
         # Smartseq can not be used with lamanno.
         if args.x.upper() in ('SMARTSEQ',):
             parser.error(
@@ -806,10 +797,10 @@ def setup_ref_args(
         '-f1',
         metavar='FASTA',
         help=(
-            '[Optional with -d] Path to the cDNA FASTA (standard, lamanno) or '
-            'mismatch FASTA (kite) or k-mer FASTA (distinguish) to be generated '
+            '[Optional with -d] Path to the cDNA FASTA (standard, nac) or '
+            'mismatch FASTA (kite) to be generated '
             '[Optional with --aa when no GTF file(s) provided] '
-            '[Optional with --workflow=distinguish]'
+            '[Not used with --workflow=distinguish]'
         ),
         type=str,
         required='-d' not in sys.argv and '--aa' not in sys.argv and workflow not in {'distinguish'}
@@ -837,28 +828,28 @@ def setup_ref_args(
     )
 
     required_lamanno = parser_ref.add_argument_group(
-        'required arguments for `lamanno` workflow'
+        'required arguments for `nac` workflow'
     )
     required_lamanno.add_argument(
         '-f2',
         metavar='FASTA',
         help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
-        required=workflow in {'lamanno'}
+        required=workflow in {'nac'}
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno'}
+        required=workflow in {'nac'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to generate unprocessed transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno'}
+        required=workflow in {'nac'}
     )
 
     parser_ref.add_argument(
@@ -893,7 +884,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--d-list',
         metavar='FASTA',
-        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard workflow)'),
+        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard/nac workflow)'),
         type=str,
         default=None
     )
@@ -918,14 +909,13 @@ def setup_ref_args(
         '--workflow',
         help=(
             'Type of workflow to prepare files for. '
-            'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
-            'Use `distinguish` for extracting k-mers unique to each FASTA. '
-            '(Note: for `distinguish`, supply a name identifying each FASTA file in lieu of GTF files). '
+            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
+            'Use `distinguish` indexing sequences by their shared name. '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite', 'distinguish']
+        choices=['standard', 'nac', 'kite', 'distinguish']
     )
     parser_ref.add_argument(
         '--make-unique',
@@ -1124,14 +1114,14 @@ def setup_count_args(
         '--workflow',
         help=(
             'Type of workflow. '
-            'Use `lamanno` for RNA velocity or single-nucleus RNA-seq reads. '
+            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
             'Use `kite` for feature barcoding. '
             'Use `kite:10xFB` for 10x Genomics Feature Barcoding technology. '
             '(default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB', 'distinguish']
+        choices=['standard', 'nac', 'kite', 'kite:10xFB']
     )
     parser_count.add_argument(
         '--em',
@@ -1169,21 +1159,21 @@ def setup_count_args(
         default=None,
     )
     required_lamanno = parser_count.add_argument_group(
-        'required arguments for `lamanno` workflow'
+        'required arguments for `nac` workflow'
     )
     required_lamanno.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno'}
+        required=workflow in {'nac'}
     )
     required_lamanno.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required=workflow in {'lamanno'}
+        required=workflow in {'nac'}
     )
     parser_count.add_argument(
         '--overwrite',
