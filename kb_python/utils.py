@@ -756,7 +756,7 @@ def sum_anndatas(
 
 
 def do_sum_matrices(
-    mtx1_path, mtx2_path, out_path
+    mtx1_path, mtx2_path, out_path, header_line=None 
 ) -> str:
     """Sums up two matrices given two matrix files.
 
@@ -764,6 +764,7 @@ def do_sum_matrices(
         mtx1_path: First matrix file path
         mtx2_path: Second matrix file path
         out_path: Output file path
+        header_line: The header line if we have it
 
     Returns:
         Output file path
@@ -779,7 +780,8 @@ def do_sum_matrices(
         nums1 = nums2 = None
         pause1 = pause2 = False
         to_write = None
-        out.write("%%MatrixMarket matrix coordinate real general\n%\n")
+        if header_line:
+            out.write("%%MatrixMarket matrix coordinate real general\n%\n")
         while not eof1 or not eof2:
             s1 = f1.readline() if not eof1 and not pause1 else '%'
             s2 = f2.readline() if not eof2 and not pause2 else '%'
@@ -824,7 +826,8 @@ def do_sum_matrices(
                 else:
                     header = [_nums1[0], _nums1[1]]
                 total_n = _nums1[2] + _nums2[2]
-                out.write(f"{_nums1[0]} {_nums1[1]} {total_n}\n")
+                if header_line:
+                    out.write(header_line)
                 continue
             elif (_nums1[0] > _nums2[0] or (_nums1[0] == _nums2[0] and _nums1[1] > _nums2[1])):
                 # If we're further in mtx1 than mtx2
@@ -864,15 +867,12 @@ def do_sum_matrices(
                     n += 1
                 to_write = f'{nums[0]} {nums[1]} {nums[2]}\n'
         if to_write:
-            out.write(to_write)
+            if header_line:
+                out.write(to_write)
             n += 1
-    if n != total_n:
-        data = []
-        with open(out_path, 'r') as file:
-            data = file.readlines()
-        data[2] = f'{header[0]} {header[1]} {n}\n'
-        with open(out_path, 'w') as file:
-            file.writelines(data)
+    if not header_line:
+        header_line = f'{header[0]} {header[1]} {n}\n'
+        do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line)
     return out_path
 
 
