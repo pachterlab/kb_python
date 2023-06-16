@@ -863,7 +863,8 @@ def do_sum_matrices(
                 to_write = f'{nums[0]} {nums[1]} {nums[2]}\n'
             else:
                 if to_write:
-                    out.write(to_write)
+                    if header_line:
+                        out.write(to_write)
                     n += 1
                 to_write = f'{nums[0]} {nums[1]} {nums[2]}\n'
         if to_write:
