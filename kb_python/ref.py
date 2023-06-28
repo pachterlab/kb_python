@@ -721,6 +721,7 @@ def ref_custom(
     k: Optional[int] = 31,
     threads: int = 8,
     dlist: str = None,
+    aa: bool = False,
     overwrite: bool = False,
     temp_dir: str = 'tmp',
     make_unique: bool = False,
@@ -735,6 +736,8 @@ def ref_custom(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification, 
             defaults to `None`
+        aa: Generate index from a FASTA-file containing amino acid sequences, 
+            defaults to `False`
         overwrite: Overwrite an existing index file, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
         make_unique: Replace repeated target names with unique names, defaults to `False`
@@ -763,7 +766,7 @@ def ref_custom(
             k=k or 31,
             threads=threads,
             dlist=dlist,
-            aa=False,
+            aa=aa,
             make_unique=make_unique,
             distinguish=distinguish)
         logger.info('Finished creating custom index')

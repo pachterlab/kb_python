@@ -212,6 +212,10 @@ def kallisto_quant_tcc(
     l: Optional[int] = None,
     s: Optional[int] = None,
     threads: int = 8,
+    bootstraps: int = 0,
+    matrix_to_files: bool = False,
+    matrix_to_directories: bool = False,
+    no_fragment: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto quant-tcc`.
 
@@ -225,6 +229,10 @@ def kallisto_quant_tcc(
         l: Mean fragment length, defaults to `None`
         s: Standard deviation of fragment length, defaults to `None`
         threads: Number of threads to use, defaults to `8`
+        bootstraps: Number of bootstraps to perform for quant-tcc, defaults to 0
+        matrix_to_files: Whether to write quant-tcc output to files, defaults to `False`
+        matrix_to_directories: Whether to write quant-tcc output to directories, defaults to `False`
+        no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
 
     Returns:
         Dictionary containing path to output files
@@ -239,12 +247,18 @@ def kallisto_quant_tcc(
     command += ['-e', ecmap_path]
     command += ['-g', t2g_path]
     command += ['-t', threads]
-    if flens_path:
+    if flens_path and not no_fragment:
         command += ['-f', flens_path]
-    if l:
+    if l and not no_fragment:
         command += ['-l', l]
-    if s:
+    if s and not no_fragment:
         command += ['-s', s]
+    if bootstraps and bootstraps != 0:
+        command += ['-b', bootstraps]
+    if matrix_to_files:
+        command += ['--matrix-to-files']
+    if matrix_to_directories:
+        command += ['--matrix-to-directories']
     command += [mtx_path]
     run_executable(command)
     ret_dict = {
@@ -1122,6 +1136,10 @@ def count(
     inleaved: bool = False,
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
+    bootstraps: int = 0,
+    matrix_to_files: bool = False,
+    matrix_to_directories: bool = False,
+    no_fragment: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1180,6 +1198,10 @@ def count(
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
+        bootstraps: Number of bootstraps to perform for quant-tcc, defaults to 0
+        matrix_to_files: Whether to write quant-tcc output to files, defaults to `False`
+        matrix_to_directories: Whether to write quant-tcc output to directories, defaults to `False`
+        no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1324,7 +1346,11 @@ def count(
             os.path.join(out_dir, CAPTURE_FILENAME)
         )
 
-    cm = technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
+    techsplit = technology.split(":")
+    ignore_umis = False
+    if len(techsplit) > 2 and len(techsplit[1]) >= 2 and techsplit[1][0] ==  "-" and techsplit[1][1] == "1":
+        ignore_umis = True
+    cm = (technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')) or ignore_umis
     quant = cm and tcc
     suffix_to_inspect_filename = { '': '' }
     if (technology.upper() == 'SMARTSEQ3'):
@@ -1427,6 +1453,10 @@ def count(
                     l=fragment_l,
                     s=fragment_s,
                     threads=threads,
+                    bootstraps=bootstraps,
+                    matrix_to_files=matrix_to_files,
+                    matrix_to_directories=matrix_to_directories,
+                    no_fragment=no_fragment,
                 )
                 update_results_with_suffix(unfiltered_results, quant_result, suffix)
     

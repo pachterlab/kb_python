@@ -313,12 +313,17 @@ def parse_ref(
                 temp_dir=temp_dir
             )
         elif args.workflow == 'custom':
+            if aa and args.distinguish:
+                parser.error(
+                    '`--aa` may not be used with --distinguish'
+                )
             ref_custom(
                 args.fasta,
                 args.i,
                 k=args.k,
                 threads=args.t,
                 dlist=dlist,
+                aa=aa,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir,
                 make_unique=args.make_unique,
@@ -387,6 +392,10 @@ def parse_count(
         logger.warning(
             '`--chromosomes` is recommended when using `--genomebam`'
         )
+        
+    # Check quant-tcc options
+    if args.matrix_to_files and args.matrix_to_directories:
+        parser.error('`--matrix-to-files` cannot be used with `--matrix-to-directories`.')
 
     # Check if batch TSV was provided.
     batch_path = None
@@ -612,6 +621,10 @@ def parse_count(
             inleaved=args.inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=args.batch_barcodes,
+            bootstraps=args.bootstraps,
+            matrix_to_files=args.matrix_to_files,
+            matrix_to_directories=args.matrix_to_directories,
+            no_fragment=args.no_fragment,
         )
 
 
@@ -1253,6 +1266,9 @@ def setup_count_args(
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_count.add_argument(
+        '--no-fragment', help=argparse.SUPPRESS, action='store_true'
+    )
 
     optional_bulk = parser_count.add_argument_group(
         'optional arguments for `BULK` and `SMARTSEQ2` technologies'
@@ -1280,6 +1296,23 @@ def setup_count_args(
         help='Standard deviation of fragment lengths. Only for single-end.',
         type=int,
         default=None
+    )
+    optional_bulk.add_argument(
+        '--bootstraps',
+        metavar='B',
+        help='Number of bootstraps to perform',
+        type=int,
+        default=None
+    )
+    optional_bulk.add_argument(
+        '--matrix-to-files',
+        help='Reorganize matrix output into abundance tsv files',
+        action='store_true'
+    )
+    optional_bulk.add_argument(
+        '--matrix-to-directories',
+        help='Reorganize matrix output into abundance tsv files across multiple directories',
+        action='store_true'
     )
 
     parser_count.add_argument(
