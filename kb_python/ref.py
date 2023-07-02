@@ -239,6 +239,7 @@ def kallisto_index(
     make_unique: bool = False,
     aa: bool = False,
     distinguish: bool = False,
+    max_ec_size: int = None,
 ) -> Dict[str, str]:
     """Runs `kallisto index`.
 
@@ -254,6 +255,7 @@ def kallisto_index(
             defaults to `False`
         distinguish: Generate a color-based-on-target-name index, 
             defaults to `False`
+        max_ec_size: Sets max size of equivalence class, defaults to `None`
 
     Returns:
         Dictionary containing path to generated index
@@ -270,6 +272,8 @@ def kallisto_index(
         command += ['--aa']
     if distinguish:
         command += ['--distinguish']
+    if max_ec_size:
+        command += ['-e', max_ec_size]
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
@@ -532,6 +536,7 @@ def ref(
     threads: int = 8,
     dlist: str = None,
     aa: bool = False,
+    max_ec_size: int = None,
 ) -> Dict[str, str]:
     """Generates files necessary to generate count matrices for single-cell RNA-seq.
 
@@ -555,6 +560,7 @@ def ref(
             defaults to `None`
         aa: Generate index from a FASTA-file containing amino acid sequences, 
             defaults to `False`
+        max_ec_size: Sets max size of equivalence class, defaults to `None`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -640,7 +646,8 @@ def ref(
             threads=threads,
             dlist=dlist,
             aa=aa,
-            make_unique=make_unique
+            make_unique=make_unique,
+            max_ec_size=max_ec_size,
         )
         results.update(index_result)
     else:
@@ -800,7 +807,8 @@ def ref_lamanno(
     overwrite: bool = False,
     make_unique: bool = False,
     threads: int = 8,
-    dlist: str = None
+    dlist: str = None,
+    max_ec_size: int = None
 ) -> Dict[str, str]:
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
 
@@ -828,6 +836,7 @@ def ref_lamanno(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification, 
             defaults to `None`
+        max_ec_size: Sets max size of equivalence class, defaults to `None`
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -968,7 +977,8 @@ def ref_lamanno(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
-                make_unique=make_unique
+                make_unique=make_unique,
+                max_ec_size=max_ec_size
             )
         elif n == 1:
             index_result = kallisto_index(
@@ -977,7 +987,8 @@ def ref_lamanno(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
-                make_unique=make_unique
+                make_unique=make_unique,
+                max_ec_size=max_ec_size
             )
         else:
             cdna_index_result = kallisto_index(
@@ -986,7 +997,8 @@ def ref_lamanno(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
-                make_unique=make_unique
+                make_unique=make_unique,
+                max_ec_size=max_ec_size
             )
             if n == 2:
                 intron_index_result = kallisto_index(
@@ -995,7 +1007,8 @@ def ref_lamanno(
                     k=k or 31,
                     threads=threads,
                     dlist=dlist,
-                    make_unique=make_unique
+                    make_unique=make_unique,
+                    max_ec_size=max_ec_size
                 )
                 index_result = {
                     'indices': [

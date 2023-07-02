@@ -279,7 +279,8 @@ def parse_ref(
             dlist=dlist,
             overwrite=args.overwrite,
             make_unique=args.make_unique,
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            max_ec_size=args.ec_max_size
         )
     else:
         # Report extraneous options
@@ -345,7 +346,8 @@ def parse_ref(
                 aa=aa,
                 overwrite=args.overwrite,
                 make_unique=args.make_unique,
-                temp_dir=temp_dir
+                temp_dir=temp_dir,
+                max_ec_size=args.ec_max_size
             )
 
 
@@ -574,7 +576,8 @@ def parse_count(
             chromosomes_path=args.chromosomes,
             inleaved=args.inleaved,
             demultiplexed=demultiplexed,
-            batch_barcodes=args.batch_barcodes
+            batch_barcodes=args.batch_barcodes,
+            numreads=args.N
         )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -625,6 +628,7 @@ def parse_count(
             matrix_to_files=args.matrix_to_files,
             matrix_to_directories=args.matrix_to_directories,
             no_fragment=args.no_fragment,
+            numreads=args.N
         )
 
 
@@ -970,6 +974,7 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_ref.add_argument('--ec-max-size', help=argparse.SUPPRESS, type=int, default=None)
     parser_ref.add_argument('--flank', help=argparse.SUPPRESS, type=int)
 
     return parser_ref
@@ -1236,6 +1241,13 @@ def setup_count_args(
             'the loom or h5ad file (and output gene names for count matrices)'
         ),
         action='store_true'
+    )
+    parser_count.add_argument(
+        '-N',
+        metavar='NUMREADS',
+        help='Maximum number of reads to process from supplied input',
+        type=int,
+        default=None
     )
 
     report_group = parser_count.add_mutually_exclusive_group()

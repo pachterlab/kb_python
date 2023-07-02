@@ -105,6 +105,7 @@ def kallisto_bus(
     inleaved: bool = False,
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
+    numreads: int = None,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -132,6 +133,7 @@ def kallisto_bus(
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
+        numreads: Maximum number of reads to process from supplied input
 
     Returns:
         Dictionary containing paths to generated files
@@ -174,6 +176,8 @@ def kallisto_bus(
         results['genomebam_index'] = os.path.join(
             out_dir, GENOMEBAM_INDEX_FILENAME
         )
+    if numreads:
+        command += ['-N', numreads]
     if aa:
         command += ['--aa']
         if paired:
@@ -1140,6 +1144,7 @@ def count(
     matrix_to_files: bool = False,
     matrix_to_directories: bool = False,
     no_fragment: bool = False,
+    numreads: int = None,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1202,6 +1207,7 @@ def count(
         matrix_to_files: Whether to write quant-tcc output to files, defaults to `False`
         matrix_to_directories: Whether to write quant-tcc output to directories, defaults to `False`
         no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
+        numreads: Maximum number of reads to process from supplied input
 
     Returns:
         Dictionary containing paths to generated files
@@ -1251,6 +1257,7 @@ def count(
             inleaved=inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
+            numreads=numreads,
         )
     else:
         logger.info(
@@ -1617,6 +1624,7 @@ def count_velocity(
     inleaved: bool = False,
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
+    numreads: int = None,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1676,6 +1684,7 @@ def count_velocity(
         inleaved: Whether input FASTQ is interleaved, defaults to `False`
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
+        numreads: Maximum number of reads to process from supplied input
 
     Returns:
         Dictionary containing path to generated index
@@ -1722,6 +1731,7 @@ def count_velocity(
             inleaved=inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
+            numreads=numreads,
         )
     else:
         logger.info(
