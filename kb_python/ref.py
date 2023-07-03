@@ -174,7 +174,8 @@ def create_t2g_from_fasta(
     logger.info(f'Creating transcript-to-gene mapping at {t2g_path}')
 
     if aa_flag:
-        with open(fasta_path, 'r') as f_in, open_as_text(t2g_path, 'w') as f_out:
+        with open(fasta_path, 'r') as f_in, open_as_text(t2g_path,
+                                                         'w') as f_out:
             fasta_lines = f_in.readlines()
             for line in fasta_lines:
                 if ">" in line:
@@ -182,8 +183,8 @@ def create_t2g_from_fasta(
                     f_out.write(f'{label}\t{label}\n')
 
     else:
-        with ngs.fasta.Fasta(fasta_path, 'r') as f_in, open_as_text(t2g_path,
-                                                                    'w') as f_out:
+        with ngs.fasta.Fasta(fasta_path,
+                             'r') as f_in, open_as_text(t2g_path, 'w') as f_out:
             for entry in f_in:
                 attributes = entry.attributes
 

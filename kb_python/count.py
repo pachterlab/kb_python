@@ -1510,19 +1510,23 @@ def count(
                     count_result['genes'], t2g_path,
                     os.path.join(counts_dir, f'{CELLRANGER_DIR}{suffix}')
                 )
-                update_results_with_suffix(unfiltered_results, {'cellranger': cr_result}, suffix)
+                update_results_with_suffix(
+                    unfiltered_results, {'cellranger': cr_result}, suffix
+                )
             if loom or h5ad:
                 name = GENE_NAME
                 if kite:
                     name = FEATURE_NAME
                 elif quant:
                     name = TRANSCRIPT_NAME
-                update_results_with_suffix(unfiltered_results,
+                update_results_with_suffix(
+                    unfiltered_results,
                     convert_matrix(
                         quant_dir if quant else counts_dir,
                         final_result['mtx'],
                         count_result['barcodes'],
-                        batch_barcodes_path=count_result['batch_barcodes'] if batch_barcodes else None,
+                        batch_barcodes_path=count_result['batch_barcodes']
+                        if batch_barcodes else None,
                         genes_path=final_result['txnames']
                         if quant else final_result.get('genes'),
                         t2g_path=t2g_path,
@@ -1535,8 +1539,7 @@ def count(
                         by_name=by_name,
                         tcc=tcc and not quant,
                         threads=threads,
-                    ),
-                    suffix
+                    ), suffix
                 )
 
     # NOTE: bulk/smartseq2 does not support filtering, so everything here
@@ -1862,9 +1865,7 @@ def count_velocity(
                 )
             sort_result = bustools_sort(
                 capture_result['bus'],
-                os.path.join(
-                    out_dir, f'output.{UNFILTERED_CODE}.bus'
-                ),
+                os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory
@@ -2145,11 +2146,15 @@ def count_velocity(
                     filtered_results[prefix] = {}
                     if cellranger:
                         cr_result = matrix_to_cellranger(
-                            res['mtx'], res['barcodes'],
-                            res['genes'], t2g_path,
-                            os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                            res['mtx'], res['barcodes'], res['genes'], t2g_path,
+                            os.path.join(
+                                filtered_counts_dir,
+                                f'{CELLRANGER_DIR}_{prefix}'
+                            )
                         )
-                        filtered_results[prefix].update({'cellranger': cr_result})
+                        filtered_results[prefix].update({
+                            'cellranger': cr_result
+                        })
                     filtered_results[prefix].update(res)
 
         if loom or h5ad:

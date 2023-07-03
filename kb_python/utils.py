@@ -820,7 +820,9 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             elif (len(header) == 0):
                 # We are at the header line and need to read it in
                 if (_nums1[0] != _nums2[0] or _nums1[1] != _nums2[1]):
-                    raise Exception("Summing up two matrix files failed: Headers incompatible")
+                    raise Exception(
+                        "Summing up two matrix files failed: Headers incompatible"
+                    )
                 else:
                     header = [_nums1[0], _nums1[1]]
                 if header_line:

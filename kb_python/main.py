@@ -1110,7 +1110,10 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--aa',
-        help='Map to index generated from FASTA-file containing amino acid sequences',
+        help=(
+            'Map to index generated from FASTA-file containing '
+            'amino acid sequences'
+        ),
         action='store_true',
         default=False
     )
@@ -1200,7 +1203,10 @@ def setup_count_args(
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
     parser_count.add_argument(
         '--batch-barcodes',
-        help='When a batch file is supplied, store sample identifiers in barcodes',
+        help=(
+            'When a batch file is supplied, store sample identifiers '
+            'in barcodes'
+        ),
         action='store_true'
     )
 
