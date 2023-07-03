@@ -798,7 +798,7 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             _nums2 = list(
                 map(int,
                     s2.split() if not eof2 and s2[0] != '%' else [])
-                )
+            )
             if nums1 is not None:
                 _nums1 = nums1
                 nums1 = None
