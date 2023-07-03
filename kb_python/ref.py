@@ -159,7 +159,9 @@ def generate_kite_fasta(
     return out_path, min(lengths)
 
 
-def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag: bool = False) -> Dict[str, str]:
+def create_t2g_from_fasta(
+    fasta_path: str, t2g_path: str, aa_flag: bool = False
+) -> Dict[str, str]:
     """Parse FASTA headers to get transcripts-to-gene mapping.
 
     Args:
@@ -277,10 +279,7 @@ def kallisto_index(
     return {'index': index_path}
 
 
-def get_dlist_fasta(
-    fasta_path: str = None,
-    temp_dir: str = 'tmp'
-) -> str:
+def get_dlist_fasta(fasta_path: str = None, temp_dir: str = 'tmp') -> str:
     """Downloads the D-list FASTA to temporary file if URL supplied
 
     Args:
@@ -296,9 +295,7 @@ def get_dlist_fasta(
     if "://" not in fasta_path:  # Not a URL
         return fasta_path
     new_fasta_path = get_temporary_filename(temp_dir)
-    logger.info(
-        f'Extracting {fasta_path} into {new_fasta_path}'
-    )
+    logger.info(f'Extracting {fasta_path} into {new_fasta_path}')
     with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
         with ngs.fasta.Fasta(new_fasta_path, 'w') as f_out:
             for entry in f_in:
@@ -773,7 +770,8 @@ def ref_custom(
             dlist=dlist,
             aa=aa,
             make_unique=make_unique,
-            distinguish=distinguish)
+            distinguish=distinguish
+        )
         logger.info('Finished creating custom index')
         results.update(index_result)
     else:

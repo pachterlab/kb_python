@@ -315,9 +315,7 @@ def parse_ref(
             )
         elif args.workflow == 'custom':
             if aa and args.distinguish:
-                parser.error(
-                    '`--aa` may not be used with --distinguish'
-                )
+                parser.error('`--aa` may not be used with --distinguish')
             ref_custom(
                 args.fasta,
                 args.i,
@@ -397,7 +395,9 @@ def parse_count(
 
     # Check quant-tcc options
     if args.matrix_to_files and args.matrix_to_directories:
-        parser.error('`--matrix-to-files` cannot be used with `--matrix-to-directories`.')
+        parser.error(
+            '`--matrix-to-files` cannot be used with `--matrix-to-directories`.'
+        )
 
     # Check if batch TSV was provided.
     batch_path = None
@@ -418,11 +418,18 @@ def parse_count(
         demultiplexed = True
 
     if args.batch_barcodes and batch_path is None:
-        parser.error('`--batch-barcodes` can only be used if batch file supplied')
+        parser.error(
+            '`--batch-barcodes` can only be used if batch file supplied'
+        )
     if args.batch_barcodes and demultiplexed:
-        parser.error(f'`--batch-barcodes` may not be used for technology {args.x}')
-    if args.batch_barcodes and args.w is None and not whitelist_provided(args.x.upper()):
-        parser.error(f'`--batch-barcodes` may not be used for technology {args.x} without whitelist')
+        parser.error(
+            f'`--batch-barcodes` may not be used for technology {args.x}'
+        )
+    if args.batch_barcodes and args.w is None and not whitelist_provided(
+            args.x.upper()):
+        parser.error(
+            f'`--batch-barcodes` may not be used for technology {args.x} without whitelist'
+        )
     if args.batch_barcodes and args.filter:
         parser.error('`--batch-barcodes` may not be used with --filter')
     if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
@@ -818,7 +825,8 @@ def setup_ref_args(
             '[Not used with --workflow=custom]'
         ),
         type=str,
-        required='-d' not in sys.argv and '--aa' not in sys.argv and workflow not in {'custom'}
+        required='-d' not in sys.argv and '--aa' not in sys.argv
+        and workflow not in {'custom'}
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(
@@ -899,7 +907,9 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--d-list',
         metavar='FASTA',
-        help=('D-list file(s) (default: the Genomic FASTA file(s) for standard/nac workflow)'),
+        help=(
+            'D-list file(s) (default: the Genomic FASTA file(s) for standard/nac workflow)'
+        ),
         type=str,
         default=None
     )
@@ -922,9 +932,7 @@ def setup_ref_args(
         choices=['standard', 'nac', 'kite', 'custom']
     )
     parser_ref.add_argument(
-        '--distinguish',
-        help=argparse.SUPPRESS,
-        action='store_true'
+        '--distinguish', help=argparse.SUPPRESS, action='store_true'
     )
     parser_ref.add_argument(
         '--make-unique',
@@ -958,7 +966,8 @@ def setup_ref_args(
         'gtf',
         help='Reference GTF file(s), comma-delimited [not required with --aa]',
         type=str,
-        nargs=None if ('-d' not in sys.argv and '--aa' not in sys.argv) and workflow not in {'custom', 'kite'} else '?'
+        nargs=None if ('-d' not in sys.argv and '--aa' not in sys.argv)
+        and workflow not in {'custom', 'kite'} else '?'
     )
     parser_ref.add_argument(
         'feature',
@@ -973,7 +982,9 @@ def setup_ref_args(
     parser_ref.add_argument(
         '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
     )
-    parser_ref.add_argument('--ec-max-size', help=argparse.SUPPRESS, type=int, default=None)
+    parser_ref.add_argument(
+        '--ec-max-size', help=argparse.SUPPRESS, type=int, default=None
+    )
     parser_ref.add_argument('--flank', help=argparse.SUPPRESS, type=int)
 
     return parser_ref
@@ -1099,7 +1110,8 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--aa',
-        help='Align to index generated from a FASTA-file containing amino acid sequences',
+        help=
+        'Align to index generated from a FASTA-file containing amino acid sequences',
         action='store_true',
         default=False
     )
@@ -1189,7 +1201,8 @@ def setup_count_args(
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
     parser_count.add_argument(
         '--batch-barcodes',
-        help='When a batch file is supplied, store the sample identifiers in barcodes',
+        help=
+        'When a batch file is supplied, store the sample identifiers in barcodes',
         action='store_true'
     )
 
@@ -1322,7 +1335,8 @@ def setup_count_args(
     )
     optional_bulk.add_argument(
         '--matrix-to-directories',
-        help='Reorganize matrix output into abundance tsv files across multiple directories',
+        help=
+        'Reorganize matrix output into abundance tsv files across multiple directories',
         action='store_true'
     )
 
@@ -1417,7 +1431,8 @@ def main():
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
-        if args.dry_run and (args.loom or args.h5ad or args.cellranger or args.gene_names):
+        if args.dry_run and (args.loom or args.h5ad or args.cellranger
+                             or args.gene_names):
             raise parser.error(
                 '--dry-run can not be used with --loom, --h5ad, --cellranger, or --gene-names'
             )

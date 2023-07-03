@@ -457,7 +457,8 @@ def obtain_gene_names(
     gene_names = []
     n_no_name = 0
     for gene_id in var_names:
-        if id_to_name.get(gene_id) and not (id_to_name[gene_id] in duplicates_set):
+        if id_to_name.get(gene_id) and not (id_to_name[gene_id]
+                                            in duplicates_set):
             gene_names.append(id_to_name[gene_id])
         else:  # blank names and duplicate names are considered missing
             gene_names.append(gene_id)
@@ -671,7 +672,9 @@ def import_matrix_as_anndata(
     )
 
     if t2g_path and by_name:
-        gene_names = obtain_gene_names(t2g_path, adata.var_names.to_list(), False)
+        gene_names = obtain_gene_names(
+            t2g_path, adata.var_names.to_list(), False
+        )
         adata.var[name_column] = pd.Categorical(gene_names)
 
     return (
@@ -681,7 +684,8 @@ def import_matrix_as_anndata(
 
 
 def overlay_anndatas(
-    adata_spliced: anndata.AnnData, adata_unspliced: anndata.AnnData,
+    adata_spliced: anndata.AnnData,
+    adata_unspliced: anndata.AnnData,
     adata_ambiguous: anndata.AnnData = None
 ) -> anndata.AnnData:
     """'Overlays' anndata objects by taking the intersection of the obs and var
@@ -716,10 +720,7 @@ def overlay_anndatas(
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
     return anndata.AnnData(
-        X=spliced_intersection.X,
-        layers=a_layers,
-        obs=df_obs,
-        var=df_var
+        X=spliced_intersection.X, layers=a_layers, obs=df_obs, var=df_var
     )
 
 
@@ -755,9 +756,7 @@ def sum_anndatas(
     )
 
 
-def do_sum_matrices(
-    mtx1_path, mtx2_path, out_path, header_line=None
-) -> str:
+def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
     """Sums up two matrices given two matrix files.
 
     Args:
@@ -851,9 +850,13 @@ def do_sum_matrices(
                 nums2 = None
             else:
                 # Shouldn't happen
-                raise Exception("Summing up two matrix files failed: Assertion failed")
+                raise Exception(
+                    "Summing up two matrix files failed: Assertion failed"
+                )
             # Write out a line
-            _nums_prev = None if not to_write else list(map(int, to_write.split()))
+            _nums_prev = None if not to_write else list(
+                map(int, to_write.split())
+            )
             if (_nums_prev and _nums_prev[0] == nums[0] and _nums_prev[1] == nums[1]):
                 nums[2] += _nums_prev[2]
                 pause1 = False
