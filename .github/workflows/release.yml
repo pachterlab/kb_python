@@ -7,7 +7,7 @@ on:
 jobs:
   release-to-pypi:
     name: Release to Pypi
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
         uses: actions/checkout@master
