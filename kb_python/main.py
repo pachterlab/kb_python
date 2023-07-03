@@ -1110,8 +1110,7 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--aa',
-        help=
-        'Align to index generated from a FASTA-file containing amino acid sequences',
+        help='Map to index generated from FASTA-file containing amino acid sequences',
         action='store_true',
         default=False
     )
@@ -1201,8 +1200,7 @@ def setup_count_args(
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
     parser_count.add_argument(
         '--batch-barcodes',
-        help=
-        'When a batch file is supplied, store the sample identifiers in barcodes',
+        help='When a batch file is supplied, store sample identifiers in barcodes',
         action='store_true'
     )
 
@@ -1335,8 +1333,10 @@ def setup_count_args(
     )
     optional_bulk.add_argument(
         '--matrix-to-directories',
-        help=
-        'Reorganize matrix output into abundance tsv files across multiple directories',
+        help=(
+            'Reorganize matrix output into abundance tsv files across '
+            'multiple directories'
+        ),
         action='store_true'
     )
 
