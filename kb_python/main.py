@@ -394,7 +394,7 @@ def parse_count(
         logger.warning(
             '`--chromosomes` is recommended when using `--genomebam`'
         )
-        
+
     # Check quant-tcc options
     if args.matrix_to_files and args.matrix_to_directories:
         parser.error('`--matrix-to-files` cannot be used with `--matrix-to-directories`.')
@@ -408,15 +408,14 @@ def parse_count(
                     batch_path = args.fastqs[0]
         except Exception:
             pass
-          
+
     if args.inleaved:
         batch_path = None
-        
+
     demultiplexed = False
     if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
         args.x = 'BULK'
         demultiplexed = True
-        
 
     if args.batch_barcodes and batch_path is None:
         parser.error('`--batch-barcodes` can only be used if batch file supplied')

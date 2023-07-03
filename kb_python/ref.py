@@ -16,8 +16,6 @@ from .utils import (
     get_temporary_filename,
     open_as_text,
     run_executable,
-    read_t2g,
-    write_list_to_file,
 )
 
 
@@ -159,7 +157,7 @@ def generate_kite_fasta(
                 f.write(entry)
 
     return out_path, min(lengths)
-    
+
 
 def create_t2g_from_fasta(fasta_path: str, t2g_path: str, aa_flag: bool = False) -> Dict[str, str]:
     """Parse FASTA headers to get transcripts-to-gene mapping.
@@ -248,12 +246,12 @@ def kallisto_index(
         index_path: path to output kallisto index
         k: k-mer length, defaults to 31
         threads: Number of threads to use, defaults to `8`
-        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+        dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
         make_unique: Replace repeated target names with unique names, defaults to `False`
-        aa: Generate index from a FASTA-file containing amino acid sequences, 
+        aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
-        distinguish: Generate a color-based-on-target-name index, 
+        distinguish: Generate a color-based-on-target-name index,
             defaults to `False`
         max_ec_size: Sets max size of equivalence class, defaults to `None`
 
@@ -292,10 +290,10 @@ def get_dlist_fasta(
     Returns:
         Path to D-list FASTA
     """
-    
+
     if not fasta_path:
         return fasta_path
-    if "://" not in fasta_path: # Not a URL
+    if "://" not in fasta_path:  # Not a URL
         return fasta_path
     new_fasta_path = get_temporary_filename(temp_dir)
     logger.info(
@@ -556,9 +554,9 @@ def ref(
         overwrite: Overwrite an existing index file, defaults to `False`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
-        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+        dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
-        aa: Generate index from a FASTA-file containing amino acid sequences, 
+        aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
         max_ec_size: Sets max size of equivalence class, defaults to `None`
 
@@ -741,9 +739,9 @@ def ref_custom(
         index_path: Path to output kallisto index
         k: Override calculated optimal kmer length, defaults to `31`
         threads: Number of threads to use, defaults to `8`
-        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+        dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
-        aa: Generate index from a FASTA-file containing amino acid sequences, 
+        aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
         overwrite: Overwrite an existing index file, defaults to `False`
         temp_dir: Path to temporary directory, defaults to `tmp`
@@ -765,7 +763,7 @@ def ref_custom(
         k = 31
 
     results = {}
-    
+
     if not glob.glob(f'{index_path}*') or overwrite:
         index_result = kallisto_index(
             ' '.join(fasta_paths),
@@ -834,7 +832,7 @@ def ref_lamanno(
         overwrite: Overwrite an existing index file, defaults to `False`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         threads: Number of threads to use, defaults to `8`
-        dlist: Path to a FASTA-file containing sequences to mask from quantification, 
+        dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
         max_ec_size: Sets max size of equivalence class, defaults to `None`
 

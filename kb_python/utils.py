@@ -459,7 +459,7 @@ def obtain_gene_names(
     for gene_id in var_names:
         if id_to_name.get(gene_id) and not (id_to_name[gene_id] in duplicates_set):
             gene_names.append(id_to_name[gene_id])
-        else: # blank names and duplicate names are considered missing
+        else:  # blank names and duplicate names are considered missing
             gene_names.append(gene_id)
             n_no_name += 1
     if n_no_name > 0 and verbose:
@@ -572,7 +572,7 @@ def import_tcc_matrix_as_anndata(
     Returns:
         A new Anndata object
     """
-    name_column='transcript_ids' if not loom else loom_names[1]
+    name_column = 'transcript_ids' if not loom else loom_names[1]
     bc_name = 'barcode' if not loom else loom_names[0]
     df_barcodes = pd.read_csv(
         barcodes_path, index_col=0, header=None, names=[bc_name]
@@ -649,7 +649,7 @@ def import_matrix_as_anndata(
     Returns:
         A new Anndata object
     """
-    name_column=f'{name}_id' if not loom else loom_names[1]
+    name_column = f'{name}_id' if not loom else loom_names[1]
     bc_name = 'barcode' if not loom else loom_names[0]
     df_barcodes = pd.read_csv(
         barcodes_path, index_col=0, header=None, names=[bc_name]
@@ -756,7 +756,7 @@ def sum_anndatas(
 
 
 def do_sum_matrices(
-    mtx1_path, mtx2_path, out_path, header_line=None 
+    mtx1_path, mtx2_path, out_path, header_line=None
 ) -> str:
     """Sums up two matrices given two matrix files.
 
@@ -771,12 +771,11 @@ def do_sum_matrices(
     """
     logger.info('Summing matrices into {}'.format(out_path))
     n = 0
-    total_n = 0
     header = []
     with open_as_text(mtx1_path, 'r') as f1, open_as_text(
         mtx2_path, 'r') as f2, open(out_path, 'w') as out:
         eof1 = eof2 = False
-        nums = [0,0,0]
+        nums = [0, 0, 0]
         nums1 = nums2 = None
         pause1 = pause2 = False
         to_write = None
@@ -825,7 +824,6 @@ def do_sum_matrices(
                     raise Exception("Summing up two matrix files failed: Headers incompatible")
                 else:
                     header = [_nums1[0], _nums1[1]]
-                total_n = _nums1[2] + _nums2[2]
                 if header_line:
                     out.write(header_line)
                 continue

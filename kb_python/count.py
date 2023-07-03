@@ -12,11 +12,10 @@ from .constants import (
     ABUNDANCE_FILENAME,
     ABUNDANCE_GENE_FILENAME,
     ABUNDANCE_GENE_TPM_FILENAME,
+    ABUNDANCE_GENE_NAMES_FILENAME,
     ABUNDANCE_TPM_FILENAME,
     ADATA_PREFIX,
-    BUS_CDNA_PREFIX,
     BUS_FILENAME,
-    BUS_INTRON_PREFIX,
     CAPTURE_FILENAME,
     CELLRANGER_BARCODES,
     CELLRANGER_DIR,
@@ -123,7 +122,7 @@ def kallisto_bus(
             bulk and smartseq2 samples, defaults to `False`
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
-        aa: Align to index generated from a FASTA-file containing amino acid sequences, 
+        aa: Align to index generated from a FASTA-file containing amino acid sequences,
             defaults to `False`
         strand: Strandedness, defaults to `None`
         gtf_path: GTF file for transcriptome information (required for --genomebam),
@@ -182,7 +181,7 @@ def kallisto_bus(
         command += ['--aa']
         if paired:
             logger.warning(
-                f'`--paired` ignored since `--aa` only supports single-end reads'
+                '`--paired` ignored since `--aa` only supports single-end reads'
             )
     if strand == 'unstranded':
         command += ['--unstranded']
@@ -656,7 +655,7 @@ def convert_matrix(
     txnames_path: Optional[str] = None,
     name: str = 'gene',
     loom: bool = False,
-    loom_names: List[str] = ['barcode','target_name'],
+    loom_names: List[str] = ['barcode', 'target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     tcc: bool = False,
@@ -729,7 +728,7 @@ def convert_matrices(
     txnames_path: Optional[str] = None,
     name: str = 'gene',
     loom: bool = False,
-    loom_names: List[str] = ['barcode','target_name'],
+    loom_names: List[str] = ['barcode', 'target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     nucleus: bool = False,
@@ -810,7 +809,8 @@ def convert_matrices(
         results.update({'h5ad': h5ad_path})
     return results
 
-def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
+
+def count_result_to_dict(count_result: Dict[str, str]) -> List[Dict[str, str]]:
     """Converts count result dict to list.
 
     Args:
@@ -819,7 +819,7 @@ def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
     Returns:
         List of count result dicts
     """
-    
+
     new_count_result = []
     for i in range(len(count_result)):
         if f'mtx{i}' not in count_result:
@@ -838,6 +838,7 @@ def count_result_to_dict(count_result: Dict[str,str]) -> List[Dict[str,str]]:
         })
     return new_count_result
 
+
 def filter_with_bustools(
     bus_path: str,
     ecmap_path: str,
@@ -855,7 +856,7 @@ def filter_with_bustools(
     memory: str = '2G',
     count: bool = True,
     loom: bool = False,
-    loom_names: List[str] = ['barcode','target_name'],
+    loom_names: List[str] = ['barcode', 'target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -941,7 +942,7 @@ def filter_with_bustools(
         if by_name and 'genes' in count_result:
             genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
             logger.info(f'Writing gene names to file {genes_by_name_path}')
-            genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes')) 
+            genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes'))
             results.update({
                   'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
             })
@@ -1121,7 +1122,7 @@ def count(
     memory: str = '2G',
     overwrite: bool = False,
     loom: bool = False,
-    loom_names: List[str] = ['barcode','target_name'],
+    loom_names: List[str] = ['barcode', 'target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -1189,7 +1190,7 @@ def count(
             batch file is provided. Defaults to `False`
         genomebam: Project pseudoalignments to genome sorted BAM file, defaults to
             `False`
-        aa: Align to index generated from a FASTA-file containing amino acid sequences, 
+        aa: Align to index generated from a FASTA-file containing amino acid sequences,
             defaults to `False`
         strand: Strandedness, defaults to `None`
         umi_gene: Whether to perform gene-level UMI collapsing, defaults to
@@ -1338,14 +1339,14 @@ def count(
             )
 
         unfiltered_results.update({'bus_scs': prev_result['bus']})
-        
+
     # Helper function to update results with suffix
     def update_results_with_suffix(current_results, new_results, suffix):
         current_results.update({
             f'{key}{suffix}': value
             for key, value in new_results.items()
         })
-    
+
     # Write capture file & capture internal/umi records (for SMARTSEQ3)
     capture_path = None
     if technology.upper() == 'SMARTSEQ3':
@@ -1355,11 +1356,11 @@ def count(
 
     techsplit = technology.split(":")
     ignore_umis = False
-    if len(techsplit) > 2 and len(techsplit[1]) >= 2 and techsplit[1][0] ==  "-" and techsplit[1][1] == "1":
+    if len(techsplit) > 2 and len(techsplit[1]) >= 2 and techsplit[1][0] == "-" and techsplit[1][1] == "1":
         ignore_umis = True
     cm = (technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')) or ignore_umis
     quant = cm and tcc
-    suffix_to_inspect_filename = { '': '' }
+    suffix_to_inspect_filename = {'': ''}
     if (technology.upper() == 'SMARTSEQ3'):
         suffix_to_inspect_filename = {
             INTERNAL_SUFFIX: INSPECT_INTERNAL_FILENAME,
@@ -1433,7 +1434,7 @@ def count(
                 counts_dir,
                 TCC_PREFIX if tcc else FEATURE_PREFIX if kite else COUNTS_PREFIX
             )
-    
+
             count_result = bustools_count(
                 sort_result['bus'],
                 counts_prefix,
@@ -1466,10 +1467,12 @@ def count(
                     no_fragment=no_fragment,
                 )
                 update_results_with_suffix(unfiltered_results, quant_result, suffix)
-    
+
             # Convert outputs.
             if by_name and 'genes' in count_result:
-                genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}' if not quant else os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
+                genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
+                if quant:
+                    genes_by_name_path = os.path.join(quant_dir, ABUNDANCE_GENE_NAMES_FILENAME)
                 logger.info(f'Writing gene names to file {genes_by_name_path}')
                 genes_by_name = obtain_gene_names(t2g_path, count_result.get('genes'))
                 count_result.update({
@@ -1604,7 +1607,7 @@ def count_velocity(
     memory: str = '4G',
     overwrite: bool = False,
     loom: bool = False,
-    loom_names: List[str] = ['barcode','target_name'],
+    loom_names: List[str] = ['barcode', 'target_name'],
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
@@ -1790,7 +1793,7 @@ def count_velocity(
             f'{key}{suffix}': value
             for key, value in new_results.items()
         })
-    
+
     # Write capture file & capture internal/umi records (for SMARTSEQ3)
     capture_path = None
     if technology.upper() == 'SMARTSEQ3':
@@ -1800,7 +1803,7 @@ def count_velocity(
 
     cm = technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
     quant = cm and tcc
-    suffix_to_inspect_filename = { '': '' }
+    suffix_to_inspect_filename = {'': ''}
     if (technology.upper() == 'SMARTSEQ3'):
         suffix_to_inspect_filename = {
             INTERNAL_SUFFIX: INSPECT_INTERNAL_FILENAME,
@@ -1889,10 +1892,10 @@ def count_velocity(
                 batch_barcodes=batch_barcodes,
             )
             count_result = count_result_to_dict(count_result)
-            prefixes = ['processed', 'unprocessed', 'ambiguous'] # 0,1,2
+            prefixes = ['processed', 'unprocessed', 'ambiguous']  # 0,1,2
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
-                if by_name and i==0 and 'genes' in count_result[i]:
+                if by_name and i == 0 and 'genes' in count_result[i]:
                     # Only need to write this once
                     genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
                     logger.info(f'Writing gene names to file {genes_by_name_path}')
@@ -1949,12 +1952,12 @@ def count_velocity(
                             os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
                         )
                         update_results_with_suffix(prefix_results, {'cellranger': cr_result}, suffix)
-                  
+
             if loom or h5ad:
                 name = GENE_NAME
                 if quant:
                     name = TRANSCRIPT_NAME
-    
+
                 convert_result = convert_matrices(
                     quant_dir if quant else counts_dir,
                     [
@@ -2046,11 +2049,11 @@ def count_velocity(
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
                 filtered_results[prefix] = {}
-                if by_name and i==0 and 'genes' in filtered_results[prefix]:
+                if by_name and i == 0 and 'genes' in filtered_results[prefix]:
                     # Only need to write this once
                     genes_by_name_path = f'{filtered_counts_prefix}.{GENE_NAMES_FILENAME}'
                     logger.info(f'Writing gene names to file {genes_by_name_path}')
-                    genes_by_name = obtain_gene_names(t2g_path, filtered_results[prefix].get('genes')) 
+                    genes_by_name = obtain_gene_names(t2g_path, filtered_results[prefix].get('genes'))
                     filtered_results[prefix].update({
                           'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
                     })
