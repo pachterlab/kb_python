@@ -771,8 +771,10 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
     logger.info('Summing matrices into {}'.format(out_path))
     n = 0
     header = []
-    with open_as_text(mtx1_path, 'r') as f1, open_as_text(
-        mtx2_path, 'r') as f2, open(out_path, 'w') as out:
+    with open_as_text(mtx1_path,
+                      'r') as f1, open_as_text(mtx2_path,
+                                               'r') as f2, open(out_path,
+                                                                'w') as out:
         eof1 = eof2 = False
         nums = [0, 0, 0]
         nums1 = nums2 = None
@@ -789,8 +791,14 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             if not s2:
                 pause2 = True
                 eof2 = True
-            _nums1 = list(map(int, s1.split() if not eof1 and s1[0] != '%' else []))
-            _nums2 = list(map(int, s2.split() if not eof2 and s2[0] != '%' else []))
+            _nums1 = list(
+                map(int,
+                    s1.split() if not eof1 and s1[0] != '%' else [])
+            )
+            _nums2 = list(
+                map(int,
+                    s2.split() if not eof2 and s2[0] != '%' else [])
+                )
             if nums1 is not None:
                 _nums1 = nums1
                 nums1 = None
@@ -828,14 +836,16 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
                 if header_line:
                     out.write(header_line)
                 continue
-            elif (_nums1[0] > _nums2[0] or (_nums1[0] == _nums2[0] and _nums1[1] > _nums2[1])):
+            elif (_nums1[0] > _nums2[0]
+                  or (_nums1[0] == _nums2[0] and _nums1[1] > _nums2[1])):
                 # If we're further in mtx1 than mtx2
                 nums = _nums2
                 pause1 = True
                 pause2 = False
                 nums1 = _nums1
                 nums2 = None
-            elif (_nums2[0] > _nums1[0] or (_nums2[0] == _nums1[0] and _nums2[1] > _nums1[1])):
+            elif (_nums2[0] > _nums1[0]
+                  or (_nums2[0] == _nums1[0] and _nums2[1] > _nums1[1])):
                 # If we're further in mtx2 than mtx1
                 nums = _nums1
                 pause2 = True
@@ -859,7 +869,8 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             _nums_prev = None if not to_write else list(
                 map(int, to_write.split())
             )
-            if (_nums_prev and _nums_prev[0] == nums[0] and _nums_prev[1] == nums[1]):
+            if (_nums_prev and _nums_prev[0] == nums[0]
+                    and _nums_prev[1] == nums[1]):
                 nums[2] += _nums_prev[2]
                 pause1 = False
                 pause2 = False

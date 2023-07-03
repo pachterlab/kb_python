@@ -838,9 +838,8 @@ def count_result_to_dict(count_result: Dict[str, str]) -> List[Dict[str, str]]:
             'mtx':
                 count_result[f'mtx{i}'],
             'ec' if f'ec{i}' in count_result else 'genes':
-                count_result[
-                    f'ec{i}' if f'ec{i}' in count_result else f'genes{i}'
-                ],
+                count_result[f'ec{i}' if f'ec{i}' in
+                             count_result else f'genes{i}'],
             'barcodes':
                 count_result[f'barcodes{i}'],
             'batch_barcodes':
@@ -957,7 +956,8 @@ def filter_with_bustools(
                 t2g_path, count_result.get('genes')
             )
             results.update({
-                  'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                'genenames':
+                    write_list_to_file(genes_by_name, genes_by_name_path)
             })
         if loom or h5ad:
             results.update(
@@ -1369,7 +1369,9 @@ def count(
 
     techsplit = technology.split(":")
     ignore_umis = False
-    if len(techsplit) > 2 and len(techsplit[1]) >= 2 and techsplit[1][0] == "-" and techsplit[1][1] == "1":
+    if len(techsplit) > 2 and len(
+            techsplit[1]
+    ) >= 2 and techsplit[1][0] == "-" and techsplit[1][1] == "1":
         ignore_umis = True
     cm = (
         technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
@@ -1396,7 +1398,9 @@ def count(
                 capture_type='umis',
                 complement=suffix == UMI_SUFFIX
             )
-            update_results_with_suffix(unfiltered_results, capture_result, suffix)
+            update_results_with_suffix(
+                unfiltered_results, capture_result, suffix
+            )
             if inspect:
                 inspect_result = bustools_inspect(
                     capture_result['bus'],
@@ -1935,7 +1939,10 @@ def count_velocity(
                         t2g_path, count_result[i].get('genes')
                     )
                     count_result[i].update({
-                        'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                        'genenames':
+                            write_list_to_file(
+                                genes_by_name, genes_by_name_path
+                            )
                     })
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
@@ -2103,13 +2110,18 @@ def count_velocity(
                         t2g_path, filtered_results[prefix].get('genes')
                     )
                     filtered_results[prefix].update({
-                          'genenames': write_list_to_file(genes_by_name, genes_by_name_path)
+                        'genenames':
+                            write_list_to_file(
+                                genes_by_name, genes_by_name_path
+                            )
                     })
                 if cellranger:
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
-                        os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                        os.path.join(
+                            filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}'
+                        )
                     )
                     filtered_results[prefix].update({'cellranger': cr_result})
                 filtered_results[prefix].update(count_result[i])
