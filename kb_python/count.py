@@ -503,6 +503,11 @@ def bustools_count(
             del ret['batch_barcodes0']
             del ret['batch_barcodes1']
             del ret['batch_barcodes2']
+        else:
+            # See if barcodes prefix exists, if not create one
+            make_prefix_file_if_not_exists(ret['batch_barcodes0'])
+            make_prefix_file_if_not_exists(ret['batch_barcodes1'])
+            make_prefix_file_if_not_exists(ret['batch_barcodes2'])
         return ret
     ret = {
         'mtx':
@@ -516,6 +521,9 @@ def bustools_count(
     }
     if not batch_barcodes:
         del ret['batch_barcodes']
+    else:
+        # See if barcodes prefix exists, if not create one
+        make_prefix_file_if_not_exists(ret['batch_barcodes'])
     return ret
 
 
@@ -1011,6 +1019,23 @@ def stream_fastqs(fastqs: List[str], temp_dir: str = 'tmp') -> List[str]:
         if urlparse(fastq).scheme in ('http', 'https', 'ftp', 'ftps') else fastq
         for fastq in fastqs
     ]
+
+
+def make_prefix_file_if_not_exists(prefix_file: str):
+    """Makes a .barcodes.prefix.txt file if doesn't already exist.
+
+    Args:
+        prefix_file: Name of the .barcodes.prefix.txt file
+
+    Returns:
+        The prefix_file file name
+    """
+    if os.path.exists(prefix_file):
+        return prefix_file
+    else:
+        # Write 16-bp of A's as the sole prefix in the file
+        write_list_to_file(["AAAAAAAAAAAAAAAA"], prefix_file)
+        return prefix_file
 
 
 @dryable(dry_count.stream_batch)
