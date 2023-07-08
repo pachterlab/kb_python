@@ -79,6 +79,7 @@ from .utils import (
     obtain_gene_names,
     write_list_to_file,
     do_sum_matrices,
+    move_file,
 )
 from .stats import STATS
 from .validate import validate_files
@@ -475,7 +476,7 @@ def bustools_count(
     if nascent_path:
         ret = {
             'mtx0':
-                f'{out_prefix}.mtx',
+                move_file(f'{out_prefix}.mtx', f'{out_prefix}.mature.mtx'),
             'ec0' if tcc else 'genes0':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
             'barcodes0':
@@ -483,7 +484,7 @@ def bustools_count(
             'batch_barcodes0':
                 f'{out_prefix}.barcodes.prefix.txt' if batch_barcodes else None,
             'mtx1':
-                f'{out_prefix}.2.mtx',
+                move_file(f'{out_prefix}.2.mtx', f'{out_prefix}.nascent.mtx'),
             'ec1' if tcc else 'genes1':
                 f'{out_prefix}.ec.txt' if tcc else f'{out_prefix}.genes.txt',
             'barcodes1':
