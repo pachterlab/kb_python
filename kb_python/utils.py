@@ -804,27 +804,27 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             if nums2 is not None:
                 _nums2 = nums2
                 nums2 = None
-            if (eof1 and eof2):
+            if eof1 and eof2:
                 # Both mtxs are done
                 break
-            elif (eof1):
+            elif eof1:
                 # mtx1 is done
                 nums = _nums2
                 pause2 = False
-            elif (eof2):
+            elif eof2:
                 # mtx2 is done
                 nums = _nums1
                 pause1 = False
-            elif (eof1 and eof2):
+            elif eof1 and eof2:
                 # Both mtxs are done
                 break
-            elif (len(_nums1) != len(_nums2)):
-                # We have a problem
-                raise Exception("Summing up two matrix files failed")
-            elif (len(_nums1) != 3) or (len(_nums2) != 3):
+            #elif (len(_nums1) != len(_nums2)):
+            #    # We have a problem
+            #    raise Exception("Summing up two matrix files failed")
+            elif not _nums1 or not _nums2:
                 # We have something other than a matrix line
                 continue
-            elif (len(header) == 0):
+            elif not header:
                 # We are at the header line and need to read it in
                 if (_nums1[0] != _nums2[0] or _nums1[1] != _nums2[1]):
                     raise Exception(
@@ -851,7 +851,7 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
                 pause1 = False
                 nums2 = _nums2
                 nums1 = None
-            elif (_nums1[0] == _nums2[0] and _nums1[1] == _nums2[1]):
+            elif _nums1[0] == _nums2[0] and _nums1[1] == _nums2[1]:
                 # If we're at the same location in mtx1 and mtx2
                 nums = _nums1
                 nums[2] += _nums2[2]
@@ -863,7 +863,7 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
                     "Summing up two matrix files failed: Assertion failed"
                 )
             # Write out a line
-            _nums_prev = to_write # None if not to_write else [int(n) for n in to_write.split()]
+            _nums_prev = to_write
             if (_nums_prev and _nums_prev[0] == nums[0]
                     and _nums_prev[1] == nums[1]):
                 nums[2] += _nums_prev[2]
