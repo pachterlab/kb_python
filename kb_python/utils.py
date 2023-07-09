@@ -775,30 +775,29 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
                       'r') as f1, open_as_text(mtx2_path,
                                                'r') as f2, open(out_path,
                                                                 'w') as out:
-        eof1 = eof2 = False
+        eof1 = eof2 = pause1 = pause2 = False
         nums = [0, 0, 0]
-        nums1 = nums2 = None
-        pause1 = pause2 = False
-        to_write = None
+        nums1 = nums2 = to_write = None
         if header_line:
             out.write("%%MatrixMarket matrix coordinate real general\n%\n")
         while not eof1 or not eof2:
             s1 = f1.readline() if not eof1 and not pause1 else '%'
             s2 = f2.readline() if not eof2 and not pause2 else '%'
             if not s1:
-                pause1 = True
-                eof1 = True
+                pause1 = eof1 = True
             if not s2:
-                pause2 = True
-                eof2 = True
-            _nums1 = list(
-                map(int,
-                    s1.split() if not eof1 and s1[0] != '%' else [])
-            )
-            _nums2 = list(
-                map(int,
-                    s2.split() if not eof2 and s2[0] != '%' else [])
-            )
+                pause2 = eof2 = True
+            _nums1 = _nums2 = []
+            if not eof1 and s1[0] != '%':
+                _nums1 = s1.split()
+                _nums1[0] = int(_nums1[0])
+                _nums1[1] = int(_nums1[1])
+                _nums1[2] = int(_nums1[2])
+            if not eof2 and s2[0] != '%':
+                _nums2 = s2.split()
+                _nums2[0] = int(_nums2[0])
+                _nums2[1] = int(_nums2[1])
+                _nums2[2] = int(_nums2[2])
             if nums1 is not None:
                 _nums1 = nums1
                 nums1 = None
@@ -856,34 +855,29 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
                 # If we're at the same location in mtx1 and mtx2
                 nums = _nums1
                 nums[2] += _nums2[2]
-                pause1 = False
-                pause2 = False
-                nums1 = None
-                nums2 = None
+                pause1 = pause2 = False
+                nums1 = nums2 = None
             else:
                 # Shouldn't happen
                 raise Exception(
                     "Summing up two matrix files failed: Assertion failed"
                 )
             # Write out a line
-            _nums_prev = None if not to_write else list(
-                map(int, to_write.split())
-            )
+            _nums_prev = to_write # None if not to_write else [int(n) for n in to_write.split()]
             if (_nums_prev and _nums_prev[0] == nums[0]
                     and _nums_prev[1] == nums[1]):
                 nums[2] += _nums_prev[2]
-                pause1 = False
-                pause2 = False
-                to_write = f'{nums[0]} {nums[1]} {nums[2]}\n'
+                pause1 = pause2 = False
+                to_write = [nums[0], nums[1], nums[2]]
             else:
                 if to_write:
                     if header_line:
-                        out.write(to_write)
+                        out.write(f'{to_write[0]} {to_write[1]} {to_write[2]}\n')
                     n += 1
-                to_write = f'{nums[0]} {nums[1]} {nums[2]}\n'
+                to_write = [nums[0], nums[1], nums[2]]
         if to_write:
             if header_line:
-                out.write(to_write)
+                out.write(f'{to_write[0]} {to_write[1]} {to_write[2]}\n')
             n += 1
     if not header_line:
         header_line = f'{header[0]} {header[1]} {n}\n'
