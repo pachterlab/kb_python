@@ -1485,7 +1485,7 @@ def count(
                     count_result['ec'],
                     t2g_path,
                     quant_dir,
-                    flens_path=bus_result.get('flens'),
+                    flens_path=None if (use_suffixes and suffix == UMI_SUFFIX) else bus_result.get('flens'),
                     l=fragment_l,
                     s=fragment_s,
                     threads=threads,
