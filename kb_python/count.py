@@ -1482,7 +1482,7 @@ def count(
                 quant_result = kallisto_quant_tcc(
                     count_result['mtx'],
                     bus_result['saved_index'],
-                    bus_result['ecmap'],
+                    count_result['ec'],
                     t2g_path,
                     quant_dir,
                     flens_path=bus_result.get('flens'),
