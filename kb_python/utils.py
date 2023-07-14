@@ -818,7 +818,7 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             elif eof1 and eof2:
                 # Both mtxs are done
                 break
-            #elif (len(_nums1) != len(_nums2)):
+            # elif (len(_nums1) != len(_nums2)):
             #    # We have a problem
             #    raise Exception("Summing up two matrix files failed")
             elif not _nums1 or not _nums2:
