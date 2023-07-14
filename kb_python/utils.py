@@ -872,7 +872,9 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             else:
                 if to_write:
                     if header_line:
-                        out.write(f'{to_write[0]} {to_write[1]} {to_write[2]}\n')
+                        out.write(
+                            f'{to_write[0]} {to_write[1]} {to_write[2]}\n'
+                        )
                     n += 1
                 to_write = [nums[0], nums[1], nums[2]]
         if to_write:
