@@ -203,7 +203,7 @@ class TestCount(TestMixin, TestCase):
         counts_path = os.path.join(out_dir, COUNTS_PREFIX)
         result = count.bustools_count(
             self.bus_scs_path, counts_path, self.t2g_path, self.ecmap_path,
-            self.txnames_path
+            self.txnames_path, umi_gene=False
         )
         self.assertEqual({
             'mtx': '{}.mtx'.format(counts_path),
@@ -219,7 +219,7 @@ class TestCount(TestMixin, TestCase):
         os.makedirs(counts_path, exist_ok=True)
         result = count.bustools_count(
             self.bus_scs_path, counts_path, self.t2g_path, self.ecmap_path,
-            self.txnames_path
+            self.txnames_path, umi_gene=False
         )
         self.assertEqual({
             'mtx': '{}.mtx'.format(counts_path),
