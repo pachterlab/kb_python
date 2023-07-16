@@ -329,7 +329,7 @@ class TestRef(TestMixin, TestCase):
                 self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
-                cdna_fasta_path, t2g_path
+                cdna_fasta_path, t2g_path, aa_flag=False
             )
             split_genomic_fasta_to_cdna.assert_called_once_with(
                 self.fasta_path,
@@ -446,7 +446,7 @@ class TestRef(TestMixin, TestCase):
                 self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
-                cdna_fasta_path, t2g_path
+                cdna_fasta_path, t2g_path, aa_flag=False
             )
             split_genomic_fasta_to_cdna.assert_called_once_with(
                 self.fasta_path,
@@ -502,7 +502,7 @@ class TestRef(TestMixin, TestCase):
             split_genomic_fasta_to_cdna.assert_not_called()
             concatenate_files.assert_not_called()
             create_t2g_from_fasta.assert_called_once_with(
-                cdna_fasta_path, t2g_path
+                cdna_fasta_path, t2g_path, aa_flag=False
             )
             kallisto_index.assert_called_once_with(
                 cdna_fasta_path, index_path, k=31
@@ -591,7 +591,7 @@ class TestRef(TestMixin, TestCase):
                 self.gtf_path, use_version=True, filter_func=mock.ANY
             )
             create_t2g_from_fasta.assert_called_once_with(
-                cdna_fasta_path, t2g_path
+                cdna_fasta_path, t2g_path, aa_flag=False
             )
             split_genomic_fasta_to_cdna.assert_called_once_with(
                 self.fasta_path,
