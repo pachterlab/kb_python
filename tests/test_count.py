@@ -408,6 +408,9 @@ class TestCount(TestMixin, TestCase):
                     matrix_path,
                     barcode_path,
                     genes_path,
+                    batch_barcodes_path=None,
+                    loom=False,
+                    loom_names=['barcode', 'target_name'],
                     t2g_path=t2g_path,
                     name='gene',
                     by_name=False
