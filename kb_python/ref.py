@@ -784,8 +784,8 @@ def ref_custom(
     return results
 
 
-@logger.namespaced('ref_lamanno')
-def ref_lamanno(
+@logger.namespaced('ref_nac')
+def ref_nac(
     fasta_paths: Union[List[str], str],
     gtf_paths: Union[List[str], str],
     cdna_path: str,
@@ -1006,6 +1006,206 @@ def ref_lamanno(
                     dlist=dlist,
                     make_unique=make_unique,
                     max_ec_size=max_ec_size
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'], intron_index_result['index']
+                    ]
+                }
+            else:
+                split_index_result = split_and_index(
+                    intron_path,
+                    f'{index_path}_intron',
+                    n=n - 1,
+                    k=k or 31,
+                    temp_dir=temp_dir
+                )
+                index_result = {
+                    'indices': [
+                        cdna_index_result['index'],
+                        *split_index_result['indices']
+                    ]
+                }
+        results.update(index_result)
+    else:
+        logger.info(
+            'Skipping kallisto index because {} already exists. Use the --overwrite flag to overwrite.'
+            .format(index_path)
+        )
+
+    return results
+
+
+@logger.namespaced('ref_lamanno')
+def ref_lamanno(
+    fasta_paths: Union[List[str], str],
+    gtf_paths: Union[List[str], str],
+    cdna_path: str,
+    intron_path: str,
+    index_path: str,
+    t2g_path: str,
+    cdna_t2c_path: str,
+    intron_t2c_path: str,
+    n: int = 1,
+    k: Optional[int] = None,
+    flank: Optional[int] = None,
+    include: Optional[List[Dict[str, str]]] = None,
+    exclude: Optional[List[Dict[str, str]]] = None,
+    temp_dir: str = 'tmp',
+    overwrite: bool = False,
+    threads: int = 8,
+) -> Dict[str, str]:
+    """RNA velocity index (DEPRECATED).
+
+    Args:
+        fasta_paths: List of paths to genomic FASTA files
+        gtf_paths: List of paths to GTF files
+        cdna_path: Path to generate the cDNA FASTA file
+        intron_path: Path to generate the intron FASTA file
+        t2g_path: Path to output transcript-to-gene mapping
+        cdna_t2c_path: Path to generate the cDNA transcripts-to-capture file
+        intron_t2c_path: Path to generate the intron transcripts-to-capture file
+        n: Split the index into `n` files
+        k: Override default kmer length (31), defaults to `None`
+        flank: Number of bases to include from the flanking regions
+            when generating the intron FASTA, defaults to `None`, which
+            sets the flanking region to be k - 1 bases.
+        include: List of dictionaries representing key-value pairs of
+            attributes to include
+        exclude: List of dictionaries representing key-value pairs of
+            attributes to exclude
+        temp_dir: Path to temporary directory, defaults to `tmp`
+        overwrite: Overwrite an existing index file, defaults to `False`
+        threads: Number of threads to use, defaults to `8`
+
+    Returns:
+        Dictionary containing paths to generated file(s)
+    """
+    if not isinstance(fasta_paths, list):
+        fasta_paths = [fasta_paths]
+    if not isinstance(gtf_paths, list):
+        gtf_paths = [gtf_paths]
+    include_func = get_gtf_attribute_include_func(
+        include
+    ) if include else lambda entry: True
+    exclude_func = get_gtf_attribute_exclude_func(
+        exclude
+    ) if exclude else lambda entry: True
+    filter_func = lambda entry: include_func(entry) and exclude_func(entry)
+
+    results = {}
+    cdnas = []
+    introns = []
+    cdna_t2cs = []
+    intron_t2cs = []
+    if (not ngs.utils.all_exists(cdna_path, intron_path, t2g_path,
+                                 cdna_t2c_path, intron_t2c_path)) or overwrite:
+        for fasta_path, gtf_path in zip(fasta_paths, gtf_paths):
+            logger.info(f'Preparing {fasta_path}, {gtf_path}')
+            # Parse GTF for gene and transcripts
+            gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
+                gtf_path, use_version=True, filter_func=filter_func
+            )
+
+            # Split cDNA
+            cdna_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Splitting genome {fasta_path} into cDNA at {cdna_temp_path}'
+            )
+            cdna_temp_path = ngs.fasta.split_genomic_fasta_to_cdna(
+                fasta_path, cdna_temp_path, gene_infos, transcript_infos
+            )
+            cdnas.append(cdna_temp_path)
+
+            # cDNA t2c
+            cdna_t2c_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Creating cDNA transcripts-to-capture at {cdna_t2c_temp_path}'
+            )
+            cdna_t2c_result = create_t2c(cdna_temp_path, cdna_t2c_temp_path)
+            cdna_t2cs.append(cdna_t2c_result['t2c'])
+
+            # Split intron
+            intron_temp_path = get_temporary_filename(temp_dir)
+            logger.info(f'Splitting genome into introns at {intron_temp_path}')
+            intron_temp_path = ngs.fasta.split_genomic_fasta_to_intron(
+                fasta_path,
+                intron_temp_path,
+                gene_infos,
+                transcript_infos,
+                flank=flank if flank is not None else k -
+                1 if k is not None else 30
+            )
+            introns.append(intron_temp_path)
+
+            # intron t2c
+            intron_t2c_temp_path = get_temporary_filename(temp_dir)
+            logger.info(
+                f'Creating intron transcripts-to-capture at {intron_t2c_temp_path}'
+            )
+            intron_t2c_result = create_t2c(
+                intron_temp_path, intron_t2c_temp_path
+            )
+            intron_t2cs.append(intron_t2c_result['t2c'])
+
+        # Concatenate
+        logger.info(f'Concatenating {len(cdnas)} cDNA FASTAs to {cdna_path}')
+        cdna_path = concatenate_files(*cdnas, out_path=cdna_path)
+        logger.info(
+            f'Concatenating {len(cdna_t2cs)} cDNA transcripts-to-captures to {cdna_t2c_path}'
+        )
+        cdna_t2c_path = concatenate_files(*cdna_t2cs, out_path=cdna_t2c_path)
+        logger.info(
+            f'Concatenating {len(introns)} intron FASTAs to {intron_path}'
+        )
+        intron_path = concatenate_files(*introns, out_path=intron_path)
+        logger.info(
+            f'Concatenating {len(intron_t2cs)} intron transcripts-to-captures to {intron_t2c_path}'
+        )
+        intron_t2c_path = concatenate_files(
+            *intron_t2cs, out_path=intron_t2c_path
+        )
+        results.update({
+            'cdna_fasta': cdna_path,
+            'cdna_t2c': cdna_t2c_path,
+            'intron_fasta': intron_path,
+            'intron_t2c': intron_t2c_path
+        })
+
+    else:
+        logger.info(
+            'Skipping cDNA and intron FASTA generation because files already exist. Use --overwrite flag to overwrite'
+        )
+
+    if not glob.glob(f'{index_path}*') or overwrite:
+        # Concatenate cDNA and intron fastas to generate T2G and build index
+        combined_path = get_temporary_filename(temp_dir)
+        logger.info(f'Concatenating cDNA and intron FASTAs to {combined_path}')
+        combined_path = concatenate_files(
+            cdna_path, intron_path, out_path=combined_path
+        )
+        t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
+        results.update(t2g_result)
+
+        if k and k != 31:
+            logger.warning(
+                f'Using provided k-mer length {k} instead of optimal length 31'
+            )
+
+        # If n = 1, make single index
+        # if n = 2, make two indices, one for spliced and another for unspliced
+        # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
+        if n == 1:
+            index_result = kallisto_index(
+                combined_path, index_path, k=k or 31, threads=threads
+            )
+        else:
+            cdna_index_result = kallisto_index(
+                cdna_path, f'{index_path}_cdna', k=k or 31
+            )
+            if n == 2:
+                intron_index_result = kallisto_index(
+                    intron_path, f'{index_path}_intron', k=k or 31
                 )
                 index_result = {
                     'indices': [

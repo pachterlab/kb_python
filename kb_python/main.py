@@ -26,7 +26,7 @@ from .config import (
 from .compile import compile
 from .constants import INFO_FILENAME
 from .logging import logger
-from .ref import download_reference, ref, ref_kite, ref_lamanno, ref_custom
+from .ref import download_reference, ref, ref_kite, ref_lamanno, ref_nac, ref_custom
 from .utils import (
     get_bustools_version,
     get_kallisto_version,
@@ -262,7 +262,7 @@ def parse_ref(
             reference, files, overwrite=args.overwrite, temp_dir=temp_dir
         )
     elif args.workflow == 'nac':
-        ref_lamanno(
+        ref_nac(
             args.fasta,
             args.gtf,
             args.f1,
@@ -281,6 +281,27 @@ def parse_ref(
             make_unique=args.make_unique,
             temp_dir=temp_dir,
             max_ec_size=args.ec_max_size
+        )
+    elif args.workflow in {'lamanno', 'nucleus'}:
+        if args.d_list is not None:
+            parser.error("d-list incompatible with lamanno/nucleus")
+        ref_lamanno(
+            args.fasta,
+            args.gtf,
+            args.f1,
+            args.f2,
+            args.i,
+            args.g,
+            args.c1,
+            args.c2,
+            k=args.k,
+            flank=args.flank,
+            include=include,
+            exclude=exclude,
+            overwrite=args.overwrite,
+            make_unique=args.make_unique,
+            temp_dir=temp_dir,
+            threads=threads
         )
     else:
         # Report extraneous options
@@ -335,7 +356,7 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
-                nucleus=args.workflow == 'nucleus',
+                nucleus=False,
                 k=args.k,
                 include=include,
                 exclude=exclude,
@@ -535,7 +556,7 @@ def parse_count(
         parser.error('`--loom-names` is invalid')
 
     if args.workflow == 'nac':
-        # Smartseq can not be used with lamanno.
+        # Smartseq can not be used with nac.
         if args.x.upper() in ('SMARTSEQ',):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
@@ -544,8 +565,8 @@ def parse_count(
             parser.error(
                 f'Option `--aa` cannot be used with workflow {args.workflow}.'
             )
-        from .count import count_velocity
-        count_velocity(
+        from .count import count_nac
+        count_nac(
             args.i,
             args.g,
             args.c1,
@@ -585,6 +606,69 @@ def parse_count(
             batch_barcodes=args.batch_barcodes,
             numreads=args.N
         )
+    elif args.workflow in {'nucleus', 'lamanno'}:
+        # Smartseq can not be used with lamanno or nucleus.
+        if args.x.upper() in ('SMARTSEQ',):
+            parser.error(
+                f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
+            )
+        if args.sum is not None:
+            parser.error('--sum incompatible with lamanno/nucleus')
+        if args.x.upper() == 'SMARTSEQ3':
+            from .count import count_velocity_smartseq3
+            count_velocity_smartseq3(
+                args.i,
+                args.g,
+                args.c1,
+                args.c2,
+                args.o,
+                args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                temp_dir=temp_dir,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                inspect=not args.no_inspect,
+                strand=args.strand,
+                by_name=args.gene_names
+            )
+        else:
+            from .count import count_velocity
+            count_velocity(
+                args.i,
+                args.g,
+                args.c1,
+                args.c2,
+                args.x,
+                args.o,
+                batch_path or args.fastqs,
+                args.w,
+                tcc=args.tcc,
+                mm=args.mm,
+                filter=args.filter,
+                filter_threshold=args.filter_threshold,
+                threads=args.t,
+                memory=args.m,
+                overwrite=args.overwrite,
+                loom=args.loom,
+                h5ad=args.h5ad,
+                cellranger=args.cellranger,
+                report=args.report,
+                inspect=not args.no_inspect,
+                nucleus=args.workflow == 'nucleus',
+                temp_dir=temp_dir,
+                fragment_l=args.fragment_l,
+                fragment_s=args.fragment_s,
+                paired=args.parity == 'paired',
+                strand=args.strand,
+                umi_gene=args.umi_gene,
+                em=args.em,
+                by_name=args.gene_names
+            )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
             parser.error(
@@ -850,24 +934,24 @@ def setup_ref_args(
         action='append',
     )
 
-    required_lamanno = parser_ref.add_argument_group(
+    required_nac = parser_ref.add_argument_group(
         'required arguments for `nac` workflow'
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-f2',
         metavar='FASTA',
         help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
         required=workflow in {'nac'}
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'nac'}
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to generate unprocessed transcripts-to-capture',
@@ -921,6 +1005,7 @@ def setup_ref_args(
     )
     parser_ref.add_argument(
         '--workflow',
+        metavar='{standard,nac,kite,custom}',
         help=(
             'Type of workflow to prepare files for. '
             'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
@@ -929,7 +1014,7 @@ def setup_ref_args(
         ),
         type=str,
         default='standard',
-        choices=['standard', 'nac', 'kite', 'custom']
+        choices=['standard', 'nac', 'kite', 'custom', 'lamanno', 'nucleus']
     )
     parser_ref.add_argument(
         '--distinguish', help=argparse.SUPPRESS, action='store_true'
@@ -1132,6 +1217,7 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--workflow',
+        metavar='{standard,nac,kite,kite:10xFB}',
         help=(
             'Type of workflow. '
             'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
@@ -1141,7 +1227,7 @@ def setup_count_args(
         ),
         type=str,
         default='standard',
-        choices=['standard', 'nac', 'kite', 'kite:10xFB']
+        choices=['standard', 'nac', 'kite', 'kite:10xFB', 'lamanno', 'nucleus']
     )
     parser_count.add_argument(
         '--em',
@@ -1178,17 +1264,17 @@ def setup_count_args(
         type=int,
         default=None,
     )
-    required_lamanno = parser_count.add_argument_group(
+    required_nac = parser_count.add_argument_group(
         'required arguments for `nac` workflow'
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
         required=workflow in {'nac'}
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
