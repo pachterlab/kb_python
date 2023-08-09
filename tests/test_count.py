@@ -272,7 +272,10 @@ class TestCount(TestMixin, TestCase):
                 genes_path,
                 t2g_path=t2g_path,
                 name='gene',
-                by_name=False
+                by_name=False,
+                loom=True,
+                loom_names=['barcode', 'target_name'],
+                batch_barcodes_path=None
             )
             import_matrix_as_anndata.return_value.write_loom.assert_called_once_with(
                 loom_path
@@ -303,7 +306,10 @@ class TestCount(TestMixin, TestCase):
                 genes_path,
                 t2g_path=t2g_path,
                 name='gene',
-                by_name=False
+                by_name=False,
+                loom=False,
+                loom_names=['barcode', 'target_name'],
+                batch_barcodes_path=None
             )
             import_matrix_as_anndata.return_value.write.assert_called_once_with(
                 h5ad_path
@@ -330,7 +336,14 @@ class TestCount(TestMixin, TestCase):
                                  tcc=True
                              ))
             import_tcc_matrix_as_anndata.assert_called_once_with(
-                matrix_path, barcodes_path, ec_path, txnames_path, threads=8
+                matrix_path,
+                barcodes_path,
+                ec_path,
+                txnames_path,
+                threads=8,
+                loom=True,
+                loom_names=['barcode', 'target_name'],
+                batch_barcodes_path=None
             )
             import_tcc_matrix_as_anndata.return_value.write_loom.assert_called_once_with(
                 loom_path

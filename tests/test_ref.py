@@ -951,9 +951,7 @@ class TestRef(TestMixin, TestCase):
             split_genomic_fasta_to_nascent.assert_called_once_with(
                 self.fasta_path,
                 'intron',
-                gene_infos,
-                transcript_infos,
-                flank=30
+                gene_infos
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1260,9 +1258,7 @@ class TestRef(TestMixin, TestCase):
             split_genomic_fasta_to_nascent.assert_called_once_with(
                 self.fasta_path,
                 'intron',
-                gene_infos,
-                transcript_infos,
-                flank=k - 1
+                gene_infos
             )
             self.assertEqual(2, create_t2c.call_count)
             create_t2c.assert_has_calls([
@@ -1510,6 +1506,12 @@ class TestRef(TestMixin, TestCase):
                 )
             ])
             kallisto_index.assert_called_once_with(
-                combined_path, index_path, k=31
+                combined_path,
+                index_path,
+                k=31,
+                threads=8,
+                dlist=None,
+                make_unique=False,
+                max_ec_size=None
             )
             split_and_index.assert_not_called()
