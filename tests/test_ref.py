@@ -843,7 +843,7 @@ class TestRef(TestMixin, TestCase):
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(fasta_path, index_path, k=1)
 
-    def test_ref_lamanno(self):
+    def test_ref_nac(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -892,7 +892,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'index': index_path,
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -941,7 +941,7 @@ class TestRef(TestMixin, TestCase):
             )
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_split_2(self):
+    def test_ref_nac_split_2(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -994,7 +994,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'indices': ['index_cdna', 'index_intron'],
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -1046,7 +1046,7 @@ class TestRef(TestMixin, TestCase):
             ])
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_split_3(self):
+    def test_ref_nac_split_3(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -1098,7 +1098,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'indices': ['index_cdna', 'index_intron.0', 'index_intron.1'],
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -1150,7 +1150,7 @@ class TestRef(TestMixin, TestCase):
                 intron_fasta_path, 'index_intron', n=2, k=31, temp_dir=temp_dir
             )
 
-    def test_ref_lamanno_override_k(self):
+    def test_ref_nac_override_k(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -1200,7 +1200,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'index': index_path,
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -1250,7 +1250,7 @@ class TestRef(TestMixin, TestCase):
             )
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_exists(self):
+    def test_ref_nac_exists(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -1290,7 +1290,7 @@ class TestRef(TestMixin, TestCase):
                 't2g': t2g_path,
                 'index': index_path,
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -1318,7 +1318,7 @@ class TestRef(TestMixin, TestCase):
             )
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_exists2(self):
+    def test_ref_nac_exists2(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -1355,7 +1355,7 @@ class TestRef(TestMixin, TestCase):
             }]
             concatenate_files.return_value = combined_path
             self.assertEqual({},
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,
@@ -1375,7 +1375,7 @@ class TestRef(TestMixin, TestCase):
             kallisto_index.assert_not_called()
             split_and_index.assert_not_called()
 
-    def test_ref_lamanno_overwrite(self):
+    def test_ref_nac_overwrite(self):
         with mock.patch('kb_python.ref.get_temporary_filename') as get_temporary_filename,\
             mock.patch('kb_python.ref.create_t2g_from_fasta') as create_t2g_from_fasta,\
             mock.patch('kb_python.ref.create_t2c') as create_t2c,\
@@ -1424,7 +1424,7 @@ class TestRef(TestMixin, TestCase):
                 'intron_t2c': intron_t2c_path,
                 'index': index_path,
             },
-                             ref.ref_lamanno(
+                             ref.ref_nac(
                                  self.fasta_path,
                                  self.gtf_path,
                                  cdna_fasta_path,

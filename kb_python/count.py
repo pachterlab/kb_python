@@ -2290,7 +2290,7 @@ def count_velocity(
     umi_gene: bool = False,
     em: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
-    """Generates RNA velocity matrices for single-cell RNA seq.
+    """Generates RNA velocity matrices (DEPRECATED).
 
     Args:
         index_path: Path to kallisto index
@@ -2711,7 +2711,7 @@ def count_velocity_smartseq3(
     inspect: bool = True,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
-    """Generates count matrices for Smartseq3.
+    """Generates count matrices for Smartseq3 (DEPRECATED).
 
     Args:
         index_path: Path to kallisto index

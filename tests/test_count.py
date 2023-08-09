@@ -4463,7 +4463,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -4781,7 +4781,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -5089,7 +5089,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -5405,7 +5405,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -5702,7 +5702,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -6079,7 +6079,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -6513,7 +6513,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
@@ -6917,7 +6917,7 @@ class TestCount(TestMixin, TestCase):
                     }
                 }
             },
-                             count.count_velocity(
+                             count.count_nac(
                                  self.index_path,
                                  self.t2g_path,
                                  cdna_t2c_path,
