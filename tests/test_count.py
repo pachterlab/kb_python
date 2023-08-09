@@ -588,7 +588,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -669,7 +669,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -828,7 +828,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=True,
                 mm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -921,7 +921,7 @@ class TestCount(TestMixin, TestCase):
                 txnames_path,
                 tcc=False,
                 mm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -1161,7 +1161,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -1309,7 +1309,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -1458,7 +1458,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -1621,7 +1621,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -1797,7 +1797,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             filter_with_bustools.assert_called_once_with(
@@ -1819,7 +1819,7 @@ class TestCount(TestMixin, TestCase):
                 h5ad=False,
                 by_name=False,
                 tcc=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -1951,7 +1951,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -2086,7 +2086,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -2265,7 +2265,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             filter_with_bustools.assert_called_once_with(
@@ -2287,7 +2287,7 @@ class TestCount(TestMixin, TestCase):
                 h5ad=False,
                 by_name=False,
                 tcc=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -2438,7 +2438,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -2583,7 +2583,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -2745,7 +2745,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -2876,7 +2876,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -3004,7 +3004,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_called_once_with(
@@ -3173,7 +3173,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=True,
                 mm=True,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             kallisto_quant_tcc.assert_called_once_with(
@@ -3353,7 +3353,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=True,
                 mm=True,
                 cm=True,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             kallisto_quant_tcc.assert_called_once_with(
@@ -4161,7 +4161,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
@@ -4311,7 +4311,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 mm=False,
                 cm=False,
-                umi_gene=False,
+                umi_gene=True,
                 em=False,
             )
             convert_matrix.assert_not_called()
