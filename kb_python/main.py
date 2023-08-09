@@ -299,7 +299,6 @@ def parse_ref(
             include=include,
             exclude=exclude,
             overwrite=args.overwrite,
-            make_unique=args.make_unique,
             temp_dir=temp_dir,
             threads=args.t
         )
