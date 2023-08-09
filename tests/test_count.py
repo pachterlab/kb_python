@@ -382,7 +382,10 @@ class TestCount(TestMixin, TestCase):
                     genes_path,
                     t2g_path=t2g_path,
                     name='gene',
-                    by_name=False
+                    by_name=False,
+                    loom=True,
+                    loom_names=['barcode', 'target_name'],
+                    batch_barcodes_path=None
                 ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
@@ -463,7 +466,14 @@ class TestCount(TestMixin, TestCase):
             self.assertEqual(2, import_tcc_matrix_as_anndata.call_count)
             import_tcc_matrix_as_anndata.assert_has_calls([
                 call(
-                    matrix_path, barcode_path, ec_path, txnames_path, threads=8
+                    matrix_path,
+                    barcode_path,
+                    ec_path,
+                    txnames_path,
+                    threads=8,
+                    loom=True,
+                    loom_names=['barcode', 'target_name'],
+                    batch_barcodes_path=None
                 ) for matrix_path, barcode_path, ec_path in
                 zip(matrix_paths, barcodes_paths, ec_paths)
             ])
@@ -506,6 +516,9 @@ class TestCount(TestMixin, TestCase):
                     t2g_path=t2g_path,
                     name='gene',
                     by_name=False,
+                    loom=True,
+                    loom_names=['barcode', 'target_name'],
+                    batch_barcodes_path=None
                 ) for matrix_path, barcode_path, genes_path in
                 zip(matrix_paths, barcodes_paths, genes_paths)
             ])
@@ -1122,9 +1135,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -1270,9 +1288,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -1582,9 +1605,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -1910,9 +1938,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -2047,9 +2080,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -2225,9 +2263,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(2, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
@@ -2388,9 +2431,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None
             )
             self.assertEqual(3, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
@@ -2542,9 +2590,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=True,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -2704,9 +2757,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -4122,9 +4180,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand='unstranded',
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
