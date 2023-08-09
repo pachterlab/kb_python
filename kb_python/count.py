@@ -2191,8 +2191,7 @@ def count_nac(
                     ],
                     [
                         filtered_results[prefix]['batch_barcodes']
-                        if batch_barcodes else None
-                        for prefix in prefixes
+                        if batch_barcodes else None for prefix in prefixes
                     ],
                     genes_paths=[
                         filtered_results[prefix].get('genes')
