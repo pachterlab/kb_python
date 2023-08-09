@@ -974,7 +974,8 @@ def filter_with_bustools(
                     counts_dir,
                     count_result['mtx'],
                     count_result['barcodes'],
-                    batch_barcodes_path=count_result['batch_barcodes'],
+                    batch_barcodes_path=count_result['batch_barcodes']
+                    if 'batch_barcodes' in count_result else None,
                     genes_path=count_result.get('genes'),
                     t2g_path=t2g_path,
                     ec_path=count_result.get('ec'),
@@ -2190,6 +2191,7 @@ def count_nac(
                     ],
                     [
                         filtered_results[prefix]['batch_barcodes']
+                        if batch_barcodes else None
                         for prefix in prefixes
                     ],
                     genes_paths=[
