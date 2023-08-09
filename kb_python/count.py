@@ -2342,6 +2342,8 @@ def count_velocity(
     """
     STATS.start()
     is_batch = isinstance(fastqs, str)
+    BUS_CDNA_PREFIX = 'spliced'
+    BUS_INTRON_PREFIX = 'unspliced'
 
     results = {}
     make_directory(out_dir)
@@ -2740,6 +2742,8 @@ def count_velocity_smartseq3(
     """
     STATS.start()
     is_batch = isinstance(fastqs, str)
+    BUS_CDNA_PREFIX = 'spliced'
+    BUS_INTRON_PREFIX = 'unspliced'
 
     results = {}
     make_directory(out_dir)

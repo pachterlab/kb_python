@@ -301,7 +301,7 @@ def parse_ref(
             overwrite=args.overwrite,
             make_unique=args.make_unique,
             temp_dir=temp_dir,
-            threads=threads
+            threads=args.t
         )
     else:
         # Report extraneous options
