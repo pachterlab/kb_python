@@ -1491,6 +1491,7 @@ class TestCount(TestMixin, TestCase):
                 cm=False,
                 umi_gene=True,
                 em=False,
+                batch_barcodes=False
             )
             convert_matrix.assert_called_once_with(
                 os.path.join(out_dir, UNFILTERED_COUNTS_DIR),
@@ -1841,6 +1842,7 @@ class TestCount(TestMixin, TestCase):
                 cm=False,
                 umi_gene=True,
                 em=False,
+                batch_barcodes=False
             )
             filter_with_bustools.assert_called_once_with(
                 bus_scs_path,
@@ -2676,6 +2678,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 threads=threads,
                 loom_names=['barcode', 'target_name'],
+                batch_barcodes_path=None
             )
             filter_with_bustools.assert_not_called()
             stream_batch.assert_not_called()
@@ -2844,7 +2847,8 @@ class TestCount(TestMixin, TestCase):
                 by_name=False,
                 tcc=False,
                 threads=threads,
-                loom_names=['barcode', 'target_name']
+                loom_names=['barcode', 'target_name'],
+                batch_barcodes_path=None
             )
             filter_with_bustools.assert_not_called()
             stream_batch.assert_not_called()
