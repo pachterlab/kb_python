@@ -656,7 +656,8 @@ class TestCount(TestMixin, TestCase):
                                  temp_dir=temp_dir,
                                  threads=threads,
                                  memory=memory,
-                                 loom=True
+                                 loom=True,
+                                 loom_names=['barcode', 'target_name'],
                              ))
 
             bustools_whitelist.assert_called_once_with(
@@ -1444,9 +1445,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
@@ -1788,9 +1794,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=False,
+                aa=False,
                 strand=None,
                 gtf_path=None,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(2, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
@@ -2145,7 +2156,8 @@ class TestCount(TestMixin, TestCase):
                 h5ad=False,
                 by_name=False,
                 tcc=False,
-                threads=threads
+                threads=threads,
+                loom_names=['barcode', 'target_name']
             )
             filter_with_bustools.assert_not_called()
 
@@ -2660,7 +2672,8 @@ class TestCount(TestMixin, TestCase):
                 h5ad=True,
                 by_name=False,
                 tcc=False,
-                threads=threads
+                threads=threads,
+                loom_names=['barcode', 'target_name'],
             )
             filter_with_bustools.assert_not_called()
             stream_batch.assert_not_called()
@@ -2828,7 +2841,8 @@ class TestCount(TestMixin, TestCase):
                 h5ad=True,
                 by_name=False,
                 tcc=False,
-                threads=threads
+                threads=threads,
+                loom_names=['barcode', 'target_name']
             )
             filter_with_bustools.assert_not_called()
             stream_batch.assert_not_called()
@@ -4345,9 +4359,14 @@ class TestCount(TestMixin, TestCase):
                 threads=threads,
                 paired=False,
                 genomebam=True,
+                aa=False,
                 strand='unstranded',
                 gtf_path=self.gtf_path,
                 chromosomes_path=None,
+                inleaved=False,
+                demultiplexed=False,
+                batch_barcodes=False,
+                numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
