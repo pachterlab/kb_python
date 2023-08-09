@@ -1506,7 +1506,8 @@ class TestCount(TestMixin, TestCase):
                 h5ad=False,
                 by_name=False,
                 tcc=False,
-                threads=threads
+                threads=threads,
+                loom_names=['barcode', 'target_name']
             )
             filter_with_bustools.assert_not_called()
 
@@ -1865,6 +1866,7 @@ class TestCount(TestMixin, TestCase):
                 tcc=False,
                 umi_gene=True,
                 em=False,
+                loom_names=['barcode', 'target_name'],
             )
             convert_matrix.assert_not_called()
 
