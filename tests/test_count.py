@@ -3621,9 +3621,10 @@ class TestCount(TestMixin, TestCase):
                         os.path.join(counts_umi_dir, 'adata.h5ad'),
                 }
             },
-                             count.count_smartseq3(
+                             count.count(
                                  self.index_path,
                                  self.t2g_path,
+                                 "SMARTSEQ3",
                                  out_dir,
                                  fastqs,
                                  temp_dir=temp_dir,
@@ -3984,6 +3985,7 @@ class TestCount(TestMixin, TestCase):
                              count.count_smartseq3(
                                  self.index_path,
                                  self.t2g_path,
+                                 "SMARTSEQ3",
                                  out_dir,
                                  fastqs,
                                  temp_dir=temp_dir,
