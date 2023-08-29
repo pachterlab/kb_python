@@ -1230,7 +1230,7 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--em',
-        help='Estimate gene abundances using an EM algorithm.',
+        help=argparse.SUPPRESS,
         action='store_true'
     )
 
