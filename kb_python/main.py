@@ -1229,9 +1229,7 @@ def setup_count_args(
         choices=['standard', 'nac', 'kite', 'kite:10xFB', 'lamanno', 'nucleus']
     )
     parser_count.add_argument(
-        '--em',
-        help=argparse.SUPPRESS,
-        action='store_true'
+        '--em', help=argparse.SUPPRESS, action='store_true'
     )
 
     count_group = parser_count.add_mutually_exclusive_group()
