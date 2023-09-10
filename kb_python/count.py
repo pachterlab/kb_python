@@ -154,10 +154,7 @@ def kallisto_bus(
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
-    if not demultiplexed:
-        command += ['-x', technology]
-    else:
-        command += ['-x', 'BULK']
+    command += ['-x', technology]
     command += ['-t', threads]
     if n:
         command += ['--num']
@@ -1843,7 +1840,15 @@ def count_nac(
             os.path.join(out_dir, CAPTURE_FILENAME)
         )
 
-    cm = technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
+    techsplit = technology.split(":")
+    ignore_umis = False
+    if len(techsplit) > 2 and len(
+            techsplit[1]
+    ) >= 2 and techsplit[1][0] == "-" and techsplit[1][1] == "1":
+        ignore_umis = True
+    cm = (
+        technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
+    ) or ignore_umis
     quant = cm and tcc
     suffix_to_inspect_filename = {'': ''}
     if (technology.upper() == 'SMARTSEQ3'):
