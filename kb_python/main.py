@@ -1208,10 +1208,7 @@ def setup_count_args(
         default=False
     )
     parser_count.add_argument(
-        '--d-list-overhang',
-        help=argparse.SUPPRESS,
-        type=int,
-        default=1
+        '--d-list-overhang', help=argparse.SUPPRESS, type=int, default=1
     )
     parser_count.add_argument(
         '--gtf',
