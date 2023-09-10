@@ -154,7 +154,13 @@ def kallisto_bus(
     command = [get_kallisto_binary_path(), 'bus']
     command += ['-i', index_path]
     command += ['-o', out_dir]
-    command += ['-x', technology]
+    if not demultiplexed:
+        command += ['-x', technology]
+    elif technology[0] == '-':
+        # User supplied a custom demuxed (no-barcode) technology
+        command += ['-x', technology]
+    else:
+        command += ['-x', 'BULK']
     command += ['-t', threads]
     if n:
         command += ['--num']
