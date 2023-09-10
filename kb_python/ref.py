@@ -237,6 +237,7 @@ def kallisto_index(
     k: int = 31,
     threads: int = 8,
     dlist: str = None,
+    dlist_overhang: int = 1,
     make_unique: bool = False,
     aa: bool = False,
     distinguish: bool = False,
@@ -251,6 +252,7 @@ def kallisto_index(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
+        dlist_overhang: The overhang to use for the D-list, defaults to `1`
         make_unique: Replace repeated target names with unique names, defaults to `False`
         aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
@@ -275,6 +277,8 @@ def kallisto_index(
         command += ['--distinguish']
     if max_ec_size:
         command += ['-e', max_ec_size]
+    if dlist_overhang > 1:
+        command += ['--d-list-overhang', dlist_overhang]
     command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
@@ -531,6 +535,7 @@ def ref(
     make_unique: bool = False,
     threads: int = 8,
     dlist: str = None,
+    dlist_overhang: int = 1,
     aa: bool = False,
     max_ec_size: int = None,
 ) -> Dict[str, str]:
@@ -554,6 +559,7 @@ def ref(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
+        dlist_overhang: The overhang to use for the D-list, defaults to `1`
         aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
         max_ec_size: Sets max size of equivalence class, defaults to `None`
@@ -641,6 +647,7 @@ def ref(
             k=k or 31,
             threads=threads,
             dlist=dlist,
+            dlist_overhang=dlist_overhang,
             aa=aa,
             make_unique=make_unique,
             max_ec_size=max_ec_size,
@@ -724,6 +731,7 @@ def ref_custom(
     k: Optional[int] = 31,
     threads: int = 8,
     dlist: str = None,
+    dlist_overhang: int = 1,
     aa: bool = False,
     overwrite: bool = False,
     temp_dir: str = 'tmp',
@@ -739,6 +747,7 @@ def ref_custom(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
+        dlist_overhang: The overhang to use for the D-list, defaults to `1`
         aa: Generate index from a FASTA-file containing amino acid sequences,
             defaults to `False`
         overwrite: Overwrite an existing index file, defaults to `False`
@@ -769,6 +778,7 @@ def ref_custom(
             k=k or 31,
             threads=threads,
             dlist=dlist,
+            dlist_overhang=dlist_overhang,
             aa=aa,
             make_unique=make_unique,
             distinguish=distinguish
@@ -805,6 +815,7 @@ def ref_nac(
     make_unique: bool = False,
     threads: int = 8,
     dlist: str = None,
+    dlist_overhang: int = 1,
     max_ec_size: int = None
 ) -> Dict[str, str]:
     """Generates files necessary to generate RNA velocity matrices for single-cell RNA-seq.
@@ -833,6 +844,7 @@ def ref_nac(
         threads: Number of threads to use, defaults to `8`
         dlist: Path to a FASTA-file containing sequences to mask from quantification,
             defaults to `None`
+        dlist_overhang: The overhang to use for the D-list, defaults to `1`
         max_ec_size: Sets max size of equivalence class, defaults to `None`
 
     Returns:
@@ -974,6 +986,7 @@ def ref_nac(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
+                dlist_overhang=dlist_overhang,
                 make_unique=make_unique,
                 max_ec_size=max_ec_size
             )
@@ -984,6 +997,7 @@ def ref_nac(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
+                dlist_overhang=dlist_overhang,
                 make_unique=make_unique,
                 max_ec_size=max_ec_size
             )
@@ -994,6 +1008,7 @@ def ref_nac(
                 k=k or 31,
                 threads=threads,
                 dlist=dlist,
+                dlist_overhang=dlist_overhang,
                 make_unique=make_unique,
                 max_ec_size=max_ec_size
             )
@@ -1004,6 +1019,7 @@ def ref_nac(
                     k=k or 31,
                     threads=threads,
                     dlist=dlist,
+                    dlist_overhang=dlist_overhang,
                     make_unique=make_unique,
                     max_ec_size=max_ec_size
                 )
