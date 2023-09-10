@@ -346,6 +346,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 aa=False,
                 make_unique=False,
                 max_ec_size=None
@@ -470,6 +471,7 @@ class TestRef(TestMixin, TestCase):
                 k=k,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 aa=False,
                 make_unique=False,
                 max_ec_size=None
@@ -524,6 +526,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 aa=False,
                 make_unique=False,
                 max_ec_size=None
@@ -629,6 +632,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 aa=False,
                 make_unique=False,
                 max_ec_size=None
@@ -976,6 +980,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 make_unique=False,
                 max_ec_size=None
             )
@@ -1289,6 +1294,7 @@ class TestRef(TestMixin, TestCase):
                 k=k,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 make_unique=False,
                 max_ec_size=None
             )
@@ -1363,6 +1369,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 make_unique=False,
                 max_ec_size=None
             )
@@ -1523,6 +1530,7 @@ class TestRef(TestMixin, TestCase):
                 k=31,
                 threads=8,
                 dlist=None,
+                dlist_overhang=1,
                 make_unique=False,
                 max_ec_size=None
             )
