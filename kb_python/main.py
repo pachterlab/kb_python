@@ -277,6 +277,7 @@ def parse_ref(
             exclude=exclude,
             threads=args.t,
             dlist=dlist,
+            dlist_overhang=args.dlist_overhang,
             overwrite=args.overwrite,
             make_unique=args.make_unique,
             temp_dir=temp_dir,
@@ -342,6 +343,7 @@ def parse_ref(
                 k=args.k,
                 threads=args.t,
                 dlist=dlist,
+                dlist_overhang=args.dlist_overhang,
                 aa=aa,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir,
@@ -361,6 +363,7 @@ def parse_ref(
                 exclude=exclude,
                 threads=args.t,
                 dlist=dlist,
+                dlist_overhang=args.dlist_overhang,
                 aa=aa,
                 overwrite=args.overwrite,
                 make_unique=args.make_unique,
@@ -1203,6 +1206,12 @@ def setup_count_args(
         ),
         action='store_true',
         default=False
+    )
+    parser_count.add_argument(
+        '--d-list-overhang',
+        help=argparse.SUPPRESS,
+        type=int,
+        default=1
     )
     parser_count.add_argument(
         '--gtf',
