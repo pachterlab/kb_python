@@ -436,6 +436,9 @@ def parse_count(
     if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
         args.x = 'BULK'
         demultiplexed = True
+    if args.x[0] == '-':
+        # Custom technology where no barcodes exist
+        demultiplexed = True
 
     if args.batch_barcodes and batch_path is None:
         parser.error(
