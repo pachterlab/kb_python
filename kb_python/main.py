@@ -1003,6 +1003,9 @@ def setup_ref_args(
         default=None
     )
     parser_ref.add_argument(
+        '--d-list-overhang', help=argparse.SUPPRESS, type=int, default=1
+    )
+    parser_ref.add_argument(
         '--aa',
         help='Generate index from a FASTA-file containing amino acid sequences',
         action='store_true',
@@ -1206,9 +1209,6 @@ def setup_count_args(
         ),
         action='store_true',
         default=False
-    )
-    parser_count.add_argument(
-        '--d-list-overhang', help=argparse.SUPPRESS, type=int, default=1
     )
     parser_count.add_argument(
         '--gtf',
