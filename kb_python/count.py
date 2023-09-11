@@ -308,7 +308,6 @@ def bustools_project(
     return {'bus': out_path}
 
 
-@validate_files(pre=False)
 def bustools_sort(
     bus_path: str,
     out_path: str,
@@ -374,7 +373,6 @@ def bustools_inspect(
     return {'inspect': out_path}
 
 
-@validate_files(pre=False)
 def bustools_correct(
     bus_path: str,
     out_path: str,
