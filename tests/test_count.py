@@ -4189,7 +4189,6 @@ class TestCount(TestMixin, TestCase):
                     'bus_scs': bus_scs_path,
                     'mtx': '{}.mtx'.format(counts_prefix),
                     'genes': '{}.genes.txt'.format(counts_prefix),
-                    'genenames': '{}.genes.names.txt'.format(counts_prefix),
                     'barcodes': '{}.barcodes.txt'.format(counts_prefix),
                 }
             },
