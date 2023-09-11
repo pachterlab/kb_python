@@ -967,10 +967,11 @@ def filter_with_bustools(
             genes_by_name = obtain_gene_names(
                 t2g_path, count_result.get('genes')
             )
-            results.update({
-                'genenames':
-                    write_list_to_file(genes_by_name, genes_by_name_path)
-            })
+            if genes_by_name:
+                results.update({
+                    'genenames':
+                        write_list_to_file(genes_by_name, genes_by_name_path)
+                })
         if loom or h5ad:
             results.update(
                 convert_matrix(
@@ -1516,10 +1517,11 @@ def count(
                 genes_by_name = obtain_gene_names(
                     t2g_path, count_result.get('genes')
                 )
-                count_result.update({
-                    'genenames':
-                        write_list_to_file(genes_by_name, genes_by_name_path)
-                })
+                if genes_by_name:
+                    count_result.update({
+                        'genenames':
+                            write_list_to_file(genes_by_name, genes_by_name_path)
+                    })
             update_results_with_suffix(unfiltered_results, count_result, suffix)
             final_result = quant_result if quant else count_result
             if cellranger:
@@ -1960,12 +1962,13 @@ def count_nac(
                     genes_by_name = obtain_gene_names(
                         t2g_path, count_result[i].get('genes')
                     )
-                    count_result[i].update({
-                        'genenames':
-                            write_list_to_file(
-                                genes_by_name, genes_by_name_path
-                            )
-                    })
+                    if genes_by_name:
+                        count_result[i].update({
+                            'genenames':
+                                write_list_to_file(
+                                    genes_by_name, genes_by_name_path
+                                )
+                        })
                 prefix_results = unfiltered_results.setdefault(prefix, {})
                 update_results_with_suffix(prefix_results, sort_result, suffix)
                 update_results_with_suffix(
@@ -2131,12 +2134,13 @@ def count_nac(
                     genes_by_name = obtain_gene_names(
                         t2g_path, filtered_results[prefix].get('genes')
                     )
-                    filtered_results[prefix].update({
-                        'genenames':
-                            write_list_to_file(
-                                genes_by_name, genes_by_name_path
-                            )
-                    })
+                    if genes_by_name:
+                        filtered_results[prefix].update({
+                            'genenames':
+                                write_list_to_file(
+                                    genes_by_name, genes_by_name_path
+                                )
+                        })
                 if cellranger:
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
