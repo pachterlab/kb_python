@@ -1520,7 +1520,9 @@ def count(
                 if genes_by_name:
                     count_result.update({
                         'genenames':
-                            write_list_to_file(genes_by_name, genes_by_name_path)
+                            write_list_to_file(
+                                genes_by_name, genes_by_name_path
+                            )
                     })
             update_results_with_suffix(unfiltered_results, count_result, suffix)
             final_result = quant_result if quant else count_result
