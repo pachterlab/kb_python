@@ -961,7 +961,7 @@ def filter_with_bustools(
         )
         results.update(count_result)
 
-        if by_name and 'genes' in count_result:
+        if 'genes' in count_result:
             genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
             logger.info(f'Writing gene names to file {genes_by_name_path}')
             genes_by_name = obtain_gene_names(
@@ -1506,7 +1506,7 @@ def count(
                 )
 
             # Convert outputs.
-            if by_name and 'genes' in count_result:
+            if 'genes' in count_result:
                 genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
                 if quant:
                     genes_by_name_path = os.path.join(
@@ -1951,7 +1951,7 @@ def count_nac(
             prefixes = ['processed', 'unprocessed', 'ambiguous']  # 0,1,2
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
-                if by_name and i == 0 and 'genes' in count_result[i]:
+                if i == 0 and 'genes' in count_result[i]:
                     # Only need to write this once
                     genes_by_name_path = f'{counts_prefix}.{GENE_NAMES_FILENAME}'
                     logger.info(
@@ -2122,7 +2122,7 @@ def count_nac(
             for i in range(len(prefixes)):
                 prefix = prefixes[i]
                 filtered_results[prefix] = {}
-                if by_name and i == 0 and 'genes' in filtered_results[prefix]:
+                if i == 0 and 'genes' in filtered_results[prefix]:
                     # Only need to write this once
                     genes_by_name_path = f'{filtered_counts_prefix}.{GENE_NAMES_FILENAME}'
                     logger.info(
