@@ -1346,7 +1346,7 @@ def setup_count_args(
         '--gene-names',
         help=(
             'Group counts by gene names instead of gene IDs when generating '
-            'the loom or h5ad file (and output gene names for count matrices)'
+            'the loom or h5ad file'
         ),
         action='store_true'
     )
