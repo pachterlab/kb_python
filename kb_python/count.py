@@ -87,7 +87,6 @@ from .validate import validate_files
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
-@validate_files()
 def kallisto_bus(
     fastqs: Union[List[str], str],
     index_path: str,
