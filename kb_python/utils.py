@@ -434,6 +434,8 @@ def obtain_gene_names(
     is_geneid_path = isinstance(gene_names_list, str)
     var_names = []
     if is_geneid_path:
+        if not os.path.exists(gene_names_list):
+            return []
         with open_as_text(gene_names_list, 'r') as f:
             var_names = [line.strip() for line in f]
     else:
