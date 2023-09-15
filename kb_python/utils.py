@@ -798,8 +798,8 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, mm=False, header_line=None) 
                     _nums1[1] = int(_nums1[1])
                     _nums1[2] = int(_nums1[2])
                 else:
-                    _nums1[0] = float(_nums1[0])
-                    _nums1[1] = float(_nums1[1])
+                    _nums1[0] = int(_nums1[0])
+                    _nums1[1] = int(_nums1[1])
                     _nums1[2] = float(_nums1[2])
             if not eof2 and s2[0] != '%':
                 _nums2 = s2.split()
@@ -808,8 +808,8 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, mm=False, header_line=None) 
                     _nums2[1] = int(_nums2[1])
                     _nums2[2] = int(_nums2[2])
                 else:
-                    _nums2[0] = float(_nums2[0])
-                    _nums2[1] = float(_nums2[1])
+                    _nums2[0] = int(_nums2[0])
+                    _nums2[1] = int(_nums2[1])
                     _nums2[2] = float(_nums2[2])
             if nums1 is not None:
                 _nums1 = nums1
@@ -885,6 +885,8 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, mm=False, header_line=None) 
             else:
                 if to_write:
                     if header_line:
+                        if mm and to_write[2].is_integer():
+                            to_write[2] = int(to_write[2])
                         out.write(
                             f'{to_write[0]} {to_write[1]} {to_write[2]}\n'
                         )
@@ -892,6 +894,8 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, mm=False, header_line=None) 
                 to_write = [nums[0], nums[1], nums[2]]
         if to_write:
             if header_line:
+                if mm and to_write[2].is_integer():
+                    to_write[2] = int(to_write[2])
                 out.write(f'{to_write[0]} {to_write[1]} {to_write[2]}\n')
             n += 1
     if not header_line:
