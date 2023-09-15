@@ -2004,7 +2004,8 @@ def count_nac(
                     updated_prefixes = ['processed', 'nucleus']
                 if sum_matrices == 'total':
                     sums['total'] = do_sum_matrices(
-                        f'{counts_prefix}.mature.mtx', f'{counts_prefix}.nucleus.mtx',
+                        f'{counts_prefix}.mature.mtx',
+                        f'{counts_prefix}.nucleus.mtx',
                         f'{counts_prefix}.total.mtx', em or mm
                     )
                     updated_prefixes = prefixes
