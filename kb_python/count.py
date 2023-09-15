@@ -1992,20 +1992,23 @@ def count_nac(
                     sums['cell'] = do_sum_matrices(
                         count_result[prefixes.index('processed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{counts_prefix}.cell.mtx'
+                        f'{counts_prefix}.cell.mtx',
+                        em or mm
                     )
                     updated_prefixes = ['cell', 'unprocessed']
                 if sum_matrices == 'nucleus' or sum_matrices == 'total':
                     sums['nucleus'] = do_sum_matrices(
                         count_result[prefixes.index('unprocessed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{counts_prefix}.nucleus.mtx'
+                        f'{counts_prefix}.nucleus.mtx',
+                        em or mm
                     )
                     updated_prefixes = ['processed', 'nucleus']
                 if sum_matrices == 'total':
                     sums['total'] = do_sum_matrices(
                         f'{counts_prefix}.mature.mtx', f'{counts_prefix}.nucleus.mtx',
-                        f'{counts_prefix}.total.mtx'
+                        f'{counts_prefix}.total.mtx',
+                        em or mm
                     )
                     updated_prefixes = prefixes
                 prefixes = updated_prefixes
@@ -2159,21 +2162,24 @@ def count_nac(
                     sums['cell'] = do_sum_matrices(
                         count_result[prefixes.index('processed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{filtered_counts_prefix}.cell.mtx'
+                        f'{filtered_counts_prefix}.cell.mtx',
+                        em or mm
                     )
                     updated_prefixes = ['cell', 'unprocessed']
                 if sum_matrices == 'nucleus' or sum_matrices == 'total':
                     sums['nucleus'] = do_sum_matrices(
                         count_result[prefixes.index('unprocessed')]['mtx'],
                         count_result[prefixes.index('ambiguous')]['mtx'],
-                        f'{filtered_counts_prefix}.nucleus.mtx'
+                        f'{filtered_counts_prefix}.nucleus.mtx',
+                        em or mm
                     )
                     updated_prefixes = ['processed', 'nucleus']
                 if sum_matrices == 'total':
                     sums['total'] = do_sum_matrices(
                         f'{filtered_counts_prefix}.mature.mtx',
                         f'{filtered_counts_prefix}.nucleus.mtx',
-                        f'{filtered_counts_prefix}.total.mtx'
+                        f'{filtered_counts_prefix}.total.mtx',
+                        em or mm
                     )
                     updated_prefixes = prefixes
                 prefixes = updated_prefixes
