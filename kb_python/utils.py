@@ -758,13 +758,14 @@ def sum_anndatas(
     )
 
 
-def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
+def do_sum_matrices(mtx1_path, mtx2_path, out_path, mm=False, header_line=None) -> str:
     """Sums up two matrices given two matrix files.
 
     Args:
         mtx1_path: First matrix file path
         mtx2_path: Second matrix file path
         out_path: Output file path
+        mm: Whether to allow multimapping (i.e. decimals)
         header_line: The header line if we have it
 
     Returns:
@@ -792,14 +793,24 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             _nums1 = _nums2 = []
             if not eof1 and s1[0] != '%':
                 _nums1 = s1.split()
-                _nums1[0] = int(_nums1[0])
-                _nums1[1] = int(_nums1[1])
-                _nums1[2] = int(_nums1[2])
+                if not mm:
+                    _nums1[0] = int(_nums1[0])
+                    _nums1[1] = int(_nums1[1])
+                    _nums1[2] = int(_nums1[2])
+                else:
+                    _nums1[0] = float(_nums1[0])
+                    _nums1[1] = float(_nums1[1])
+                    _nums1[2] = float(_nums1[2])
             if not eof2 and s2[0] != '%':
                 _nums2 = s2.split()
-                _nums2[0] = int(_nums2[0])
-                _nums2[1] = int(_nums2[1])
-                _nums2[2] = int(_nums2[2])
+                if not mm:
+                    _nums2[0] = int(_nums2[0])
+                    _nums2[1] = int(_nums2[1])
+                    _nums2[2] = int(_nums2[2])
+                else:
+                    _nums2[0] = float(_nums2[0])
+                    _nums2[1] = float(_nums2[1])
+                    _nums2[2] = float(_nums2[2])
             if nums1 is not None:
                 _nums1 = nums1
                 nums1 = None
@@ -885,7 +896,7 @@ def do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line=None) -> str:
             n += 1
     if not header_line:
         header_line = f'{header[0]} {header[1]} {n}\n'
-        do_sum_matrices(mtx1_path, mtx2_path, out_path, header_line)
+        do_sum_matrices(mtx1_path, mtx2_path, out_path, mm, header_line)
     return out_path
 
 
