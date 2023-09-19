@@ -1896,7 +1896,7 @@ def count_nac(
                 )
             sort_result = bustools_sort(
                 capture_result['bus'],
-                os.path.join(out_dir, f'output.{UNFILTERED_CODE}.bus'),
+                os.path.join(out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus'),
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory
