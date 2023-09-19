@@ -1402,9 +1402,11 @@ def count(
     modifications = [''] if not replacement else ['', '_modified']
     for suffix, inspect_filename in suffix_to_inspect_filename.items():
         if use_suffixes:
+            fname1 = os.path.join(out_dir, f'output{suffix}.bus')
+            fname2 = os.path.join(out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus')
             capture_result = bustools_capture(
                 prev_result['bus'],
-                os.path.join(out_dir, f'output{suffix}.bus'),
+                fname1,
                 capture_path,
                 capture_type='umis',
                 complement=suffix == UMI_SUFFIX
@@ -1423,7 +1425,7 @@ def count(
                 )
             sort_result = bustools_sort(
                 capture_result['bus'],
-                os.path.join(out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus'),
+                fname2,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory
