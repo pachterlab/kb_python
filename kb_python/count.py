@@ -1403,7 +1403,9 @@ def count(
     for suffix, inspect_filename in suffix_to_inspect_filename.items():
         if use_suffixes:
             fname1 = os.path.join(out_dir, f'output{suffix}.bus')
-            fname2 = os.path.join(out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus')
+            fname2 = os.path.join(
+                out_dir, f'output{suffix}.{UNFILTERED_CODE}.bus'
+            )
             capture_result = bustools_capture(
                 prev_result['bus'],
                 fname1,
