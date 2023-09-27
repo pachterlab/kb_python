@@ -438,13 +438,14 @@ def parse_count(
     if '%' in args.x:
         x_split = args.x.split('%')
         args.x = x_split[0]
-        if x_split[1].upper() == "UNSTRANDED":
-            args.strand = "unstranded"
-        elif x_split[1].upper() == "FORWARD":
-            args.strand = "forward"
-        elif x_split[1].upper() == "REVERSE":
-            args.strand = "reverse"
-        if len(x_split) > 2:
+        if args.strand is None:
+            if x_split[1].upper() == "UNSTRANDED":
+                args.strand = "unstranded"
+            elif x_split[1].upper() == "FORWARD":
+                args.strand = "forward"
+            elif x_split[1].upper() == "REVERSE":
+                args.strand = "reverse"
+        if args.parity is None and len(x_split) > 2:
             if x_split[2].upper() == 'PAIRED':
                 args.parity = "paired"
             else:
