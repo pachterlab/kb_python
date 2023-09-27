@@ -435,6 +435,21 @@ def parse_count(
     if args.inleaved:
         batch_path = None
 
+    if '%' in args.x:
+        x_split = args.x.split('%')
+        args.x = x_split[0]
+        if x_split[1].upper() == "UNSTRANDED":
+            args.strand = "unstranded"
+        elif x_split[1].upper() == "FORWARD":
+            args.strand = "forward"
+        elif x_split[1].upper() == "REVERSE":
+            args.strand = "reverse"
+        if len(x_split) > 2:
+            if x_split[2].upper() == 'PAIRED':
+                args.parity = "paired"
+            else:
+                args.parity = "single"
+
     demultiplexed = False
     if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
         args.x = 'BULK'
