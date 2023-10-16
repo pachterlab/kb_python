@@ -1300,7 +1300,12 @@ def count(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path and not demultiplexed:
+    correct = True
+    if whitelist_path and whitelist_path.upper() == "NONE":
+        correct = False
+    if not correct:
+        whitelist_path = None
+    if not whitelist_path and not demultiplexed and correct:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology if not FB else '10xFB', sort_result['bus'], out_dir
@@ -1315,7 +1320,7 @@ def count(
             whitelist_path=whitelist_path,
         )
         unfiltered_results.update(inspect_result)
-    if not demultiplexed:
+    if not demultiplexed and correct:
         prev_result = bustools_correct(
             prev_result['bus'],
             os.path.join(
@@ -1802,7 +1807,12 @@ def count_nac(
         threads=threads,
         memory=memory
     )
-    if not whitelist_path and not demultiplexed:
+    correct = True
+    if whitelist_path and whitelist_path.upper() == "NONE":
+        correct = False
+    if not correct:
+        whitelist_path = None
+    if not whitelist_path and not demultiplexed and correct:
         logger.info('Whitelist not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
@@ -1818,7 +1828,7 @@ def count_nac(
         unfiltered_results.update(inspect_result)
 
     prev_result = sort_result
-    if not demultiplexed:
+    if not demultiplexed and correct:
         prev_result = bustools_correct(
             prev_result['bus'],
             os.path.join(
