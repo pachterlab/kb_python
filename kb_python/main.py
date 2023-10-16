@@ -389,9 +389,6 @@ def parse_count(
             'and crash for large count matrices.'
         ))
 
-    if args.w and args.w.lower() == 'none':
-        args.w = None
-
     if args.filter_threshold and args.filter != 'bustools':
         parser.error(
             'Option `--filter-threshold` may only be used with `--filter bustools`.'
@@ -1169,8 +1166,9 @@ def setup_count_args(
         help=(
             'Path to file of on-listed barcodes to correct to. '
             'If not provided and bustools supports the technology, '
-            'a pre-packaged on-list is used. Otherwise, or if \'None\', is '
-            'provided, the bustools whitelist command is used. '
+            'a pre-packaged on-list is used. Otherwise, '
+            'the bustools whitelist command is used. '
+            'Specify NONE to bypass barcode error correction. '
             '(`kb --list` to view on-lists)'
         ),
         type=str
