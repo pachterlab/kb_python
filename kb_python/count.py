@@ -460,7 +460,7 @@ def bustools_count(
         command += ['--multimapping']
     if cm:
         command += ['--cm']
-    if umi_gene:
+    if umi_gene and not cm:
         command += ['--umi-gene']
     if em:
         command += ['--em']
