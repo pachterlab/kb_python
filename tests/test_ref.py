@@ -349,7 +349,8 @@ class TestRef(TestMixin, TestCase):
                 dlist_overhang=1,
                 aa=False,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -474,7 +475,8 @@ class TestRef(TestMixin, TestCase):
                 dlist_overhang=1,
                 aa=False,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -529,7 +531,8 @@ class TestRef(TestMixin, TestCase):
                 dlist_overhang=1,
                 aa=False,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -635,7 +638,8 @@ class TestRef(TestMixin, TestCase):
                 dlist_overhang=1,
                 aa=False,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -677,7 +681,7 @@ class TestRef(TestMixin, TestCase):
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(
-                fasta_path, index_path, k=1, threads=8
+                fasta_path, index_path, k=1, threads=8, temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -761,7 +765,7 @@ class TestRef(TestMixin, TestCase):
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(
-                fasta_path, index_path, k=1, threads=8
+                fasta_path, index_path, k=1, threads=8, temp_dir=temp_dir
             )
 
     def test_ref_kite_override_k(self):
@@ -803,7 +807,7 @@ class TestRef(TestMixin, TestCase):
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(
-                fasta_path, index_path, k=k, threads=8
+                fasta_path, index_path, k=k, threads=8, temp_dir=temp_dir
             )
 
     def test_ref_kite_doesnt_overwrite(self):
@@ -880,7 +884,7 @@ class TestRef(TestMixin, TestCase):
             )
             create_t2g_from_fasta.assert_called_once_with(fasta_path, t2g_path)
             kallisto_index.assert_called_once_with(
-                fasta_path, index_path, k=1, threads=8
+                fasta_path, index_path, k=1, threads=8, temp_dir=temp_dir
             )
 
     def test_ref_nac(self):
@@ -982,7 +986,8 @@ class TestRef(TestMixin, TestCase):
                 dlist=None,
                 dlist_overhang=1,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -1189,7 +1194,7 @@ class TestRef(TestMixin, TestCase):
                 )
             ])
             kallisto_index.assert_called_once_with(
-                cdna_fasta_path, 'index_cdna', k=31
+                cdna_fasta_path, 'index_cdna', k=31, temp_dir=temp_dir
             )
             split_and_index.assert_called_once_with(
                 intron_fasta_path, 'index_intron', n=2, k=31, temp_dir=temp_dir
@@ -1296,7 +1301,8 @@ class TestRef(TestMixin, TestCase):
                 dlist=None,
                 dlist_overhang=1,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -1371,7 +1377,8 @@ class TestRef(TestMixin, TestCase):
                 dlist=None,
                 dlist_overhang=1,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
 
@@ -1532,6 +1539,7 @@ class TestRef(TestMixin, TestCase):
                 dlist=None,
                 dlist_overhang=1,
                 make_unique=False,
-                max_ec_size=None
+                max_ec_size=None,
+                temp_dir=temp_dir
             )
             split_and_index.assert_not_called()
