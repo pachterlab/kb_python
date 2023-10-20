@@ -360,7 +360,9 @@ def split_and_index(
 
     built = []
     for fasta_part_path, index_part_path in zip(fastas, indices):
-        result = kallisto_index(fasta_part_path, index_part_path, k=k, temp_dir=temp_dir)
+        result = kallisto_index(
+            fasta_part_path, index_part_path, k=k, temp_dir=temp_dir
+        )
         built.append(result['index'])
 
     return {'indices': built}
@@ -717,7 +719,11 @@ def ref_kite(
         index_result = split_and_index(
             kite_path, index_path, n=n, k=k or optimal_k, temp_dir=temp_dir
         ) if n > 1 else kallisto_index(
-            kite_path, index_path, k=k or optimal_k, threads=threads, temp_dir=temp_dir
+            kite_path,
+            index_path,
+            k=k or optimal_k,
+            threads=threads,
+            temp_dir=temp_dir
         )
         results.update(index_result)
     else:
@@ -1222,7 +1228,11 @@ def ref_lamanno(
         # if n > 2, make n indices, one for spliced, another n - 1 for unspliced
         if n == 1:
             index_result = kallisto_index(
-                combined_path, index_path, k=k or 31, threads=threads, temp_dir=temp_dir
+                combined_path,
+                index_path,
+                k=k or 31,
+                threads=threads,
+                temp_dir=temp_dir
             )
         else:
             cdna_index_result = kallisto_index(
@@ -1230,7 +1240,10 @@ def ref_lamanno(
             )
             if n == 2:
                 intron_index_result = kallisto_index(
-                    intron_path, f'{index_path}_intron', k=k or 31, temp_dir=temp_dir
+                    intron_path,
+                    f'{index_path}_intron',
+                    k=k or 31,
+                    temp_dir=temp_dir
                 )
                 index_result = {
                     'indices': [
