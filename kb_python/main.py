@@ -97,7 +97,7 @@ def display_technologies():
     """Displays a list of supported technologies along with whether kb provides
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
-    headers = ['name', 'description', 'whitelist', 'barcode', 'umi', 'cDNA']
+    headers = ['name', 'description', 'on-list', 'barcode', 'umi', 'cDNA']
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
@@ -467,7 +467,7 @@ def parse_count(
     if args.batch_barcodes and args.w is None and not whitelist_provided(
             args.x.upper()):
         parser.error(
-            f'`--batch-barcodes` may not be used for technology {args.x} without whitelist'
+            f'`--batch-barcodes` may not be used for technology {args.x} without on-list'
         )
     if args.batch_barcodes and args.filter:
         parser.error('`--batch-barcodes` may not be used with --filter')
@@ -1167,7 +1167,7 @@ def setup_count_args(
             'Path to file of on-listed barcodes to correct to. '
             'If not provided and bustools supports the technology, '
             'a pre-packaged on-list is used. Otherwise, '
-            'the bustools whitelist command is used. '
+            'the bustools allowlist command is used. '
             'Specify NONE to bypass barcode error correction. '
             '(`kb --list` to view on-lists)'
         ),
