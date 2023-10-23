@@ -391,7 +391,7 @@ def bustools_correct(
         Dictionary containing path to generated index
     """
     logger.info(
-        'Correcting BUS records in {} to {} with whitelist {}'.format(
+        'Correcting BUS records in {} to {} with on-list {}'.format(
             bus_path, out_path, whitelist_path
         )
     )
@@ -575,20 +575,20 @@ def bustools_whitelist(
     out_path: str,
     threshold: Optional[int] = None
 ) -> Dict[str, str]:
-    """Runs `bustools whitelist`.
+    """Runs `bustools allowlist`.
 
     Args:
-        bus_path: Path to BUS file generate the whitelist from
-        out_path: Path to output whitelist
-        threshold: Barcode threshold to be included in whitelist
+        bus_path: Path to BUS file generate the on-list from
+        out_path: Path to output on-list
+        threshold: Barcode threshold to be included in on-list
 
     Returns:
         Dictionary containing path to generated index
     """
     logger.info(
-        'Generating whitelist {} from BUS file {}'.format(out_path, bus_path)
+        'Generating on-list {} from BUS file {}'.format(out_path, bus_path)
     )
-    command = [get_bustools_binary_path(), 'whitelist']
+    command = [get_bustools_binary_path(), 'allowlist']
     command += ['-o', out_path]
     if threshold:
         command += ['--threshold', threshold]
@@ -1065,7 +1065,7 @@ def copy_or_create_whitelist(
     """
     if whitelist_provided(technology):
         logger.info(
-            'Copying pre-packaged {} whitelist to {}'.format(
+            'Copying pre-packaged {} on-list to {}'.format(
                 technology.upper(), out_dir
             )
         )
@@ -1306,7 +1306,7 @@ def count(
     if not correct:
         whitelist_path = None
     if not whitelist_path and not demultiplexed and correct:
-        logger.info('Whitelist not provided')
+        logger.info('On-list not provided')
         whitelist_path = copy_or_create_whitelist(
             technology if not FB else '10xFB', sort_result['bus'], out_dir
         )
@@ -1813,7 +1813,7 @@ def count_nac(
     if not correct:
         whitelist_path = None
     if not whitelist_path and not demultiplexed and correct:
-        logger.info('Whitelist not provided')
+        logger.info('On-list not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
         )
@@ -2423,7 +2423,7 @@ def count_velocity(
         memory=memory
     )
     if not whitelist_path and not is_batch:
-        logger.info('Whitelist not provided')
+        logger.info('On-list not provided')
         whitelist_path = copy_or_create_whitelist(
             technology, sort_result['bus'], out_dir
         )
