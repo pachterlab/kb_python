@@ -147,9 +147,6 @@ TECHNOLOGIES = sorted([
         'STORMSEQ', 'STORM-seq', ngs.chemistry.get_chemistry('stormseq')
     ),
     Technology(
-        'VASASEQ', 'VASA-seq', ngs.chemistry.get_chemistry('vasaseq')
-    ),
-    Technology(
         'BDWTA', 'BD Rhapsody', ngs.chemistry.get_chemistry('bd rhapsody')
     ),
     Technology('Visium', '10x Visium', ngs.chemistry.get_chemistry('visium')),
