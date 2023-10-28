@@ -1163,9 +1163,7 @@ def setup_count_args(
         default='.',
     )
     parser_count.add_argument(
-        '--num',
-        help='Store read numbers in BUS file',
-        action='store_true'
+        '--num', help='Store read numbers in BUS file', action='store_true'
     )
     parser_count.add_argument(
         '-w',
