@@ -622,7 +622,8 @@ def parse_count(
             inleaved=args.inleaved,
             demultiplexed=demultiplexed,
             batch_barcodes=args.batch_barcodes,
-            numreads=args.N
+            numreads=args.N,
+            store_num=args.num
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
@@ -736,7 +737,8 @@ def parse_count(
             matrix_to_files=args.matrix_to_files,
             matrix_to_directories=args.matrix_to_directories,
             no_fragment=args.no_fragment,
-            numreads=args.N
+            numreads=args.N,
+            store_num=args.num
         )
 
 
@@ -1159,6 +1161,11 @@ def setup_count_args(
         help='Path to output directory (default: current directory)',
         type=str,
         default='.',
+    )
+    parser_count.add_argument(
+        '--num',
+        help='Store read numbers in BUS file',
+        action='store_true'
     )
     parser_count.add_argument(
         '-w',
