@@ -315,6 +315,7 @@ def bustools_sort(
     threads: int = 8,
     memory: str = '2G',
     flags: bool = False,
+    store_num: bool = False,
 ) -> Dict[str, str]:
     """Runs `bustools sort`.
 
@@ -326,6 +327,8 @@ def bustools_sort(
         memory: Amount of memory to use, defaults to `2G`
         flags: Whether to supply the `--flags` argument to sort, defaults to
             `False`
+        store_num: Whether to process BUS files with read numbers in flag,
+            defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -338,6 +341,8 @@ def bustools_sort(
     command += ['-m', memory]
     if flags:
         command += ['--flags']
+    if store_num:
+        command += ['--no-flags']
     command += [bus_path]
     run_executable(command)
     return {'bus': out_path}
@@ -1170,6 +1175,7 @@ def count(
     matrix_to_directories: bool = False,
     no_fragment: bool = False,
     numreads: int = None,
+    store_num: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1233,6 +1239,7 @@ def count(
         matrix_to_directories: Whether to write quant-tcc output to directories, defaults to `False`
         no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
+        store_num: Whether to store read numbers in BUS file, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1283,6 +1290,7 @@ def count(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
+            n=store_num
         )
     else:
         logger.info(
@@ -1298,7 +1306,8 @@ def count(
         ),
         temp_dir=temp_dir,
         threads=threads,
-        memory=memory
+        memory=memory,
+        store_num=store_num
     )
     correct = True
     if whitelist_path and whitelist_path.upper() == "NONE":
@@ -1683,6 +1692,7 @@ def count_nac(
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
     numreads: int = None,
+    store_num: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1743,6 +1753,7 @@ def count_nac(
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
+        store_num: Whether to store read numbers in BUS file, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -1790,6 +1801,7 @@ def count_nac(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
+            n=store_num
         )
     else:
         logger.info(
@@ -1805,7 +1817,8 @@ def count_nac(
         ),
         temp_dir=temp_dir,
         threads=threads,
-        memory=memory
+        memory=memory,
+        store_num=store_num
     )
     correct = True
     if whitelist_path and whitelist_path.upper() == "NONE":
