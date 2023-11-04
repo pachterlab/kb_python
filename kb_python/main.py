@@ -463,11 +463,12 @@ def parse_count(
             '`--batch-barcodes` can only be used if batch file supplied'
         )
     if args.batch_barcodes and demultiplexed:
-        parser.error(
-            f'`--batch-barcodes` may not be used for technology {args.x}'
-        )
+        if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
+            parser.error(
+                f'`--batch-barcodes` may not be used for technology {args.x}'
+            )
     if args.batch_barcodes and args.w is None and not whitelist_provided(
-            args.x.upper()):
+            args.x.upper()) and not demultiplexed:
         parser.error(
             f'`--batch-barcodes` may not be used for technology {args.x} without on-list'
         )
