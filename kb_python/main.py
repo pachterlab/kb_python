@@ -432,6 +432,8 @@ def parse_count(
     if args.inleaved:
         batch_path = None
 
+    args.x = args.x.strip()
+
     if '%' in args.x:
         x_split = args.x.split('%')
         args.x = x_split[0]
