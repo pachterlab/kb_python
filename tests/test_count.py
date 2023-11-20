@@ -592,7 +592,6 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -675,7 +674,6 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -769,7 +767,6 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                store_num=False
             )
             bustools_count.assert_not_called()
             convert_matrix.assert_not_called()
@@ -838,7 +835,6 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -932,7 +928,6 @@ class TestCount(TestMixin, TestCase):
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
-                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -1169,7 +1164,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1326,7 +1320,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1484,7 +1477,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1658,7 +1650,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1842,7 +1833,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2005,7 +1995,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2151,7 +2140,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2340,7 +2328,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2513,7 +2500,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 ),
                 call(
                     bus_scsp_path,
@@ -2521,7 +2507,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             create_10x_feature_barcode_map.assert_called_once_with(map_path)
@@ -2677,7 +2662,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2850,7 +2834,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -4289,7 +4272,6 @@ class TestCount(TestMixin, TestCase):
                     temp_dir=temp_dir,
                     threads=threads,
                     memory=memory,
-                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -4325,164 +4307,6 @@ class TestCount(TestMixin, TestCase):
             import_matrix_as_anndata.assert_not_called()
             render_report.assert_not_called()
 
-    def test_count_genomebam(self):
-        with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\
-            mock.patch('kb_python.count.kallisto_bus') as kallisto_bus,\
-            mock.patch('kb_python.count.bustools_sort') as bustools_sort,\
-            mock.patch('kb_python.count.bustools_inspect') as bustools_inspect,\
-            mock.patch('kb_python.count.copy_or_create_whitelist') as copy_or_create_whitelist,\
-            mock.patch('kb_python.count.bustools_correct') as bustools_correct,\
-            mock.patch('kb_python.count.bustools_count') as bustools_count,\
-            mock.patch('kb_python.count.convert_matrix') as convert_matrix,\
-            mock.patch('kb_python.count.filter_with_bustools') as filter_with_bustools,\
-            mock.patch('kb_python.count.STATS') as STATS,\
-            mock.patch('kb_python.count.render_report') as render_report,\
-            mock.patch('kb_python.count.import_matrix_as_anndata') as import_matrix_as_anndata:
-            out_dir = self.temp_dir
-            temp_dir = self.temp_dir
-            counts_prefix = os.path.join(
-                out_dir, UNFILTERED_COUNTS_DIR, COUNTS_PREFIX
-            )
-            threads = 99999
-            memory = 'TEST'
-            bus_path = os.path.join(out_dir, BUS_FILENAME)
-            ecmap_path = os.path.join(out_dir, ECMAP_FILENAME)
-            txnames_path = os.path.join(out_dir, TXNAMES_FILENAME)
-            info_path = os.path.join(out_dir, KALLISTO_INFO_FILENAME)
-            genomebam_path = os.path.join(out_dir, GENOMEBAM_FILENAME)
-            genomebam_index_path = os.path.join(
-                out_dir, GENOMEBAM_INDEX_FILENAME
-            )
-            inspect_path = os.path.join(out_dir, INSPECT_FILENAME)
-            bus_s_path = os.path.join(temp_dir, BUS_S_FILENAME)
-            bus_sc_path = os.path.join(temp_dir, BUS_SC_FILENAME)
-            bus_scs_path = os.path.join(out_dir, BUS_UNFILTERED_FILENAME)
-            stream_fastqs.return_value = self.fastqs
-            kallisto_bus.return_value = {
-                'bus': bus_path,
-                'ecmap': ecmap_path,
-                'txnames': txnames_path,
-                'info': info_path,
-                'genomebam': genomebam_path,
-                'genomebam_index': genomebam_index_path,
-            }
-            bustools_sort.side_effect = [{
-                'bus': bus_s_path
-            }, {
-                'bus': bus_scs_path
-            }]
-            bustools_inspect.return_value = {'inspect': inspect_path}
-            bustools_correct.return_value = {'bus': bus_sc_path}
-            bustools_count.return_value = {
-                'mtx': '{}.mtx'.format(counts_prefix),
-                'genes': '{}.genes.txt'.format(counts_prefix),
-                'barcodes': '{}.barcodes.txt'.format(counts_prefix),
-            }
-            STATS.save.return_value = 'stats'
-
-            self.assertEqual({
-                'stats': 'stats',
-                'unfiltered': {
-                    'bus': bus_path,
-                    'ecmap': ecmap_path,
-                    'txnames': txnames_path,
-                    'info': info_path,
-                    'genomebam': genomebam_path,
-                    'genomebam_index': genomebam_index_path,
-                    'inspect': inspect_path,
-                    'bus_scs': bus_scs_path,
-                    'mtx': '{}.mtx'.format(counts_prefix),
-                    'genes': '{}.genes.txt'.format(counts_prefix),
-                    'barcodes': '{}.barcodes.txt'.format(counts_prefix),
-                }
-            },
-                             count.count(
-                                 self.index_path,
-                                 self.t2g_path,
-                                 self.technology,
-                                 out_dir,
-                                 self.fastqs,
-                                 whitelist_path=self.whitelist_path,
-                                 temp_dir=temp_dir,
-                                 threads=threads,
-                                 memory=memory,
-                                 genomebam=True,
-                                 strand='unstranded',
-                                 gtf_path=self.gtf_path,
-                             ))
-
-            stream_fastqs.assert_called_once_with(
-                self.fastqs, temp_dir=temp_dir
-            )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=True,
-                aa=False,
-                strand='unstranded',
-                gtf_path=self.gtf_path,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
-            self.assertEqual(bustools_sort.call_count, 2)
-            bustools_sort.assert_has_calls([
-                call(
-                    bus_path,
-                    bus_s_path,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    store_num=False
-                ),
-                call(
-                    bus_sc_path,
-                    bus_scs_path,
-                    temp_dir=temp_dir,
-                    threads=threads,
-                    memory=memory,
-                    store_num=False
-                )
-            ])
-            bustools_inspect.assert_called_once_with(
-                bus_s_path,
-                inspect_path,
-                whitelist_path=self.whitelist_path,
-            )
-            copy_or_create_whitelist.assert_not_called()
-            bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
-            )
-            bustools_count.assert_called_once_with(
-                bus_scs_path,
-                counts_prefix,
-                self.t2g_path,
-                ecmap_path,
-                txnames_path,
-                tcc=False,
-                mm=False,
-                cm=False,
-                umi_gene=True,
-                em=False,
-                batch_barcodes=False,
-            )
-            convert_matrix.assert_not_called()
-            filter_with_bustools.assert_not_called()
-
-            STATS.start.assert_called_once()
-            STATS.end.assert_called_once()
-            STATS.save.assert_called_once_with(
-                os.path.join(out_dir, KB_INFO_FILENAME)
-            )
-            import_matrix_as_anndata.assert_not_called()
-            render_report.assert_not_called()
 
     def test_count_velocity_with_whitelist(self):
         with mock.patch('kb_python.count.stream_fastqs') as stream_fastqs,\

@@ -185,7 +185,7 @@ class TestUtils(TestMixin, TestCase):
             'Olfr1010', 'Olfr1021-ps1', 'Olfr1038-ps', 'Olfr1077-ps1',
             'Olfr1083-ps', 'Olfr1117-ps1', 'Olfr1165-ps', 'Olfr475-ps1',
             'Olfr1267-ps1', 'Olfr1268-ps1', 'Olfr1273-ps', 'Olfr1300-ps1'
-        ], list(adata.var.gene_name.values))
+        ], list(adata.var.gene_id.values))
 
     def test_import_matrix_as_anndata_with_t2g_no_gene_name(self):
         adata = utils.import_matrix_as_anndata(
@@ -205,7 +205,7 @@ class TestUtils(TestMixin, TestCase):
             'Olfr1077-ps1', 'Olfr1083-ps', 'Olfr1117-ps1', 'Olfr1165-ps',
             'Olfr475-ps1', 'Olfr1267-ps1', 'Olfr1268-ps1', 'Olfr1273-ps',
             'Olfr1300-ps1'
-        ], list(adata.var.gene_name.values))
+        ], list(adata.var.gene_id.values))
 
     def test_import_matrix_as_anndata_name(self):
         adata = utils.import_matrix_as_anndata(
