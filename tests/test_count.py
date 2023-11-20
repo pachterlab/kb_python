@@ -591,7 +591,8 @@ class TestCount(TestMixin, TestCase):
                 sort_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -673,7 +674,8 @@ class TestCount(TestMixin, TestCase):
                 sort_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -766,7 +768,8 @@ class TestCount(TestMixin, TestCase):
                 sort_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_count.assert_not_called()
             convert_matrix.assert_not_called()
@@ -834,7 +837,8 @@ class TestCount(TestMixin, TestCase):
                 sort_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -927,7 +931,8 @@ class TestCount(TestMixin, TestCase):
                 sort_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_count.assert_called_once_with(
                 sort_path,
@@ -1155,14 +1160,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1310,14 +1317,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1466,14 +1475,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1638,14 +1649,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1820,14 +1833,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -1981,14 +1996,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2125,14 +2142,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2312,14 +2331,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2483,21 +2504,24 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_scsp_path,
                     bus_scsps_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             create_10x_feature_barcode_map.assert_called_once_with(map_path)
@@ -2644,14 +2668,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2815,14 +2841,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -2961,7 +2989,8 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_inspect.assert_called_once_with(
                 bus_s_path,
@@ -3089,7 +3118,8 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_inspect.assert_called_once_with(
                 bus_s_path,
@@ -3258,7 +3288,8 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_inspect.assert_called_once_with(
                 bus_s_path,
@@ -3438,7 +3469,8 @@ class TestCount(TestMixin, TestCase):
                 bus_s_path,
                 temp_dir=temp_dir,
                 threads=threads,
-                memory=memory
+                memory=memory,
+                store_num=False
             )
             bustools_inspect.assert_called_once_with(
                 bus_s_path,
@@ -3665,14 +3697,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_has_calls([
@@ -4027,14 +4061,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_has_calls([
@@ -4244,14 +4280,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -4401,14 +4439,16 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             bustools_inspect.assert_called_once_with(
@@ -4630,28 +4670,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -4949,28 +4993,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -5257,28 +5305,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -5573,28 +5625,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -5868,28 +5924,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -6247,28 +6307,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_filtered_capture_path,
@@ -6278,7 +6342,8 @@ class TestCount(TestMixin, TestCase):
                     ),
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_filtered_capture_path,
@@ -6288,7 +6353,8 @@ class TestCount(TestMixin, TestCase):
                     ),
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -6682,28 +6748,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_filtered_capture_path,
@@ -6713,7 +6783,8 @@ class TestCount(TestMixin, TestCase):
                     ),
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_filtered_capture_path,
@@ -6723,7 +6794,8 @@ class TestCount(TestMixin, TestCase):
                     ),
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
@@ -7085,28 +7157,32 @@ class TestCount(TestMixin, TestCase):
                     bus_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     bus_sc_path,
                     bus_scs_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     cdna_capture_path,
                     cdna_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 ),
                 call(
                     intron_capture_path,
                     intron_s_path,
                     temp_dir=temp_dir,
                     threads=threads,
-                    memory=memory
+                    memory=memory,
+                    store_num=False
                 )
             ])
             self.assertEqual(3, bustools_inspect.call_count)
