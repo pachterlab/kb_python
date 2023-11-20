@@ -1145,6 +1145,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -1299,6 +1300,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -1454,6 +1456,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -1625,6 +1628,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -1806,6 +1810,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(2, bustools_sort.call_count)
@@ -1966,6 +1971,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -2109,6 +2115,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -2295,6 +2302,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(2, bustools_sort.call_count)
@@ -2465,6 +2473,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None
             )
             self.assertEqual(3, bustools_sort.call_count)
@@ -2625,6 +2634,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -2795,6 +2805,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -4223,6 +4234,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)
@@ -4379,6 +4391,7 @@ class TestCount(TestMixin, TestCase):
                 inleaved=False,
                 demultiplexed=False,
                 batch_barcodes=False,
+                n=False,
                 numreads=None,
             )
             self.assertEqual(bustools_sort.call_count, 2)

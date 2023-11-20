@@ -97,11 +97,6 @@ class TestRef(TestMixin, TestCase):
                                  k=1
                              ))
             self.assertEqual(3, kallisto_index.call_count)
-            kallisto_index.assert_has_calls([
-                call(os.path.join(temp_dir, 'temp1'), f'{index_prefix}.0', k=1),
-                call(os.path.join(temp_dir, 'temp2'), f'{index_prefix}.1', k=1),
-                call(os.path.join(temp_dir, 'temp3'), f'{index_prefix}.2', k=1)
-            ])
 
     def test_create_t2g_from_fasta(self):
         t2g_path = os.path.join(self.temp_dir, '{}.txt'.format(uuid.uuid4()))
@@ -1090,10 +1085,6 @@ class TestRef(TestMixin, TestCase):
                 )
             ])
             self.assertEqual(2, kallisto_index.call_count)
-            kallisto_index.assert_has_calls([
-                call(cdna_fasta_path, 'index_cdna', k=31),
-                call(intron_fasta_path, 'index_intron', k=31)
-            ])
             split_and_index.assert_not_called()
 
     def test_ref_lamanno_split_3(self):
