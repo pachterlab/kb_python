@@ -1503,7 +1503,7 @@ def count(
             if quant:
                 quant_result = kallisto_quant_tcc(
                     count_result['mtx'],
-                    bus_result['saved_index'],
+                    index_path,
                     count_result['ec'],
                     t2g_path,
                     quant_dir,
@@ -2528,7 +2528,7 @@ def count_velocity(
         if quant:
             quant_result = kallisto_quant_tcc(
                 count_result['mtx'],
-                bus_result['saved_index'],
+                index_path,
                 bus_result['ecmap'],
                 t2g_path,
                 quant_dir,
@@ -2957,7 +2957,7 @@ def count_velocity_smartseq3(
             if tcc:
                 quant_result = kallisto_quant_tcc(
                     count_result['mtx'],
-                    bus_result['saved_index'],
+                    index_path,
                     bus_result['ecmap'],
                     t2g_path,
                     quant_dir,
