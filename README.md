@@ -66,7 +66,7 @@ Prebuilt indices are available at https://github.com/pachterlab/kallisto-transcr
 # Index the transcriptome from genome FASTA (genome.fa.gz) and GTF (annotation.gtf.gz)
 $ kb ref -i index.idx -g t2g.txt -f1 transcriptome.fa genome.fa.gz annotation.gtf.gz
 # An example for downloading a prebuilt reference for mouse
-$ kb ref -d mouse -i mouse_index.idx -g mouse_t2g.txt
+$ kb ref -d mouse -i index.idx -g t2g.txt
 ```
 ---
 ### `kb count`: pseudoalign and count reads
