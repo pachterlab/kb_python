@@ -370,8 +370,8 @@ def split_and_index(
 
 @logger.namespaced('download')
 def download_reference(
-    species: str = 'human',
-    workflow: str = 'standard',
+    species: str,
+    workflow: str,
     files: Dict[str, str],
     temp_dir: str = 'tmp',
     overwrite: bool = False
@@ -379,8 +379,8 @@ def download_reference(
     """Downloads a provided reference file from a static url.
 
     Args:
-        species: Name of species, defaults to `human`
-        workflow: Type of workflow (nac or standard), defaults to `standard`
+        species: Name of species
+        workflow: Type of workflow (nac or standard)
         files: Dictionary that has the command-line option as keys and
             the path as values. used to determine if all the required
             paths to download the given reference have been provided
