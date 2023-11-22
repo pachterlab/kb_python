@@ -257,9 +257,8 @@ def parse_ref(
             for option in options
             if getattr(args, option) is not None
         }
-        reference = REFERENCES_MAPPING[args.d]
         download_reference(
-            reference, files, overwrite=args.overwrite, temp_dir=temp_dir
+            args.d, args.workflow, overwrite=args.overwrite, temp_dir=temp_dir
         )
     elif args.workflow == 'nac':
         ref_nac(

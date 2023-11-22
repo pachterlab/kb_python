@@ -370,17 +370,17 @@ def split_and_index(
 
 @logger.namespaced('download')
 def download_reference(
-    reference: Reference,
+    species: str = 'human',
+    workflow: str = 'standard',
     files: Dict[str, str],
     temp_dir: str = 'tmp',
     overwrite: bool = False
 ) -> Dict[str, str]:
     """Downloads a provided reference file from a static url.
 
-    The configuration for provided references is in `config.py`.
-
     Args:
-        reference: A Reference object
+        species: Name of species, defaults to `human`
+        workflow: Type of workflow (nac or standard), defaults to `standard`
         files: Dictionary that has the command-line option as keys and
             the path as values. used to determine if all the required
             paths to download the given reference have been provided
@@ -394,26 +394,39 @@ def download_reference(
         RefError: If the required options are not provided
     """
     results = {}
+    species = species.lower()
+    workflow = workflow.lower()
     if not ngs.utils.all_exists(*list(files.values())) or overwrite:
         # Make sure all the required file paths are there.
-        diff = set(reference.files.keys()) - set(files.keys())
-        if diff:
+        if not 'i' in set(files.keys()) or not 'g' in set(files.keys()):
             raise RefError(
-                'the following options are required to download this reference: {}'
-                .format(','.join(diff))
+                'Following options are required to download reference: -i, -g'
+            )
+        if workflow == 'nac' and not 'c1' in set(files.keys()):
+            raise RefError(
+                'Following options are required to download nac reference: -c1'
+            )
+        if workflow == 'nac' and not 'c2' in set(files.keys()):
+            raise RefError(
+                'Following options are required to download nac reference: -c2'
+            )
+        if workflow != 'nac' and workflow != 'standard':
+            raise RefError(
+                f'The following workflow option is not supported: {workflow}'
             )
 
-        url = reference.url
+        url = "https://github.com/pachterlab/kallisto-transcriptome-indices/"
+        url = url + f'releases/download/v1/{species}_index_{workflow}.tar.xz'
         path = os.path.join(temp_dir, os.path.basename(url))
         logger.info(
-            'Downloading files for {} from {} to {}'.format(
-                reference.name, url, path
+            'Downloading files for {} ({} workflow) from {} to {}'.format(
+                species, workflow, url, path
             )
         )
         local_path = download_file(url, path)
 
         logger.info('Extracting files from {}'.format(local_path))
-        with tarfile.open(local_path, 'r:gz') as f:
+        with tarfile.open(local_path, 'r:xz') as f:
 
             def is_within_directory(directory, target):
 
@@ -436,10 +449,17 @@ def download_reference(
                 tar.extractall(path, members, numeric_owner=numeric_owner)
 
             safe_extract(f, temp_dir)
+            
+        reference_files = {}
+        reference_files.update({'i': "index.idx"})
+        reference_files.update({'g': "t2g.txt"})
+        if workflow == "nac":
+            reference_files.update({'c1': "cdna.txt"})
+            reference_files.update({'c2': "nascent.txt"})
 
-        for option in reference.files:
+        for option in reference_files:
             os.rename(
-                os.path.join(temp_dir, reference.files[option]), files[option]
+                os.path.join(temp_dir, reference_files[option]), files[option]
             )
             results.update({option: files[option]})
     else:
