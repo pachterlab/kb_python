@@ -1,6 +1,6 @@
 # kb-python
-![github version](https://img.shields.io/badge/Version-0.27.3-informational)
-[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.27.3/)
+![github version](https://img.shields.io/badge/Version-0.28.0-informational)
+[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.28.0/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/pachterlab/kb_python/branch/master/graph/badge.svg)](https://codecov.io/gh/pachterlab/kb_python)
@@ -59,10 +59,14 @@ kb ref -i index.idx -g t2g.txt -f1 transcriptome.fa <GENOME> <GENOME_ANNOTATION>
 	- For example, the zebrafish genome annotation file is hosted by [ensembl](https://uswest.ensembl.org/Danio_rerio/Info/Index) and can be downloaded [here](http://ftp.ensembl.org/pub/release-107/gtf/danio_rerio/Danio_rerio.GRCz11.107.gtf.gz)
 - **Note:** The latest genome annotation and genome file for every species on ensembl can be found with the [`gget`](https://github.com/pachterlab/gget) command-line tool.
 
+Prebuilt indices are available at https://github.com/pachterlab/kallisto-transcriptome-indices
+
 #### Examples
 ```bash
-# Index the zebrafish transcriptome genome.fa.gz annotation.gtf.gz
+# Index the transcriptome from genome FASTA (genome.fa.gz) and GTF (annotation.gtf.gz)
 $ kb ref -i index.idx -g t2g.txt -f1 transcriptome.fa genome.fa.gz annotation.gtf.gz
+# An example for downloading a prebuilt reference for mouse
+$ kb ref -d mouse -i index.idx -g t2g.txt
 ```
 ---
 ### `kb count`: pseudoalign and count reads
@@ -93,9 +97,9 @@ The `kb info` command prints out package information including the version of `k
 
 ```bash
 $ kb info
-kb_python 0.27.3 ...
-kallisto: 0.48.0 ...
-bustools: 0.41.0 ...
+kb_python 0.28.0 ...
+kallisto: 0.50.1 ...
+bustools: 0.43.1 ...
 ...
 ```
 ---

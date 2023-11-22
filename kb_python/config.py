@@ -9,6 +9,9 @@ import ngs_tools as ngs
 
 PACKAGE_PATH = os.path.abspath(os.path.dirname(__file__))
 PLATFORM = platform.system().lower()
+CPU = ''
+if PLATFORM == 'darwin' and platform.processor().lower() == 'arm':
+    CPU = 'm1'
 BINS_DIR = os.path.join(PACKAGE_PATH, 'bins')
 COMPILED_DIR = os.path.join(BINS_DIR, 'compiled')
 
@@ -32,7 +35,7 @@ def get_provided_kallisto_path() -> Optional[str]:
         Path to the binary, `None` if not found
     """
     bin_filename = 'kallisto.exe' if PLATFORM == 'windows' else 'kallisto'
-    path = os.path.join(BINS_DIR, PLATFORM, 'kallisto', bin_filename)
+    path = os.path.join(BINS_DIR, PLATFORM, CPU, 'kallisto', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
@@ -45,7 +48,7 @@ def get_provided_bustools_path() -> Optional[str]:
         Path to the binary, `None` if not found
     """
     bin_filename = 'bustools.exe' if PLATFORM == 'windows' else 'bustools'
-    path = os.path.join(BINS_DIR, PLATFORM, 'bustools', bin_filename)
+    path = os.path.join(BINS_DIR, PLATFORM, CPU, 'bustools', bin_filename)
     if not os.path.isfile(path):
         return None
     return path
@@ -142,6 +145,9 @@ TECHNOLOGIES = sorted([
     ),
     Technology(
         'SMARTSEQ3', 'Smart-seq3', ngs.chemistry.get_chemistry('smartseq3')
+    ),
+    Technology(
+        'STORMSEQ', 'STORM-seq', ngs.chemistry.get_chemistry('stormseq')
     ),
     Technology(
         'BDWTA', 'BD Rhapsody', ngs.chemistry.get_chemistry('bd rhapsody')

@@ -15,7 +15,6 @@ from .config import (
     is_dry,
     no_validate,
     PACKAGE_PATH,
-    REFERENCES_MAPPING,
     set_dry,
     set_bustools_binary_path,
     set_kallisto_binary_path,
@@ -26,13 +25,14 @@ from .config import (
 from .compile import compile
 from .constants import INFO_FILENAME
 from .logging import logger
-from .ref import download_reference, ref, ref_kite, ref_lamanno
+from .ref import download_reference, ref, ref_kite, ref_lamanno, ref_nac, ref_custom
 from .utils import (
     get_bustools_version,
     get_kallisto_version,
     make_directory,
     open_as_text,
     remove_directory,
+    whitelist_provided,
 )
 
 
@@ -96,7 +96,7 @@ def display_technologies():
     """Displays a list of supported technologies along with whether kb provides
     a whitelist for that technology and the FASTQ argument order for kb count.
     """
-    headers = ['name', 'description', 'whitelist', 'barcode', 'umi', 'cDNA']
+    headers = ['name', 'description', 'on-list', 'barcode', 'umi', 'cDNA']
     rows = [headers]
 
     print('List of supported single-cell technologies\n')
@@ -205,17 +205,32 @@ def parse_ref(
         parser: The argument parser
         args: Parsed command-line arguments
     """
+    dlist = None
+    aa = False
     if args.k is not None:
         if args.k < 0 or not args.k % 2:
             parser.error('K-mer length must be a positive odd integer.')
+    if args.d_list is None:
+        if args.aa or args.workflow == 'custom':
+            dlist = None
+        else:
+            # Use whole genome for dlist
+            dlist = str(args.fasta)
+    elif args.d_list.upper() != 'NONE':
+        dlist = args.d_list
+    if args.aa:
+        aa = args.aa
     if args.fasta:
         args.fasta = args.fasta.split(',')
     if args.gtf:
         args.gtf = args.gtf.split(',')
+    if not args.gtf and (args.aa or args.workflow == 'custom'):
+        args.gtf = []
     if (args.fasta and args.gtf) and len(args.fasta) != len(args.gtf):
-        parser.error(
-            'There must be the same number of FASTAs as there are GTFs.'
-        )
+        if args.workflow != 'custom':
+            parser.error(
+                'There must be the same number of FASTAs as there are GTFs.'
+            )
 
     # Parse include/exclude KEY:VALUE pairs
     include = []
@@ -241,11 +256,38 @@ def parse_ref(
             for option in options
             if getattr(args, option) is not None
         }
-        reference = REFERENCES_MAPPING[args.d]
         download_reference(
-            reference, files, overwrite=args.overwrite, temp_dir=temp_dir
+            args.d,
+            args.workflow,
+            files,
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
+        )
+    elif args.workflow == 'nac':
+        ref_nac(
+            args.fasta,
+            args.gtf,
+            args.f1,
+            args.f2,
+            args.i,
+            args.g,
+            args.c1,
+            args.c2,
+            k=args.k,
+            flank=args.flank,
+            include=include,
+            exclude=exclude,
+            threads=args.t,
+            dlist=dlist,
+            dlist_overhang=args.d_list_overhang,
+            overwrite=args.overwrite,
+            make_unique=args.make_unique,
+            temp_dir=temp_dir,
+            max_ec_size=args.ec_max_size
         )
     elif args.workflow in {'lamanno', 'nucleus'}:
+        if args.d_list is not None:
+            parser.error("d-list incompatible with lamanno/nucleus")
         ref_lamanno(
             args.fasta,
             args.gtf,
@@ -260,7 +302,8 @@ def parse_ref(
             include=include,
             exclude=exclude,
             overwrite=args.overwrite,
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            threads=args.t
         )
     else:
         # Report extraneous options
@@ -277,6 +320,10 @@ def parse_ref(
                     '`--include-attribute` or `--exclude-attribute` may not be used '
                     f'for workflow `{args.workflow}`'
                 )
+            if args.d_list:
+                parser.error(
+                    f'`--d-list` may not be used for workflow `{args.workflow}`'
+                )
 
             ref_kite(
                 args.feature,
@@ -285,8 +332,25 @@ def parse_ref(
                 args.g,
                 k=args.k,
                 no_mismatches=args.no_mismatches,
+                threads=args.t,
                 overwrite=args.overwrite,
                 temp_dir=temp_dir
+            )
+        elif args.workflow == 'custom':
+            if aa and args.distinguish:
+                parser.error('`--aa` may not be used with --distinguish')
+            ref_custom(
+                args.fasta,
+                args.i,
+                k=args.k,
+                threads=args.t,
+                dlist=dlist,
+                dlist_overhang=args.d_list_overhang,
+                aa=aa,
+                overwrite=args.overwrite,
+                temp_dir=temp_dir,
+                make_unique=args.make_unique,
+                distinguish=args.distinguish
             )
         else:
             ref(
@@ -295,11 +359,18 @@ def parse_ref(
                 args.f1,
                 args.i,
                 args.g,
+                nucleus=False,
                 k=args.k,
                 include=include,
                 exclude=exclude,
+                threads=args.t,
+                dlist=dlist,
+                dlist_overhang=args.d_list_overhang,
+                aa=aa,
                 overwrite=args.overwrite,
-                temp_dir=temp_dir
+                make_unique=args.make_unique,
+                temp_dir=temp_dir,
+                max_ec_size=args.ec_max_size
             )
 
 
@@ -320,9 +391,6 @@ def parse_count(
             'and crash for large count matrices.'
         ))
 
-    if args.w and args.w.lower() == 'none':
-        args.w = None
-
     if args.filter_threshold and args.filter != 'bustools':
         parser.error(
             'Option `--filter-threshold` may only be used with `--filter bustools`.'
@@ -337,14 +405,21 @@ def parse_count(
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
-    if args.tcc and args.em:
-        parser.error('`--tcc` may not be used with `--em`.')
-    if args.gene_names and not (args.loom or args.h5ad):
-        parser.error(
-            '`--gene-names` may only be used with `--h5ad` or `--loom`'
+    # Note: We are currently not supporting --genomebam
+    if args.genomebam:
+        parser.error('--genomebam is not currently supported')
+    if args.genomebam and not args.gtf:
+        parser.error('`--gtf` must be provided when using `--genomebam`.')
+    if args.genomebam and not args.chromosomes:
+        logger.warning(
+            '`--chromosomes` is recommended when using `--genomebam`'
         )
-    if args.tcc and args.gene_names:
-        parser.error('`--gene-names` may not be used with `--tcc`')
+
+    # Check quant-tcc options
+    if args.matrix_to_files and args.matrix_to_directories:
+        parser.error(
+            '`--matrix-to-files` cannot be used with `--matrix-to-directories`.'
+        )
 
     # Check if batch TSV was provided.
     batch_path = None
@@ -356,11 +431,53 @@ def parse_count(
         except Exception:
             pass
 
-    if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and (args.umi_gene
-                                                                 or args.em):
+    if args.inleaved:
+        batch_path = None
+
+    args.x = args.x.strip()
+
+    if '%' in args.x:
+        x_split = args.x.split('%')
+        args.x = x_split[0]
+        if args.strand is None:
+            if x_split[1].upper() == "UNSTRANDED":
+                args.strand = "unstranded"
+            elif x_split[1].upper() == "FORWARD":
+                args.strand = "forward"
+            elif x_split[1].upper() == "REVERSE":
+                args.strand = "reverse"
+        if args.parity is None and len(x_split) > 2:
+            if x_split[2].upper() == 'PAIRED':
+                args.parity = "paired"
+            else:
+                args.parity = "single"
+
+    demultiplexed = False
+    if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
+        args.x = 'BULK'
+        demultiplexed = True
+    if args.x[0] == '-':
+        # Custom technology where no barcodes exist
+        demultiplexed = True
+
+    if args.batch_barcodes and batch_path is None:
         parser.error(
-            f'`--umi-gene` or `--em` may not be used for technology {args.x}'
+            '`--batch-barcodes` can only be used if batch file supplied'
         )
+    if args.batch_barcodes and demultiplexed:
+        if args.x.upper() == 'DEFAULT' or args.x.upper() == 'BULK':
+            parser.error(
+                f'`--batch-barcodes` may not be used for technology {args.x}'
+            )
+    if args.batch_barcodes and args.w is None and not whitelist_provided(
+            args.x.upper()) and not demultiplexed:
+        parser.error(
+            f'`--batch-barcodes` may not be used for technology {args.x} without on-list'
+        )
+    if args.batch_barcodes and args.filter:
+        parser.error('`--batch-barcodes` may not be used with --filter')
+    if args.x.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3') and args.em:
+        parser.error(f'`--em` may not be used for technology {args.x}')
     if args.x.upper() in ('BULK', 'SMARTSEQ2'):
         # Check unsupported options
         unsupported = ['filter']
@@ -375,13 +492,13 @@ def parse_count(
                 f'`--parity` must be provided for technology `{args.x}`.'
             )
 
-        if not batch_path:
+        if not batch_path and not demultiplexed:
             logger.warning(
                 f'FASTQs were provided for technology `{args.x}`. '
                 'Assuming multiplexed samples. For demultiplexed samples, provide '
-                'a batch textfile.'
+                'a batch textfile or specify `bulk` as the technology.'
             )
-        else:
+        elif batch_path:
             # If `single`, then each row must contain 2 columns. If `paired`,
             # each row must contain 3 columns.
             target = 2 + (args.parity == 'paired')
@@ -440,16 +557,12 @@ def parse_count(
                 )
     else:
         # Check unsupported options
-        unsupported = ['parity', 'fragment-l', 'fragment-s']
+        unsupported = ['fragment-l', 'fragment-s']
         for arg in unsupported:
             if getattr(args, arg.replace('-', '_')):
                 parser.error(
                     f'Argument `{arg}` is not supported for technology `{args.x}`.'
                 )
-
-        # Batch file not supported
-        if batch_path:
-            parser.error(f'Technology {args.x} does not support a batch file.')
 
         if args.fragment_l is not None or args.fragment_s is not None:
             parser.error(
@@ -457,13 +570,74 @@ def parse_count(
                 '`BULK` and `SMARTSEQ2` technologies.'
             )
 
-    if args.workflow in {'lamanno', 'nucleus'}:
+    from .constants import VELOCYTO_LOOM_NAMES
+    loom_names = args.loom_names
+    if args.loom_names.upper().strip() == 'VELOCYTO':
+        loom_names = VELOCYTO_LOOM_NAMES
+    loom_names = [x.strip() for x in loom_names.split(',')]
+    if '' in loom_names or len(loom_names) != 2:
+        parser.error('`--loom-names` is invalid')
+
+    if args.workflow == 'nac':
+        # Smartseq can not be used with nac.
+        if args.x.upper() in ('SMARTSEQ',):
+            parser.error(
+                f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
+            )
+        if args.aa:
+            parser.error(
+                f'Option `--aa` cannot be used with workflow {args.workflow}.'
+            )
+        from .count import count_nac
+        count_nac(
+            args.i,
+            args.g,
+            args.c1,
+            args.c2,
+            args.x,
+            args.o,
+            batch_path or args.fastqs,
+            args.w,
+            args.r,
+            tcc=args.tcc,
+            mm=args.mm,
+            filter=args.filter,
+            filter_threshold=args.filter_threshold,
+            threads=args.t,
+            memory=args.m,
+            overwrite=args.overwrite,
+            loom=args.loom,
+            loom_names=loom_names,
+            h5ad=args.h5ad,
+            cellranger=args.cellranger,
+            report=args.report,
+            inspect=not args.no_inspect,
+            temp_dir=temp_dir,
+            fragment_l=args.fragment_l,
+            fragment_s=args.fragment_s,
+            paired=args.parity == 'paired',
+            genomebam=args.genomebam,
+            strand=args.strand,
+            umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
+            em=args.em,
+            by_name=args.gene_names,
+            sum_matrices=args.sum,
+            gtf_path=args.gtf,
+            chromosomes_path=args.chromosomes,
+            inleaved=args.inleaved,
+            demultiplexed=demultiplexed,
+            batch_barcodes=args.batch_barcodes,
+            numreads=args.N,
+            store_num=args.num
+        )
+    elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
         if args.x.upper() in ('SMARTSEQ',):
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
-
+        if args.sum is not None:
+            parser.error('--sum incompatible with lamanno/nucleus')
         if args.x.upper() == 'SMARTSEQ3':
             from .count import count_velocity_smartseq3
             count_velocity_smartseq3(
@@ -525,58 +699,52 @@ def parse_count(
                 '`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
-        if args.x.upper() == 'SMARTSEQ3':
-            from .count import count_smartseq3
-            count_smartseq3(
-                args.i,
-                args.g,
-                args.o,
-                args.fastqs,
-                args.w,
-                tcc=args.tcc,
-                mm=args.mm,
-                temp_dir=temp_dir,
-                threads=args.t,
-                memory=args.m,
-                overwrite=args.overwrite,
-                loom=args.loom,
-                h5ad=args.h5ad,
-                inspect=not args.no_inspect,
-                strand=args.strand,
-                by_name=args.gene_names
-            )
-        else:
-            from .count import count
-            count(
-                args.i,
-                args.g,
-                args.x,
-                args.o,
-                batch_path or args.fastqs,
-                args.w,
-                tcc=args.tcc,
-                mm=args.mm,
-                filter=args.filter,
-                filter_threshold=args.filter_threshold,
-                kite='kite' in args.workflow,
-                FB='10xFB' in args.workflow,
-                threads=args.t,
-                memory=args.m,
-                overwrite=args.overwrite,
-                loom=args.loom,
-                h5ad=args.h5ad,
-                cellranger=args.cellranger,
-                report=args.report,
-                inspect=not args.no_inspect,
-                temp_dir=temp_dir,
-                fragment_l=args.fragment_l,
-                fragment_s=args.fragment_s,
-                paired=args.parity == 'paired',
-                strand=args.strand,
-                umi_gene=args.umi_gene,
-                em=args.em,
-                by_name=args.gene_names
-            )
+        from .count import count
+        count(
+            args.i,
+            args.g,
+            args.x,
+            args.o,
+            batch_path or args.fastqs,
+            args.w,
+            args.r,
+            tcc=args.tcc,
+            mm=args.mm,
+            filter=args.filter,
+            filter_threshold=args.filter_threshold,
+            kite='kite' in args.workflow,
+            FB='10xFB' in args.workflow,
+            threads=args.t,
+            memory=args.m,
+            overwrite=args.overwrite,
+            loom=args.loom,
+            loom_names=loom_names,
+            h5ad=args.h5ad,
+            cellranger=args.cellranger,
+            report=args.report,
+            inspect=not args.no_inspect,
+            temp_dir=temp_dir,
+            fragment_l=args.fragment_l,
+            fragment_s=args.fragment_s,
+            paired=args.parity == 'paired',
+            genomebam=args.genomebam,
+            aa=args.aa,
+            strand=args.strand,
+            umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
+            em=args.em,
+            by_name=args.gene_names,
+            gtf_path=args.gtf,
+            chromosomes_path=args.chromosomes,
+            inleaved=args.inleaved,
+            demultiplexed=demultiplexed,
+            batch_barcodes=args.batch_barcodes,
+            bootstraps=args.bootstraps,
+            matrix_to_files=args.matrix_to_files,
+            matrix_to_directories=args.matrix_to_directories,
+            no_fragment=args.no_fragment,
+            numreads=args.N,
+            store_num=args.num
+        )
 
 
 COMMAND_TO_FUNCTION = {
@@ -754,17 +922,20 @@ def setup_ref_args(
         metavar='T2G',
         help='Path to transcript-to-gene mapping to be generated',
         type=str,
-        required=True
+        required=workflow not in {'custom'}
     )
     required_ref.add_argument(
         '-f1',
         metavar='FASTA',
         help=(
-            '[Optional with -d] Path to the cDNA FASTA (lamanno, nucleus) '
-            'or mismatch FASTA (kite) to be generated '
+            '[Optional with -d] Path to the cDNA FASTA (standard, nac) or '
+            'mismatch FASTA (kite) to be generated '
+            '[Optional with --aa when no GTF file(s) provided] '
+            '[Not used with --workflow=custom]'
         ),
         type=str,
-        required='-d' not in sys.argv
+        required='-d' not in sys.argv and '--aa' not in sys.argv
+        and workflow not in {'custom'}
     )
     filter_group = parser_ref.add_mutually_exclusive_group()
     filter_group.add_argument(
@@ -788,39 +959,40 @@ def setup_ref_args(
         action='append',
     )
 
-    required_lamanno = parser_ref.add_argument_group(
-        'required arguments for `lamanno` and `nucleus` workflows'
+    required_nac = parser_ref.add_argument_group(
+        'required arguments for `nac` workflow'
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-f2',
         metavar='FASTA',
-        help='Path to the intron FASTA to be generated',
+        help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'nac'} and '-d' not in sys.argv
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to generate cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'nac'}
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c2',
         metavar='T2C',
-        help='Path to generate intron transcripts-to-capture',
+        help='Path to generate unprocessed transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'nac'}
     )
 
     parser_ref.add_argument(
         '-d',
+        metavar='NAME',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
             'instead of building it locally'
         ),
         type=str,
-        choices=list(REFERENCES_MAPPING.keys()),
+        default=None,
         required=False
     )
     parser_ref.add_argument(
@@ -836,16 +1008,50 @@ def setup_ref_args(
         required=False
     )
     parser_ref.add_argument(
+        '-t',
+        metavar='THREADS',
+        help=('Number of threads to use (default: 8)'),
+        type=int,
+        default=8
+    )
+    parser_ref.add_argument(
+        '--d-list',
+        metavar='FASTA',
+        help=(
+            'D-list file(s) (default: the Genomic FASTA file(s) for standard/nac workflow)'
+        ),
+        type=str,
+        default=None
+    )
+    parser_ref.add_argument(
+        '--d-list-overhang', help=argparse.SUPPRESS, type=int, default=1
+    )
+    parser_ref.add_argument(
+        '--aa',
+        help='Generate index from a FASTA-file containing amino acid sequences',
+        action='store_true',
+        default=False
+    )
+    parser_ref.add_argument(
         '--workflow',
+        metavar='{standard,nac,kite,custom}',
         help=(
             'Type of workflow to prepare files for. '
-            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
-            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
+            'Use `custom` for indexing targets directly. '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite']
+        choices=['standard', 'nac', 'kite', 'custom', 'lamanno', 'nucleus']
+    )
+    parser_ref.add_argument(
+        '--distinguish', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_ref.add_argument(
+        '--make-unique',
+        help='Replace repeated target names with unique names',
+        action='store_true'
     )
     parser_ref.add_argument(
         '--overwrite',
@@ -872,9 +1078,10 @@ def setup_ref_args(
     )
     parser_ref.add_argument(
         'gtf',
-        help='Reference GTF file(s), comma-delimited',
+        help='Reference GTF file(s), comma-delimited [not required with --aa]',
         type=str,
-        nargs=None if '-d' not in sys.argv and workflow != 'kite' else '?'
+        nargs=None if ('-d' not in sys.argv and '--aa' not in sys.argv)
+        and workflow not in {'custom', 'kite'} else '?'
     )
     parser_ref.add_argument(
         'feature',
@@ -888,6 +1095,9 @@ def setup_ref_args(
     # Hidden options.
     parser_ref.add_argument(
         '--no-mismatches', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_ref.add_argument(
+        '--ec-max-size', help=argparse.SUPPRESS, type=int, default=None
     )
     parser_ref.add_argument('--flank', help=argparse.SUPPRESS, type=int)
 
@@ -959,16 +1169,30 @@ def setup_count_args(
         default='.',
     )
     parser_count.add_argument(
+        '--num', help='Store read numbers in BUS file', action='store_true'
+    )
+    parser_count.add_argument(
         '-w',
-        metavar='WHITELIST',
+        metavar='ONLIST',
         help=(
-            'Path to file of whitelisted barcodes to correct to. '
+            'Path to file of on-listed barcodes to correct to. '
             'If not provided and bustools supports the technology, '
-            'a pre-packaged whitelist is used. Otherwise, or if \'None\', is '
-            'provided, the bustools whitelist command is used. '
-            '(`kb --list` to view whitelists)'
+            'a pre-packaged on-list is used. Otherwise, '
+            'the bustools allowlist command is used. '
+            'Specify NONE to bypass barcode error correction. '
+            '(`kb --list` to view on-lists)'
         ),
         type=str
+    )
+    parser_count.add_argument(
+        '-r',
+        metavar='REPLACEMENT',
+        help=(
+            'Path to file of a replacement list to correct to. '
+            'In the file, the first column is the original barcode and second is the replacement sequence'
+        ),
+        type=str,
+        default=None
     )
     parser_count.add_argument(
         '-t',
@@ -980,9 +1204,9 @@ def setup_count_args(
     parser_count.add_argument(
         '-m',
         metavar='MEMORY',
-        help='Maximum memory used (default: 4G)',
+        help='Maximum memory used (default: 2G for standard, 4G for others)',
         type=str,
-        default='4G'
+        default='2G' if workflow == 'standard' else '4G'
     )
     parser_count.add_argument(
         '--strand',
@@ -992,28 +1216,54 @@ def setup_count_args(
         choices=['unstranded', 'forward', 'reverse']
     )
     parser_count.add_argument(
+        '--inleaved',
+        help='Specifies that input is an interleaved FASTQ file',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--genomebam',
+        help=argparse.SUPPRESS,
+        action='store_true',
+        default=False,
+    )
+    parser_count.add_argument(
+        '--aa',
+        help=(
+            'Map to index generated from FASTA-file containing '
+            'amino acid sequences'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_count.add_argument(
+        '--gtf',
+        help=argparse.SUPPRESS,
+        type=str,
+        default=None,
+    )
+    parser_count.add_argument(
+        '--chromosomes',
+        metavar='chrom.sizes',
+        help=argparse.SUPPRESS,
+        type=str,
+        default=None,
+    )
+    parser_count.add_argument(
         '--workflow',
+        metavar='{standard,nac,kite,kite:10xFB}',
         help=(
             'Type of workflow. '
-            'Use `lamanno` for RNA velocity based on La Manno et al. 2018 logic. '
-            'Use `nucleus` for RNA velocity on single-nucleus RNA-seq reads. '
+            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
             'Use `kite` for feature barcoding. '
             'Use `kite:10xFB` for 10x Genomics Feature Barcoding technology. '
             '(default: standard)'
         ),
         type=str,
         default='standard',
-        choices=['standard', 'lamanno', 'nucleus', 'kite', 'kite:10xFB']
+        choices=['standard', 'nac', 'kite', 'kite:10xFB', 'lamanno', 'nucleus']
     )
     parser_count.add_argument(
-        '--em',
-        help='Estimate gene abundances using an EM algorithm.',
-        action='store_true'
-    )
-    parser_count.add_argument(
-        '--umi-gene',
-        help='Perform gene-level collapsing of UMIs.',
-        action='store_true'
+        '--em', help=argparse.SUPPRESS, action='store_true'
     )
 
     count_group = parser_count.add_mutually_exclusive_group()
@@ -1045,22 +1295,22 @@ def setup_count_args(
         type=int,
         default=None,
     )
-    required_lamanno = parser_count.add_argument_group(
-        'required arguments for `lamanno` and `nucleus` workflows'
+    required_nac = parser_count.add_argument_group(
+        'required arguments for `nac` workflow'
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c1',
         metavar='T2C',
         help='Path to cDNA transcripts-to-capture',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'nac'}
     )
-    required_lamanno.add_argument(
+    required_nac.add_argument(
         '-c2',
         metavar='T2C',
         help='Path to intron transcripts-to-captured',
         type=str,
-        required=workflow in {'lamanno', 'nucleus'}
+        required=workflow in {'nac'}
     )
     parser_count.add_argument(
         '--overwrite',
@@ -1068,6 +1318,14 @@ def setup_count_args(
         action='store_true'
     )
     parser_count.add_argument('--dry-run', help='Dry run', action='store_true')
+    parser_count.add_argument(
+        '--batch-barcodes',
+        help=(
+            'When a batch file is supplied, store sample identifiers '
+            'in barcodes'
+        ),
+        action='store_true'
+    )
 
     conversion_group = parser_count.add_mutually_exclusive_group()
     conversion_group.add_argument(
@@ -1081,6 +1339,30 @@ def setup_count_args(
         action='store_true'
     )
     parser_count.add_argument(
+        '--loom-names',
+        metavar='col_attrs/{name},row_attrs/{name}',
+        help=(
+            'Names for col_attrs and row_attrs in loom file (default: barcode,target_name). '
+            'Use --loom-names=velocyto for velocyto-compatible loom files'
+        ),
+        type=str,
+        default="barcode,target_name",
+    )
+    parser_count.add_argument(
+        '--sum',
+        metavar='TYPE',
+        help=(
+            'Produced summed count matrices (Options: none, cell, nucleus, total). '
+            'Use `cell` to add ambiguous and processed transcript matrices. '
+            'Use `nucleus` to add ambiguous and unprocessed transcript matrices. '
+            'Use `total` to add all three matrices together. '
+            '(Default: none)'
+        ),
+        type=str,
+        default="none",
+        choices=['none', 'cell', 'nucleus', 'total']
+    )
+    parser_count.add_argument(
         '--cellranger',
         help='Convert count matrices to cellranger-compatible format',
         action='store_true'
@@ -1092,6 +1374,13 @@ def setup_count_args(
             'the loom or h5ad file'
         ),
         action='store_true'
+    )
+    parser_count.add_argument(
+        '-N',
+        metavar='NUMREADS',
+        help='Maximum number of reads to process from supplied input',
+        type=int,
+        default=None
     )
 
     report_group = parser_count.add_mutually_exclusive_group()
@@ -1122,6 +1411,9 @@ def setup_count_args(
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
     )
+    parser_count.add_argument(
+        '--no-fragment', help=argparse.SUPPRESS, action='store_true'
+    )
 
     optional_bulk = parser_count.add_argument_group(
         'optional arguments for `BULK` and `SMARTSEQ2` technologies'
@@ -1149,6 +1441,26 @@ def setup_count_args(
         help='Standard deviation of fragment lengths. Only for single-end.',
         type=int,
         default=None
+    )
+    optional_bulk.add_argument(
+        '--bootstraps',
+        metavar='B',
+        help='Number of bootstraps to perform',
+        type=int,
+        default=None
+    )
+    optional_bulk.add_argument(
+        '--matrix-to-files',
+        help='Reorganize matrix output into abundance tsv files',
+        action='store_true'
+    )
+    optional_bulk.add_argument(
+        '--matrix-to-directories',
+        help=(
+            'Reorganize matrix output into abundance tsv files across '
+            'multiple directories'
+        ),
+        action='store_true'
     )
 
     parser_count.add_argument(
@@ -1242,9 +1554,10 @@ def main():
 
     if 'dry_run' in args:
         # Dry run can not be specified with matrix conversion.
-        if args.dry_run and (args.loom or args.h5ad):
+        if args.dry_run and (args.loom or args.h5ad or args.cellranger
+                             or args.gene_names):
             raise parser.error(
-                '--dry-run can not be used with --loom or --h5ad'
+                '--dry-run can not be used with --loom, --h5ad, --cellranger, or --gene-names'
             )
 
         if args.dry_run:

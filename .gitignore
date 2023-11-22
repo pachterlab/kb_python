@@ -63,6 +63,9 @@ instance/
 # Scrapy stuff:
 .scrapy
 
+# Mac stuff:
+.DS_Store
+
 # Sphinx documentation
 docs/_build/
 docs/api/
@@ -105,3 +108,4 @@ venv.bak/
 .mypy_cache/
 .DS_Store
 .vscode/
+.Rhistory
