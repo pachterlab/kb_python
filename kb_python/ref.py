@@ -398,15 +398,15 @@ def download_reference(
     workflow = workflow.lower()
     if not ngs.utils.all_exists(*list(files.values())) or overwrite:
         # Make sure all the required file paths are there.
-        if not 'i' in set(files.keys()) or not 'g' in set(files.keys()):
+        if 'i' not in set(files.keys()) or 'g' not in set(files.keys()):
             raise RefError(
                 'Following options are required to download reference: -i, -g'
             )
-        if workflow == 'nac' and not 'c1' in set(files.keys()):
+        if workflow == 'nac' and 'c1' not in set(files.keys()):
             raise RefError(
                 'Following options are required to download nac reference: -c1'
             )
-        if workflow == 'nac' and not 'c2' in set(files.keys()):
+        if workflow == 'nac' and 'c2' not in set(files.keys()):
             raise RefError(
                 'Following options are required to download nac reference: -c2'
             )
@@ -449,7 +449,7 @@ def download_reference(
                 tar.extractall(path, members, numeric_owner=numeric_owner)
 
             safe_extract(f, temp_dir)
-            
+
         reference_files = {}
         reference_files.update({'i': "index.idx"})
         reference_files.update({'g': "t2g.txt"})

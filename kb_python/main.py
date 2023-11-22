@@ -15,7 +15,6 @@ from .config import (
     is_dry,
     no_validate,
     PACKAGE_PATH,
-    REFERENCES_MAPPING,
     set_dry,
     set_bustools_binary_path,
     set_kallisto_binary_path,
@@ -258,7 +257,7 @@ def parse_ref(
             if getattr(args, option) is not None
         }
         download_reference(
-            args.d, args.workflow, overwrite=args.overwrite, temp_dir=temp_dir
+            args.d, args.workflow, files, overwrite=args.overwrite, temp_dir=temp_dir
         )
     elif args.workflow == 'nac':
         ref_nac(
