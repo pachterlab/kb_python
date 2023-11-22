@@ -984,12 +984,13 @@ def setup_ref_args(
 
     parser_ref.add_argument(
         '-d',
+        metavar='NAME',
         help=(
             'Download a pre-built kallisto index (along with all necessary files) '
             'instead of building it locally'
         ),
         type=str,
-        choices=list(REFERENCES_MAPPING.keys()),
+        default=None,
         required=False
     )
     parser_ref.add_argument(
