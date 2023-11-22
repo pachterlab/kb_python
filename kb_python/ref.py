@@ -7,7 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import ngs_tools as ngs
 import pandas as pd
 
-from .config import get_kallisto_binary_path, Reference
+from .config import get_kallisto_binary_path
 from .logging import logger
 from .utils import (
     concatenate_files,
