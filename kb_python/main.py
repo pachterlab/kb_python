@@ -965,7 +965,7 @@ def setup_ref_args(
         metavar='FASTA',
         help='Path to the unprocessed transcripts FASTA to be generated',
         type=str,
-        required=workflow in {'nac'}
+        required=workflow in {'nac'} and '-d' not in sys.argv
     )
     required_nac.add_argument(
         '-c1',
