@@ -257,7 +257,11 @@ def parse_ref(
             if getattr(args, option) is not None
         }
         download_reference(
-            args.d, args.workflow, files, overwrite=args.overwrite, temp_dir=temp_dir
+            args.d,
+            args.workflow,
+            files,
+            overwrite=args.overwrite,
+            temp_dir=temp_dir
         )
     elif args.workflow == 'nac':
         ref_nac(
