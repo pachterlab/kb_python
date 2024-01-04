@@ -711,8 +711,8 @@ def overlay_anndatas(
     spliced_intersection = adata_spliced[obs_idx][:, var_idx]
     unspliced_intersection = adata_unspliced[obs_idx][:, var_idx]
     a_layers = {
-        'spliced': spliced_intersection.X,
-        'unspliced': unspliced_intersection.X
+        'mature': spliced_intersection.X,
+        'nascent': unspliced_intersection.X
     }
     ambiguous_intersection = None
     if adata_ambiguous is not None:
