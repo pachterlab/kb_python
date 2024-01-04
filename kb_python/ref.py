@@ -282,7 +282,12 @@ def kallisto_index(
         command += ['--d-list-overhang', dlist_overhang]
     if temp_dir != 'tmp':
         command += ['-T', temp_dir]
-    command += [fasta_path]
+    if ',' in fasta_path:
+        fasta_paths = fasta_path.split(',')
+        for fp in fasta_paths:
+            command += [fp]
+    else:
+        command += [fasta_path]
     run_executable(command)
     return {'index': index_path}
 
@@ -303,11 +308,15 @@ def get_dlist_fasta(fasta_path: str = None, temp_dir: str = 'tmp') -> str:
     if "://" not in fasta_path:  # Not a URL
         return fasta_path
     new_fasta_path = get_temporary_filename(temp_dir)
+    fasta_path_array = [fasta_path]
+    if fasta_path.count("://") > 1:
+        fasta_path_array = fasta_path.split(",")
     logger.info(f'Extracting {fasta_path} into {new_fasta_path}')
-    with ngs.fasta.Fasta(fasta_path, 'r') as f_in:
-        with ngs.fasta.Fasta(new_fasta_path, 'w') as f_out:
-            for entry in f_in:
-                f_out.write(entry)
+    with ngs.fasta.Fasta(new_fasta_path, 'w') as f_out:
+        for fp in fasta_path_array:
+            with ngs.fasta.Fasta(fp, 'r') as f_in:
+                for entry in f_in:
+                    f_out.write(entry)
     return new_fasta_path
 
 
@@ -803,7 +812,7 @@ def ref_custom(
 
     if not glob.glob(f'{index_path}*') or overwrite:
         index_result = kallisto_index(
-            ' '.join(fasta_paths),
+            ','.join(fasta_paths),
             index_path,
             k=k or 31,
             threads=threads,

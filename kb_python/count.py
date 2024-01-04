@@ -204,6 +204,8 @@ def kallisto_bus(
 
     if technology.upper() in ('BULK', 'SMARTSEQ3'):
         results['saved_index'] = os.path.join(out_dir, SAVED_INDEX_FILENAME)
+        if os.path.exists(results['saved_index']):
+            os.remove(results['saved_index'])  # TODO: Fix this in kallisto?
     return results
 
 

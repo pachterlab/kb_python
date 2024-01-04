@@ -636,7 +636,7 @@ def parse_count(
             parser.error(
                 f'Technology `{args.x}` can not be used with workflow {args.workflow}.'
             )
-        if args.sum is not None:
+        if args.sum != "none":
             parser.error('--sum incompatible with lamanno/nucleus')
         if args.x.upper() == 'SMARTSEQ3':
             from .count import count_velocity_smartseq3
@@ -1036,8 +1036,8 @@ def setup_ref_args(
         '--workflow',
         metavar='{standard,nac,kite,custom}',
         help=(
-            'Type of workflow to prepare files for. '
-            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
+            'The type of index to create. '
+            'Use `nac` for an index type that can quantify nascent and mature RNA. '
             'Use `custom` for indexing targets directly. '
             'Use `kite` for feature barcoding. (default: standard)'
         ),
@@ -1253,7 +1253,7 @@ def setup_count_args(
         metavar='{standard,nac,kite,kite:10xFB}',
         help=(
             'Type of workflow. '
-            'Use `nac` for RNA velocity or single-nucleus RNA-seq reads. '
+            'Use `nac` to specify a nac index for producing mature/nascent/ambiguous matrices. '
             'Use `kite` for feature barcoding. '
             'Use `kite:10xFB` for 10x Genomics Feature Barcoding technology. '
             '(default: standard)'
@@ -1301,14 +1301,14 @@ def setup_count_args(
     required_nac.add_argument(
         '-c1',
         metavar='T2C',
-        help='Path to cDNA transcripts-to-capture',
+        help='Path to mature transcripts-to-capture',
         type=str,
         required=workflow in {'nac'}
     )
     required_nac.add_argument(
         '-c2',
         metavar='T2C',
-        help='Path to intron transcripts-to-captured',
+        help='Path to nascent transcripts-to-captured',
         type=str,
         required=workflow in {'nac'}
     )

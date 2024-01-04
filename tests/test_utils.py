@@ -227,7 +227,7 @@ class TestUtils(TestMixin, TestCase):
             self.unspliced_genes_path
         )
         adata = utils.overlay_anndatas(adata_spliced, adata_unspliced)
-        self.assertEqual({'spliced', 'unspliced'}, set(adata.layers.keys()))
+        self.assertEqual({'mature', 'nascent'}, set(adata.layers.keys()))
 
     def test_sum_anndatas(self):
         adata_spliced = utils.import_matrix_as_anndata(
