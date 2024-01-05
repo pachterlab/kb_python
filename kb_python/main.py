@@ -689,7 +689,7 @@ def parse_count(
                 fragment_s=args.fragment_s,
                 paired=args.parity == 'paired',
                 strand=args.strand,
-                umi_gene=args.umi_gene,
+                umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
                 em=args.em,
                 by_name=args.gene_names
             )
