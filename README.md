@@ -140,7 +140,19 @@ If you have a new feature you'd like to add to `kb-python` please create a pull 
 # Cite
 If you use `kb-python` in a publication, please cite the following papers:
 
-`kb-python`  & `bustools` 
+`kb-python`  & `kallisto` and/or `bustools`
+```
+@article{sullivan2023kallisto,
+  title={kallisto, bustools, and kb-python for quantifying bulk, single-cell, and single-nucleus RNA-seq},
+  author={Sullivan, Delaney K and Min, Kyung Hoi and Hj{\"o}rleifsson, Kristj{\'a}n Eldj{\'a}rn and Luebbert, Laura and Holley, Guillaume and Moses, Lambda and Gustafsson, Johan and Bray, Nicolas L and Pimentel, Harold and Booeshaghi, A Sina and others},
+  journal={bioRxiv},
+  pages={2023--11},
+  year={2023},
+  publisher={Cold Spring Harbor Laboratory}
+}
+```
+
+`bustools` 
 ```tex
 @article{melsted2021modular,
   title={\href{https://doi.org/10.1038/s41587-021-00870-2}{Modular, efficient and constant-memory single-cell RNA-seq preprocessing}},
@@ -165,6 +177,20 @@ If you use `kb-python` in a publication, please cite the following papers:
   pages={525--527},
   year={2016},
   publisher={Nature Publishing Group}
+}
+```
+
+`kITE`
+```tex
+@article{booeshaghi2024quantifying,
+  title={Quantifying orthogonal barcodes for sequence census assays},
+  author={Booeshaghi, A Sina and Min, Kyung Hoi and Gehring, Jase and Pachter, Lior},
+  journal={Bioinformatics Advances},
+  volume={4},
+  number={1},
+  pages={vbad181},
+  year={2024},
+  publisher={Oxford University Press}
 }
 ```
 
