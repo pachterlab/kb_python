@@ -109,3 +109,6 @@ venv.bak/
 .DS_Store
 .vscode/
 .Rhistory
+
+# PyCHarm
+/.idea/
