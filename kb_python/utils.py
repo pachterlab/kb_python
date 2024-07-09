@@ -130,7 +130,7 @@ def run_executable(
     if alias:
         c[0] = os.path.basename(c[0])
     if not quiet:
-        logger.debug(' '.join(c))
+        logger.info(' '.join(c))
     if not wait and record:
         STATS.command(c)
     start = time.time()
@@ -201,6 +201,7 @@ def run_executable(
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
+        logger.info(stdout)
 
     return (p, stdout, stderr) if wait else p
 

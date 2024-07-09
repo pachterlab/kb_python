@@ -70,13 +70,13 @@ def extract(
 
     make_directory(out_dir)
 
-    fastq = stream_fastqs([fastq], temp_dir=temp_dir)[0]
+    fastq = stream_fastqs([fastq], temp_dir=temp_dir)
 
     kallisto_bus(
         fastqs=fastq,
         index_path=index_path,
         technology=technology,
-        out_dir=out_dir,
+        out_dir=temp_dir,
         threads=threads,
         n=True,
         paired=False,
@@ -104,9 +104,9 @@ def extract(
         gene_ids = ["transcript"]
         g2ts = {gene_ids[0]: targets}
 
-    ecmap = os.path.join(out_dir, "matrix.ec")
-    txnames = os.path.join(out_dir, "transcripts.txt")
-    bus_in = os.path.join(out_dir, "output.bus")
+    ecmap = os.path.join(temp_dir, "matrix.ec")
+    txnames = os.path.join(temp_dir, "transcripts.txt")
+    bus_in = os.path.join(temp_dir, "output.bus")
 
     for gid in gene_ids:
         transcripts = g2ts[gid]
@@ -129,9 +129,9 @@ def extract(
                 ", ".join(transcripts)
             )
 
-        bus_out = os.path.join(out_dir, f"output_extracted_{gid}.bus")
+        bus_out = os.path.join(temp_dir, f"output_extracted_{gid}.bus")
         bus_out_sorted = os.path.join(
-            out_dir, f"output_extracted_{gid}_sorted.bus"
+            temp_dir, f"output_extracted_{gid}_sorted.bus"
         )
 
         # Capture records for this transcript ID
@@ -141,7 +141,8 @@ def extract(
             ecmap_path=ecmap,
             txnames_path=txnames,
             capture_type="transcripts",
-            out_path=bus_out
+            out_path=bus_out,
+            complement=False
         )
 
         # Extract records for this transcript ID from fastq

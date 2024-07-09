@@ -790,7 +790,7 @@ def parse_extract(
         threads=args.t,
         aa=args.aa,
         strand=args.strand,
-        numreads=args.numreads
+        numreads=args.N
     )
 
 
