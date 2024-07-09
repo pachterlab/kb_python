@@ -747,10 +747,58 @@ def parse_count(
         )
 
 
+def parse_extract(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
+    """Parser for the `extract` command.
+
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
+    """
+    if (args.target_type == "gene") == (args.g is None):
+        parser.error(
+            'Transcript-to-gene mapping must be provided if and only if target type '
+            'is `gene`.'
+        )
+
+    args.x = args.x.strip()
+
+    if '%' in args.x:
+        x_split = args.x.split('%')
+        args.x = x_split[0]
+        if args.strand is None:
+            if x_split[1].upper() == "UNSTRANDED":
+                args.strand = "unstranded"
+            elif x_split[1].upper() == "FORWARD":
+                args.strand = "forward"
+            elif x_split[1].upper() == "REVERSE":
+                args.strand = "reverse"
+
+    from .extract import extract
+    extract(
+        args.i,
+        args.x,
+        args.o,
+        args.fastq,
+        args.targets,
+        args.target_type,
+        t2g_path=args.g,
+        temp_dir=temp_dir,
+        threads=args.t,
+        aa=args.aa,
+        strand=args.strand,
+        numreads=args.numreads
+    )
+
+
 COMMAND_TO_FUNCTION = {
     'compile': parse_compile,
     'ref': parse_ref,
     'count': parse_count,
+    'extract': parse_extract,
 }
 
 
@@ -1477,6 +1525,131 @@ def setup_count_args(
     return parser_count
 
 
+def setup_extract_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """Helper function to set up a subparser for the `count` command.
+
+    Args:
+        parser: Parser to add the `count` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
+    """
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
+    parser_extract = parser.add_parser(
+        'extract',
+        description='',  # TODO LAURA write description
+        help='',  # TODO LAURA write help
+        parents=[parent]
+    )
+    parser_extract._actions[0].help = parser_extract._actions[
+        0].help.capitalize()
+
+    required_extract = parser_extract.add_argument_group('required arguments')
+    required_extract.add_argument(
+        '-i',
+        metavar='INDEX',
+        help='Path to kallisto index',
+        type=str,
+        required=True,
+    )
+    required_extract.add_argument(
+        '-x',
+        metavar='TECHNOLOGY',
+        help='Single-cell technology used (`kb --list` to view)',
+        type=str,
+        required=True,
+    )
+    required_extract.add_argument(
+        '--targets',
+        metavar='TARGETS',
+        help='Names of genes or transcript ids of interest',
+        type=str,
+        nargs='+',
+        required=True,
+    )
+    required_extract.add_argument(
+        'fastq',
+        metavar='FASTQ',
+        help='Path to the FASTQ file to extract',
+        type=str,
+    )
+
+    parser_extract.add_argument(
+        '--target_type',
+        metavar='TYPE',
+        help='Type of targets (default: gene)',
+        type=str,
+        default='gene',
+        choices=['gene', 'transcript'],
+    )
+    parser_extract.add_argument(
+        '-g',
+        metavar='T2G',
+        help=(
+            'Path to transcript-to-gene mapping.'
+            ' Required if and only if target_type is gene'
+        ),
+        type=str,
+    )
+    parser_extract.add_argument(
+        '-o',
+        metavar='OUT',
+        help='Path to output directory (default: current directory)',
+        type=str,
+        default='.',
+    )
+    parser_extract.add_argument(
+        '-t',
+        metavar='THREADS',
+        help='Number of threads to use (default: 8)',
+        type=int,
+        default=8
+    )
+    parser_extract.add_argument(
+        '--strand',
+        help='Strandedness (default: see `kb --list`)',
+        type=str,
+        default=None,
+        choices=['unstranded', 'forward', 'reverse']
+    )
+    parser_extract.add_argument(
+        '--aa',
+        help=(
+            'Map to index generated from FASTA-file'
+            ' containing amino acid sequences'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '-N',
+        metavar='NUMREADS',
+        help='Maximum number of reads to process from supplied input',
+        type=int,
+        default=None
+    )
+    parser_extract.add_argument(
+        '--kallisto',
+        help=f'Path to kallisto binary to use (default: {kallisto_path})',
+        type=str,
+        default=kallisto_path
+    )
+    parser_extract.add_argument(
+        '--bustools',
+        help=f'Path to bustools binary to use (default: {bustools_path})',
+        type=str,
+        default=bustools_path
+    )
+
+    return parser_extract
+
+
 @logger.namespaced('main')
 def main():
     """Command-line entrypoint.
@@ -1518,11 +1691,13 @@ def main():
     parser_compile = setup_compile_args(subparsers, parent)
     parser_ref = setup_ref_args(subparsers, parent)
     parser_count = setup_count_args(subparsers, parent)
+    parser_extract = setup_extract_args(subparsers, parent)
 
     command_to_parser = {
         'compile': parser_compile,
         'ref': parser_ref,
         'count': parser_count,
+        'extract': parser_extract,
     }
     if 'info' in sys.argv:
         display_info()
@@ -1567,8 +1742,8 @@ def main():
     logger.debug('Printing verbose output')
 
     # Set binary paths
-    if args.command in ('ref', 'count') and ('dry_run' not in args
-                                             or not args.dry_run):
+    if args.command in ('ref', 'count', 'extract') and ('dry_run' not in args
+                                                        or not args.dry_run):
         if args.kallisto:
             set_kallisto_binary_path(args.kallisto)
         if args.bustools:
