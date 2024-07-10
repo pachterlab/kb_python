@@ -764,27 +764,13 @@ def parse_extract(
             'is `gene`.'
         )
 
-    args.x = args.x.strip()
-
-    if '%' in args.x:
-        x_split = args.x.split('%')
-        args.x = x_split[0]
-        if args.strand is None:
-            if x_split[1].upper() == "UNSTRANDED":
-                args.strand = "unstranded"
-            elif x_split[1].upper() == "FORWARD":
-                args.strand = "forward"
-            elif x_split[1].upper() == "REVERSE":
-                args.strand = "reverse"
-
     from .extract import extract
     extract(
-        args.i,
-        args.x,
-        args.o,
-        args.fastq,
-        args.targets,
-        args.target_type,
+        fastq=args.fastq,
+        index_path=args.i,
+        targets=args.targets,
+        target_type=args.target_type,
+        out_dir=args.o,
         t2g_path=args.g,
         temp_dir=temp_dir,
         threads=args.t,
@@ -1543,8 +1529,8 @@ def setup_extract_args(
 
     parser_extract = parser.add_parser(
         'extract',
-        description='',  # TODO LAURA write description
-        help='',  # TODO LAURA write help
+        description='Extract raw reads that were aligned to an index for specific genes/transcripts.',
+        help='Extract raw reads that were aligned to an index for specific genes/transcripts.',
         parents=[parent]
     )
     parser_extract._actions[0].help = parser_extract._actions[
@@ -1552,41 +1538,33 @@ def setup_extract_args(
 
     required_extract = parser_extract.add_argument_group('required arguments')
     required_extract.add_argument(
-        '-i',
-        metavar='INDEX',
-        help='Path to kallisto index',
+        'fastq',
+        metavar='FASTQ',
         type=str,
-        required=True,
+        help='Single fastq file containing the sequencing reads (e.g. in case of 10x data, provide the R2 file)'
     )
     required_extract.add_argument(
-        '-x',
-        metavar='TECHNOLOGY',
-        help='Single-cell technology used (`kb --list` to view)',
+        '-i',
+        metavar='INDEX',
         type=str,
         required=True,
+        help='Path to kallisto index'
     )
     required_extract.add_argument(
         '--targets',
         metavar='TARGETS',
-        help='Names of genes or transcript ids of interest',
         type=str,
         nargs='+',
         required=True,
+        help='Gene or transcript names for which to extract the raw reads that align to the index'
     )
-    required_extract.add_argument(
-        'fastq',
-        metavar='FASTQ',
-        help='Path to the FASTQ file to extract',
-        type=str,
-    )
-
     parser_extract.add_argument(
         '--target_type',
         metavar='TYPE',
-        help='Type of targets (default: gene)',
         type=str,
         default='gene',
         choices=['gene', 'transcript'],
+        help="'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
     )
     parser_extract.add_argument(
         '-g',
@@ -1630,7 +1608,7 @@ def setup_extract_args(
     parser_extract.add_argument(
         '-N',
         metavar='NUMREADS',
-        help='Maximum number of reads to process from supplied input',
+        help='Maximum number of reads to process from supplied fastq',
         type=int,
         default=None
     )
