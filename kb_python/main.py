@@ -1541,7 +1541,10 @@ def setup_extract_args(
         'fastq',
         metavar='FASTQ',
         type=str,
-        help='Single fastq file containing the sequencing reads (e.g. in case of 10x data, provide the R2 file)'
+        help=(
+            'Single fastq file containing the sequencing reads (e.g. in case of 10x data, provide the R2 file).'
+            ' Sequencing technology will be treated as bulk here since barcode and UMI tracking is not necessary to extract reads.'
+        )
     )
     required_extract.add_argument(
         '-i',
@@ -1591,7 +1594,7 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '--strand',
-        help='Strandedness (default: see `kb --list`)',
+        help='Strandedness (default: 'unstranded')',
         type=str,
         default=None,
         choices=['unstranded', 'forward', 'reverse']
