@@ -45,19 +45,36 @@ def bustools_extract(
 
 @logger.namespaced('extract')
 def extract(
-    index_path: str,
-    technology: str,
-    out_dir: str,
     fastq: str,
+    index_path: str,
     targets: list[str],
     target_type: Literal['gene', 'transcript'],
     t2g_path: Optional[str] = None,
+    out_dir: str,
     temp_dir: str = 'tmp',
     threads: int = 8,
     aa: bool = False,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     numreads: Optional[int] = None,
 ):
+    """
+    Extracts raw reads that were aligned to an index for specific genes/transcripts.
+    
+    fastq: Single fastq file containing sequencing reads
+    index_path: Path to kallisto index
+    targets: Gene or transcript names for which to extract the raw reads that align to the index
+    target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
+    t2g_path: Path to transcript-to-gene mapping file (only required when target_type = gene)
+    out_dir: Path to output directory
+    temp_dir: Path to temporary directory, defaults to `tmp`
+    threads: Number of threads to use, defaults to `8`
+    aa: Align to index generated from a FASTA-file containing amino acid sequences, defaults to `False`
+    strand: Strandedness, defaults to `None`
+    numreads: Maximum number of reads to process from supplied input
+
+    Returns:
+    Raw reads that were aligned to the index by kallisto for each target.
+    """
     if target_type not in ["gene", "transcript"]:
         raise ValueError(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
@@ -75,7 +92,7 @@ def extract(
     kallisto_bus(
         fastqs=fastq,
         index_path=index_path,
-        technology=technology,
+        technology="bulk",
         out_dir=temp_dir,
         threads=threads,
         n=True,
