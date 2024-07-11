@@ -103,7 +103,6 @@ def extract(
     )
 
     if target_type == "gene":
-        # Extract reads using bustools
         # Read t2g to find all transcripts associated with a gene/mutant ID
         with open(t2g_path, "r") as t2g_file:
             lines = t2g_file.readlines()
@@ -112,21 +111,21 @@ def extract(
         t2g_df["gene_id"] = [
             line.split("\t")[1].replace("\n", "") for line in lines
         ]
-        gene_ids = targets
         g2ts = {
             gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
-            for gid in gene_ids
+            for gid in targets
         }
-    else:
-        gene_ids = ["transcript"]
-        g2ts = {gene_ids[0]: targets}
 
     ecmap = os.path.join(temp_dir, "matrix.ec")
     txnames = os.path.join(temp_dir, "transcripts.txt")
     bus_in = os.path.join(temp_dir, "output.bus")
 
-    for gid in gene_ids:
-        transcripts = g2ts[gid]
+    for gid in targets:
+        if target_type == "gene":
+            transcripts = g2ts[gid]
+        else:
+            # if target_type==transcript, each transcript will be extracted individually
+            transcripts = [gid]
 
         # Create temp txt file with transcript IDs to extract
         transcript_names_file = os.path.join(
@@ -137,13 +136,12 @@ def extract(
 
         if target_type == "gene":
             logger.info(
-                f"Extracting reads from the following transcripts for gene ID {gid}: "
+                f"Extracting reads for following transcripts for gene ID {gid}: "
                 + ", ".join(transcripts)
             )
         else:
             logger.info(
-                "Extracting reads from the following transcripts: " +
-                ", ".join(transcripts)
+                f"Extracting reads for the following transcript: {gid}"
             )
 
         bus_out = os.path.join(temp_dir, f"output_extracted_{gid}.bus")
