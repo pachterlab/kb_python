@@ -1548,12 +1548,14 @@ def setup_extract_args(
     )
     required_extract.add_argument(
         '-i',
+        '--index',
         metavar='INDEX',
         type=str,
         required=True,
         help='Path to kallisto index'
     )
     required_extract.add_argument(
+        '-t',
         '--targets',
         metavar='TARGETS',
         type=str,
@@ -1562,6 +1564,7 @@ def setup_extract_args(
         help='Gene or transcript names for which to extract the raw reads that align to the index'
     )
     parser_extract.add_argument(
+        '-tt',
         '--target_type',
         metavar='TYPE',
         type=str,
@@ -1580,6 +1583,7 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '-o',
+        '--out',
         metavar='OUT',
         help='Path to output directory (default: current directory)',
         type=str,
@@ -1587,12 +1591,14 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '-t',
+        '--threads',
         metavar='THREADS',
         help='Number of threads to use (default: 8)',
         type=int,
         default=8
     )
     parser_extract.add_argument(
+        '-s',
         '--strand',
         help="Strandedness (default: 'unstranded')",
         type=str,
@@ -1600,6 +1606,7 @@ def setup_extract_args(
         choices=['unstranded', 'forward', 'reverse']
     )
     parser_extract.add_argument(
+        '-aa',
         '--aa',
         help=(
             'Map to index generated from FASTA-file'
