@@ -80,7 +80,7 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (target_type == "gene") == (t2g_path is None):
+    if (target_type == "gene") and (t2g_path is None):
         raise ValueError(
             "t2g_path must be provided if and only if target_type is 'gene'"
         )
