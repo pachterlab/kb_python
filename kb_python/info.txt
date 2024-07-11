@@ -8,7 +8,7 @@ The `kb ref` command builds or downloads a species-specific index for pseudoalig
 
 The `kb count` command runs the kallisto [1] and bustools [2] programs. It can be used for pre-processing of data from a variety of single-cell RNA-seq technologies, and for a number of different workflows (e.g. production of gene count matrices, RNA velocity analyses, etc.). The output can be saved in a variety of formats including mix and loom. Examples are provided below.
 
-The `kb extract` command runs the kallisto [1] and bustools [2] programs. TODO LAURA - describe what this does
+The `kb extract` command runs the kallisto [1] and bustools [2] programs. It pulls out the raw reads from a fastq file that align to a specified gene or transcript in the index.
 
 Examples are available at: https://www.kallistobus.tools/tutorials
 
