@@ -89,6 +89,8 @@ def extract(
 
     fastq = stream_fastqs([fastq], temp_dir=temp_dir)
 
+    logger.info("Performing alignment using kallisto...")
+
     kallisto_bus(
         fastqs=fastq,
         index_path=index_path,
@@ -102,6 +104,7 @@ def extract(
         numreads=numreads
     )
 
+    logger.info("Alignment complete. Beginning extraction of reads using bustools...")
     if target_type == "gene":
         # Read t2g to find all transcripts associated with a gene/mutant ID
         with open(t2g_path, "r") as t2g_file:
