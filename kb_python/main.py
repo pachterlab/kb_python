@@ -1548,7 +1548,6 @@ def setup_extract_args(
     )
     required_extract.add_argument(
         '-i',
-        '--index',
         metavar='INDEX',
         type=str,
         required=True,
@@ -1583,7 +1582,6 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '-o',
-        '--out',
         metavar='OUT',
         help='Path to output directory (default: current directory)',
         type=str,
@@ -1591,7 +1589,6 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '-t',
-        '--threads',
         metavar='THREADS',
         help='Number of threads to use (default: 8)',
         type=int,
@@ -1606,7 +1603,6 @@ def setup_extract_args(
         choices=['unstranded', 'forward', 'reverse']
     )
     parser_extract.add_argument(
-        '-aa',
         '--aa',
         help=(
             'Map to index generated from FASTA-file'
