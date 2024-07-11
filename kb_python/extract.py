@@ -149,24 +149,28 @@ def extract(
             temp_dir, f"output_extracted_{gid}_sorted.bus"
         )
 
-        # Capture records for this transcript ID
-        bustools_capture(
-            bus_path=bus_in,
-            capture_path=transcript_names_file,
-            ecmap_path=ecmap,
-            txnames_path=txnames,
-            capture_type="transcripts",
-            out_path=bus_out,
-            complement=False
-        )
+        try:
+            # Capture records for this transcript ID
+            bustools_capture(
+                bus_path=bus_in,
+                capture_path=transcript_names_file,
+                ecmap_path=ecmap,
+                txnames_path=txnames,
+                capture_type="transcripts",
+                out_path=bus_out,
+                complement=False
+            )
+    
+            # Extract records for this transcript ID from fastq
+            bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
+    
+            extract_out_folder = os.path.join(out_dir, gid)
+            bustools_extract(
+                sorted_bus_path=bus_out_sorted,
+                out_path=extract_out_folder,
+                fastqs=fastq,
+                num_fastqs=1
+            )
 
-        # Extract records for this transcript ID from fastq
-        bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
-
-        extract_out_folder = os.path.join(out_dir, gid)
-        bustools_extract(
-            sorted_bus_path=bus_out_sorted,
-            out_path=extract_out_folder,
-            fastqs=fastq,
-            num_fastqs=1
-        )
+        except Exception as e:
+            logger.error(f"Extraction of reads unsuccessful for {gid} due to the following error:\n{e}")
