@@ -48,9 +48,9 @@ def extract(
     fastq: str,
     index_path: str,
     targets: list[str],
+    out_dir: str,
     target_type: Literal['gene', 'transcript'],
     t2g_path: Optional[str] = None,
-    out_dir: str,
     temp_dir: str = 'tmp',
     threads: int = 8,
     aa: bool = False,
@@ -63,9 +63,9 @@ def extract(
     fastq: Single fastq file containing sequencing reads
     index_path: Path to kallisto index
     targets: Gene or transcript names for which to extract the raw reads that align to the index
+    out_dir: Path to output directory
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
     t2g_path: Path to transcript-to-gene mapping file (only required when target_type = gene)
-    out_dir: Path to output directory
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
     aa: Align to index generated from a FASTA-file containing amino acid sequences, defaults to `False`
