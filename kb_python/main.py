@@ -1594,7 +1594,7 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '--strand',
-        help='Strandedness (default: 'unstranded')',
+        help="Strandedness (default: 'unstranded')",
         type=str,
         default=None,
         choices=['unstranded', 'forward', 'reverse']
