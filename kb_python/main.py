@@ -1555,7 +1555,7 @@ def setup_extract_args(
         help='Path to kallisto index'
     )
     required_extract.add_argument(
-        '-t',
+        '-ts',
         '--targets',
         metavar='TARGETS',
         type=str,
@@ -1564,7 +1564,7 @@ def setup_extract_args(
         help='Gene or transcript names for which to extract the raw reads that align to the index'
     )
     parser_extract.add_argument(
-        '-tt',
+        '-ttype',
         '--target_type',
         metavar='TYPE',
         type=str,
