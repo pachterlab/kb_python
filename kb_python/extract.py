@@ -59,7 +59,8 @@ def extract(
     numreads: Optional[int] = None,
 ):
     """
-    Extracts raw reads that were aligned to an index for specific genes/transcripts.
+    Extracts sequencing reads that were pseudo-aligned to an index for specific genes/transcripts.
+    Note: Multimapped reads will also be extracted.
     
     fastq: Single fastq file containing sequencing reads
     index_path: Path to kallisto index
@@ -74,7 +75,7 @@ def extract(
     numreads: Maximum number of reads to process from supplied input
 
     Returns:
-    Raw reads that were aligned to the index by kallisto for each target.
+    Raw reads that were pseudo-aligned to the index by kallisto for each specified gene/transcript.
     """
     if target_type not in ["gene", "transcript"]:
         raise ValueError(
