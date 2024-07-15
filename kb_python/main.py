@@ -1514,10 +1514,10 @@ def setup_count_args(
 def setup_extract_args(
     parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
-    """Helper function to set up a subparser for the `count` command.
+    """Helper function to set up a subparser for the `extract` command.
 
     Args:
-        parser: Parser to add the `count` command to
+        parser: Parser to add the `extract` command to
         parent: Parser parent of the newly added subcommand.
             used to inherit shared commands/flags
 
@@ -1529,8 +1529,8 @@ def setup_extract_args(
 
     parser_extract = parser.add_parser(
         'extract',
-        description='Extract raw reads that were aligned to an index for specific genes/transcripts.',
-        help='Extract raw reads that were aligned to an index for specific genes/transcripts.',
+        description='Extract sequencing reads that were pseudoaligned to the specified genes/transcripts.',
+        help='Extract sequencing reads that were pseudoaligned to the specified genes/transcripts. Note: Multimapped reads will also be extracted.',
         parents=[parent]
     )
     parser_extract._actions[0].help = parser_extract._actions[
