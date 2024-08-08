@@ -69,8 +69,8 @@ def extract(
     targets: Gene or transcript names for which to extract the raw reads that align to the index
     out_dir: Path to output directory
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
-    extract_all: Extracts reads for all genes, defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all.
-    extract_all_fast: Extracts reads for all genes, defaults to `False`. Does not break down output by gene. Set targets = None when using extract_all_fast.
+    extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all.
+    extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast.
     t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
@@ -164,7 +164,7 @@ def extract(
             # Omit sorting because 'bustools sort' has trouble when a flag column is present
             shutil.copyfile(bus_out, bus_out_sorted)
     
-            extract_out_folder = os.path.join(out_dir, gid)
+            extract_out_folder = os.path.join(out_dir, "all")
             bustools_extract(
                 sorted_bus_path=bus_out_sorted,
                 out_path=extract_out_folder,
@@ -186,17 +186,27 @@ def extract(
                 line.split("\t")[1].replace("\n", "") for line in lines
             ]
     
-            # If extract_all is True, extract pseudo-aligned reads for all genes
             if extract_all:
-                targets = list(set(t2g_df["gene_id"].values))
+                if target_type == "gene":
+                    # Set targets to all genes
+                    targets = list(set(t2g_df["gene_id"].values))
+                    g2ts = {
+                            gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
+                            for gid in targets
+                        }
     
-            g2ts = {
-                gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
-                for gid in targets
-            }
+                else:
+                    # Set targets to all transcripts
+                    targets = list(set(t2g_df["transcript"].values))
+    
+            else:
+                g2ts = {
+                        gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
+                        for gid in targets
+                    }
     
         for gid in targets:
-            if target_type == "gene" or extract_all:
+            if target_type == "gene":
                 transcripts = g2ts[gid]
             else:
                 # if target_type==transcript, each transcript will be extracted individually
