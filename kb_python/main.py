@@ -1577,7 +1577,8 @@ def setup_extract_args(
     parser_extract.add_argument(
         '--extract_all',
         help=(
-            'Extracts all reads that pseudo-aligned to any gene (breaks down results by gene). This might take a long time to run when there are a large number of genes in the index.'
+            'Extracts all reads that pseudo-aligned to any gene or transcript (as defined by target_type) (breaks down output by gene/transcript). '
+            'Using extract_all might take a long time to run when there are a large number of genes/transcripts in the index.'
         ),
         action='store_true',
         default=False
@@ -1585,7 +1586,7 @@ def setup_extract_args(
     parser_extract.add_argument(
         '--extract_all_fast',
         help=(
-            'Extracts all reads that pseudo-aligned to any gene (does not break down results by gene).'
+            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript).'
         ),
         action='store_true',
         default=False
