@@ -122,58 +122,58 @@ def extract(
     bus_in = os.path.join(temp_dir, "output.bus")
 
     if extract_all_fast:
-            # Read t2g to find all transcript IDs
-            with open(t2g_path, "r") as t2g_file:
-                lines = t2g_file.readlines()
-            t2g_df = pd.DataFrame()
-            t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
+        # Read t2g to find all transcript IDs
+        with open(t2g_path, "r") as t2g_file:
+            lines = t2g_file.readlines()
+        t2g_df = pd.DataFrame()
+        t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
 
-            transcripts = list(set(t2g_df["transcript"].values))
-    
-            # Create temp txt file with transcript IDs to extract
-            transcript_names_file = os.path.join(
-                temp_dir, "pull_out_reads_transcript_ids_temp.txt"
-            )
-            with open(transcript_names_file, "w") as f:
-                f.write("\n".join(transcripts))
+        transcripts = list(set(t2g_df["transcript"].values))
 
-            logger.info(
-                f"Extracting all reads that pseudo-aligned to any gene in the index."
+        # Create temp txt file with transcript IDs to extract
+        transcript_names_file = os.path.join(
+            temp_dir, "pull_out_reads_transcript_ids_temp.txt"
+        )
+        with open(transcript_names_file, "w") as f:
+            f.write("\n".join(transcripts))
+
+        logger.info(
+            f"Extracting all reads that pseudo-aligned to any gene in the index."
+        )
+
+        bus_out = os.path.join(temp_dir, f"output_extracted.bus")
+        bus_out_sorted = os.path.join(
+            temp_dir, "output_extracted_sorted.bus"
+        )
+
+        try:
+            # Capture records for this transcript ID
+            bustools_capture(
+                bus_path=bus_in,
+                capture_path=transcript_names_file,
+                ecmap_path=ecmap,
+                txnames_path=txnames,
+                capture_type="transcripts",
+                out_path=bus_out,
+                complement=False
             )
     
-            bus_out = os.path.join(temp_dir, f"output_extracted.bus")
-            bus_out_sorted = os.path.join(
-                temp_dir, f"output_extracted_sorted.bus"
+            # Extract records for this transcript ID from fastq
+            # bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
+
+            # Omit sorting because 'bustools sort' has trouble when a flag column is present
+            shutil.copyfile(bus_out, bus_out_sorted)
+    
+            extract_out_folder = os.path.join(out_dir, gid)
+            bustools_extract(
+                sorted_bus_path=bus_out_sorted,
+                out_path=extract_out_folder,
+                fastqs=fastq,
+                num_fastqs=1
             )
-    
-            try:
-                # Capture records for this transcript ID
-                bustools_capture(
-                    bus_path=bus_in,
-                    capture_path=transcript_names_file,
-                    ecmap_path=ecmap,
-                    txnames_path=txnames,
-                    capture_type="transcripts",
-                    out_path=bus_out,
-                    complement=False
-                )
-        
-                # Extract records for this transcript ID from fastq
-                # bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
-    
-                # Omit sorting because 'bustools sort' has trouble when a flag column is present
-                shutil.copyfile(bus_out, bus_out_sorted)
-        
-                extract_out_folder = os.path.join(out_dir, gid)
-                bustools_extract(
-                    sorted_bus_path=bus_out_sorted,
-                    out_path=extract_out_folder,
-                    fastqs=fastq,
-                    num_fastqs=1
-                )
-    
-            except Exception as e:
-                logger.error(f"Extraction of reads unsuccessful due to the following error:\n{e}")
+
+        except Exception as e:
+            logger.error(f"Extraction of reads unsuccessful due to the following error:\n{e}")
 
     else:
         if target_type == "gene" or extract_all:
