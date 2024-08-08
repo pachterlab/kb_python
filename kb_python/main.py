@@ -773,6 +773,7 @@ def parse_extract(
         extract_all=args.extract_all,
         extract_all_fast=args.extract_all_fast,
         out_dir=args.o,
+        mm=args.mm,
         t2g_path=args.g,
         temp_dir=temp_dir,
         threads=args.t,
@@ -1587,6 +1588,14 @@ def setup_extract_args(
         '--extract_all_fast',
         help=(
             'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript).'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '--mm',
+        help=(
+            'Also extract reads that multi-mapped to more than one gene.'
         ),
         action='store_true',
         default=False
