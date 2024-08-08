@@ -52,6 +52,7 @@ def extract(
     target_type: Literal['gene', 'transcript'],
     extract_all: bool = False,
     extract_all_fast: bool = False,
+    mm: bool = False,
     t2g_path: Optional[str] = None,
     temp_dir: str = 'tmp',
     threads: int = 8,
@@ -70,6 +71,7 @@ def extract(
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
     extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all.
     extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast.
+    mm: Also extract reads that multi-mapped to several genes, defaults to `False`
     t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
@@ -116,9 +118,47 @@ def extract(
 
     logger.info("Alignment complete. Beginning extraction of reads using bustools...")
 
-    ecmap = os.path.join(temp_dir, "matrix.ec")
     txnames = os.path.join(temp_dir, "transcripts.txt")
     bus_in = os.path.join(temp_dir, "output.bus")
+
+    if mm:
+        ecmap = os.path.join(temp_dir, "matrix.ec")
+
+    # Remove multimapped reads from matrix file
+    else:
+        logger.debug("Removing equivalence classes with multimapped reads from matrix.ec")
+
+        ecmap_mm = os.path.join(temp_dir, "matrix.ec")
+        ecmap = os.path.join(temp_dir, "matrix_no_mm.ec")
+
+        # Read t2g to find all transcripts associated with a gene/mutant ID
+        with open(t2g_path, "r") as t2g_file:
+            lines = t2g_file.readlines()
+        t2g_df = pd.DataFrame()
+        t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
+        t2g_df["gene_id"] = [
+            line.split("\t")[1].replace("\n", "") for line in lines
+        ]
+
+        with open(txnames) as f:
+            txs = f.read().splitlines()
+
+        ec_df = pd.read_csv(ecmap_mm, sep="\t", header=None)
+        # List to save multimapped ecs
+        ecs_mm = []
+        for index, row in ec_df.iterrows():
+            # Get transcript IDs that mapped to this ec
+            mapped_txs = txs[row[1].split(",")]
+
+            # Check if transcript IDs belong to one or more genes
+            if len(t2g_df[t2g_df["transcript"] is in mapped_txs]["gene_id"]) > 1:
+                ecs_mm.append(ec)
+
+        # Write new matrix.ec file excluding mm ecs
+        new_ec = ec_df[~ec_df[1].isin(ecs_mm)]
+        new_ec.to_csv(ecmap, sep='\t', index=False, header=None)
+
+        logger.debug("Finished removing equivalence classes with multimapped reads from matrix.ec")
 
     if extract_all_fast:
         # Read t2g to find all transcript IDs
