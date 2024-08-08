@@ -1,5 +1,4 @@
 import os
-import shutil
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
@@ -160,9 +159,6 @@ def extract(
     
             # Extract records for this transcript ID from fastq
             bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
-
-            # Omit sorting because 'bustools sort' has trouble when a flag column is present
-            # shutil.copyfile(bus_out, bus_out_sorted)
     
             extract_out_folder = os.path.join(out_dir, "all")
             bustools_extract(
@@ -248,9 +244,6 @@ def extract(
         
                 # Extract records for this transcript ID from fastq
                 bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
-    
-                # Omit sorting because 'bustools sort' has trouble when a flag column is present
-                # shutil.copyfile(bus_out, bus_out_sorted)
         
                 extract_out_folder = os.path.join(out_dir, gid)
                 bustools_extract(
