@@ -51,6 +51,7 @@ def extract(
     targets: list[str],
     out_dir: str,
     target_type: Literal['gene', 'transcript'],
+    extract_all: False,
     t2g_path: Optional[str] = None,
     temp_dir: str = 'tmp',
     threads: int = 8,
@@ -67,7 +68,8 @@ def extract(
     targets: Gene or transcript names for which to extract the raw reads that align to the index
     out_dir: Path to output directory
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
-    t2g_path: Path to transcript-to-gene mapping file (only required when target_type = gene)
+    extract_all: Extracts reads for all genes, defaults to `False`. Set targets = None when using extract_all.
+    t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
     aa: Align to index generated from a FASTA-file containing amino acid sequences, defaults to `False`
@@ -82,9 +84,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (target_type == "gene") and (t2g_path is None):
+    if (target_type == "gene" or extract_all) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if and only if target_type is 'gene'"
+            "t2g_path must be provided if target_type is 'gene' or extract_all is True"
         )
 
     make_directory(out_dir)
@@ -107,7 +109,7 @@ def extract(
     )
 
     logger.info("Alignment complete. Beginning extraction of reads using bustools...")
-    if target_type == "gene":
+    if target_type == "gene" or extract_all:
         # Read t2g to find all transcripts associated with a gene/mutant ID
         with open(t2g_path, "r") as t2g_file:
             lines = t2g_file.readlines()
@@ -116,6 +118,11 @@ def extract(
         t2g_df["gene_id"] = [
             line.split("\t")[1].replace("\n", "") for line in lines
         ]
+
+        # If extract_all is True, extract pseudo-aligned reads for all genes
+        if extract_all:
+            targets = t2g_df["gene_id"].values
+
         g2ts = {
             gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
             for gid in targets
@@ -126,7 +133,7 @@ def extract(
     bus_in = os.path.join(temp_dir, "output.bus")
 
     for gid in targets:
-        if target_type == "gene":
+        if target_type == "gene" or extract_all:
             transcripts = g2ts[gid]
         else:
             # if target_type==transcript, each transcript will be extracted individually
