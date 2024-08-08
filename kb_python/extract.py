@@ -79,6 +79,11 @@ def extract(
     Returns:
     Raw reads that were pseudo-aligned to the index by kallisto for each specified gene/transcript.
     """
+    if targets is None and not extract_all:
+        raise ValueError(
+            f"targets must be provided (unless extract_all is used to extract reads for all genes)."
+        )
+
     if target_type not in ["gene", "transcript"]:
         raise ValueError(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
