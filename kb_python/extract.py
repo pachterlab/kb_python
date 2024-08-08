@@ -2,6 +2,7 @@ import os
 from typing import Dict, List, Optional, Union
 
 import pandas as pd
+import numpy as np
 
 from typing_extensions import Literal
 
