@@ -147,17 +147,15 @@ def extract(
         # List to save multimapped ecs
         ecs_mm = []
         for index, row in ec_df.iterrows():
-            print(row)
-            print(row[1])
             # Get transcript IDs that mapped to this ec
-            mapped_txs = txs[row[1].split(",")]
+            mapped_txs = np.array(txs)[np.array(row[1].split(",")).astype(int)]
 
             # Check if transcript IDs belong to one or more genes
             if len(set(t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values)) > 1:
-                ecs_mm.append(ec)
+                ecs_mm.append(row[0])
 
         # Write new matrix.ec file excluding mm ecs
-        new_ec = ec_df[~ec_df[1].isin(ecs_mm)]
+        new_ec = ec_df[~ec_df[0].isin(ecs_mm)]
         new_ec.to_csv(ecmap, sep='\t', index=False, header=None)
 
         logger.debug("Finished removing equivalence classes with multimapped reads from matrix.ec")
