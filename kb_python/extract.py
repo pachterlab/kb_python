@@ -147,6 +147,8 @@ def extract(
         # List to save multimapped ecs
         ecs_mm = []
         for index, row in ec_df.iterrows():
+            print(row)
+            print(row[1])
             # Get transcript IDs that mapped to this ec
             mapped_txs = txs[row[1].split(",")]
 
