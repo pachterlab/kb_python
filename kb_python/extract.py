@@ -83,9 +83,14 @@ def extract(
     Returns:
     Raw reads that were pseudo-aligned to the index by kallisto for each specified gene/transcript.
     """
+    if extract_all and extract_all_fast:
+        raise ValueError(
+            f"extract_all and extract_all_fast cannot be used simultaneously"
+        )
+
     if targets is None and not (extract_all or extract_all_fast):
         raise ValueError(
-            f"targets must be provided (unless extract_all is used to extract reads for all genes)."
+            f"targets must be provided (unless extract_all or extract_all_fast are used to extract all reads)"
         )
 
     if target_type not in ["gene", "transcript"]:
@@ -93,9 +98,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (target_type == "gene" or extract_all) and (t2g_path is None):
+    if (target_type == "gene" or extract_all or extract_all_fast) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if target_type is 'gene' or extract_all is True"
+            "t2g_path must be provided if target_type is 'gene' or extract_all is True or extract_all_fast is True"
         )
 
     make_directory(out_dir)
