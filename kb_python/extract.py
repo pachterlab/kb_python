@@ -126,7 +126,7 @@ def extract(
 
         # If extract_all is True, extract pseudo-aligned reads for all genes
         if extract_all:
-            targets = t2g_df["gene_id"].values
+            targets = list(set(t2g_df["gene_id"].values))
 
         g2ts = {
             gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
