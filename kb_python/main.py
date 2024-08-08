@@ -770,6 +770,7 @@ def parse_extract(
         index_path=args.i,
         targets=args.targets,
         target_type=args.target_type,
+        extract_all=args.extract_all,
         out_dir=args.o,
         t2g_path=args.g,
         temp_dir=temp_dir,
@@ -1559,7 +1560,8 @@ def setup_extract_args(
         metavar='TARGETS',
         type=str,
         nargs='+',
-        required=True,
+        required=False,
+        default=None,
         help='Gene or transcript names for which to extract the raw reads that align to the index'
     )
     parser_extract.add_argument(
@@ -1570,6 +1572,14 @@ def setup_extract_args(
         default='gene',
         choices=['gene', 'transcript'],
         help="'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
+    )
+    parser_extract.add_argument(
+        '--extract_all',
+        help=(
+            'Extracts reads for all genes'
+        ),
+        action='store_true',
+        default=False
     )
     parser_extract.add_argument(
         '-g',
