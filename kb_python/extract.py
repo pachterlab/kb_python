@@ -93,6 +93,11 @@ def extract(
             f"targets must be provided (unless extract_all or extract_all_fast are used to extract all reads)"
         )
 
+    if targets and (extract_all or extract_all_fast):
+        logger.warning(
+            f"targets will be ignored since extract_all or extract_all_fast is activated which will extract all reads"
+        )
+
     if target_type not in ["gene", "transcript"]:
         raise ValueError(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
