@@ -151,7 +151,7 @@ def extract(
             mapped_txs = txs[row[1].split(",")]
 
             # Check if transcript IDs belong to one or more genes
-            if len(t2g_df[t2g_df["transcript"] is in mapped_txs]["gene_id"]) > 1:
+            if len(set(t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values)) > 1:
                 ecs_mm.append(ec)
 
         # Write new matrix.ec file excluding mm ecs
