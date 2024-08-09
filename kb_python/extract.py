@@ -174,7 +174,7 @@ def extract(
 
     # Remove multimapped reads from matrix and bus files
     else:
-        logger.debug("Removing equivalence classes with multimapped reads from matrix.ec")
+        logger.info("Removing equivalence classes with multi-mapped reads from the matrix.ec and BUS files")
 
         ecmap_mm = os.path.join(temp_dir, "matrix.ec")
         ecmap = os.path.join(temp_dir, "matrix_no_mm.ec")
@@ -232,6 +232,8 @@ def extract(
         )
 
         bus_in = bus_no_mm
+
+        logger.debug("Finished removing equivalence classes with multimapped reads from BUS file")
 
     if extract_all_fast:
         # Read t2g to find all transcript IDs
