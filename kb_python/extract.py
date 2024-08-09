@@ -12,6 +12,43 @@ from .count import kallisto_bus, bustools_capture, bustools_sort, stream_fastqs
 
 from .logging import logger
 
+def bustools_text(
+    bus_path: str,
+    out_path: str,
+    flags: bool = False,
+):
+    """Runs `bustools text`.
+
+    Args:
+        bus_path: Path to BUS file to convert to text format
+        out_dir: Path to output txt file path
+        flags: Whether to include the flags columns
+    """
+    # logger.info('Converting BUS file {} to {}'.format(bus_path, out_path))
+    command = [get_bustools_binary_path(), 'text']
+    command += ['-o', out_path]
+    if flags:
+        command += ['--flags']
+    command += [bus_path]
+    run_executable(command)
+    return {'bus': out_path}
+
+def bustools_fromtext(
+    txt_path: str,
+    out_path: str
+):
+    """Runs `bustools fromtext`.
+
+    Args:
+        bus_path: Path to text file to convert to BUS format
+        out_dir: Path to output BUS file
+    """
+    # logger.info('Creating BUS file {} from {}'.format(out_path, bus_path))
+    command = [get_bustools_binary_path(), 'fromtext']
+    command += ['-o', out_path]
+    command += [txt_path]
+    run_executable(command)
+    return {'bus': out_path}
 
 def bustools_extract(
     sorted_bus_path: str,
@@ -135,7 +172,7 @@ def extract(
     if mm:
         ecmap = os.path.join(temp_dir, "matrix.ec")
 
-    # Remove multimapped reads from matrix file
+    # Remove multimapped reads from matrix and bus files
     else:
         logger.debug("Removing equivalence classes with multimapped reads from matrix.ec")
 
@@ -170,6 +207,31 @@ def extract(
         new_ec.to_csv(ecmap, sep='\t', index=False, header=None)
 
         logger.debug("Finished removing equivalence classes with multimapped reads from matrix.ec")
+
+        ## Remove mm ecs from bus file
+        bus_txt = os.path.join(temp_dir, "output.bus.txt")
+        bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
+        bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
+
+        # Convert bus to txt file
+        bustools_text(
+            bus_path = bus_in,
+            out_path = bus_txt,
+            flags = True
+        )
+
+        # Remove mm ecs
+        bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
+        new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
+        new_bus_df.to_csv(bus_txt_no_mm, sep='\t', index=False, header=None)
+
+        # Convert back to bus format
+        bustools_fromtext(
+            txt_path = bus_txt_no_mm,
+            out_path = bus_no_mm            
+        )
+
+        bus_in = bus_no_mm
 
     if extract_all_fast:
         # Read t2g to find all transcript IDs
