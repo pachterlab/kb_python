@@ -140,9 +140,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (target_type == "gene" or extract_all or extract_all_fast) and (t2g_path is None):
+    if (not mm or target_type == "gene" or extract_all or extract_all_fast) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if target_type is 'gene' or extract_all is True or extract_all_fast is True"
+            "t2g_path must be provided if mm flag is not provided, target_type is 'gene', extract_all is True, OR extract_all_fast is True"
         )
 
     make_directory(out_dir)
