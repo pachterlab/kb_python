@@ -758,11 +758,6 @@ def parse_extract(
         parser: The argument parser
         args: Parsed command-line arguments
     """
-    if (args.target_type == "gene") == (args.g is None):
-        parser.error(
-            'Transcript-to-gene mapping must be provided if and only if target type '
-            'is `gene`.'
-        )
 
     from .extract import extract
     extract(
