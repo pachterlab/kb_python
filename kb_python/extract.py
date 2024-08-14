@@ -1,6 +1,7 @@
 import os
 from typing import Dict, List, Optional, Union
 
+from Bio import SeqIO
 import pandas as pd
 import numpy as np
 
@@ -80,6 +81,32 @@ def bustools_extract(
     run_executable(command)
     return {"bus": out_path}
 
+def read_headers_from_fastq(fastq_file):
+    """
+    Reads headers from a FASTQ file and returns a set of headers.
+    """
+    headers = set()
+    with open(fastq_file, 'r') as file:
+        for record in SeqIO.parse(file, 'fastq'):
+            headers.add(record.id)
+    return headers
+
+def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq):
+    """
+    Extracts reads from the input FASTQ file that are present in the reference FASTQ file
+    based on headers and writes them to the output FASTQ file.
+    """
+    # Read headers from the reference FASTQ file
+    reference_headers = read_headers_from_fastq(reference_fastq)
+    
+    with open(input_fastq, 'r') as infile, open(output_fastq, 'w') as outfile:
+        # Create a SeqIO writer for the output FASTQ file
+        writer = SeqIO.write(
+            (record for record in SeqIO.parse(infile, 'fastq') if record.id in reference_headers),
+            outfile,
+            'fastq'
+        )
+        logger.info(f'Number of unmapped reads written to {output_fastq}: {writer}')
 
 @logger.namespaced('extract')
 def extract(
@@ -90,6 +117,7 @@ def extract(
     target_type: Literal['gene', 'transcript'],
     extract_all: bool = False,
     extract_all_fast: bool = False,
+    extract_all_unmapped: bool = False,
     mm: bool = False,
     t2g_path: Optional[str] = None,
     temp_dir: str = 'tmp',
@@ -235,7 +263,7 @@ def extract(
 
         logger.debug("Finished removing equivalence classes with multimapped reads from BUS file")
 
-    if extract_all_fast:
+    if extract_all_fast or extract_all_unmapped:
         bus_out_sorted = os.path.join(
             temp_dir, "output_extracted_sorted.bus"
         )
@@ -254,6 +282,11 @@ def extract(
 
         except Exception as e:
             logger.error(f"Extraction of reads unsuccessful due to the following error:\n{e}")
+
+    if extract_all_unmapped:
+        # Save unmapped reads in a separate fastq file
+        unmapped_fastq = os.path.join(out_dir, "all_unmapped")
+        extract_matching_reads_by_header(extract_out_folder, fastq, unmapped_fastq)
 
     else:
         if target_type == "gene" or extract_all:
