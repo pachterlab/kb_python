@@ -148,7 +148,7 @@ def get_mm_ecs(t2g_path, txnames, temp_dir):
             ecs_mm.append(row[0])
 
     logger.debug(
-        f"Found the following equivalence classes that map to multiple genes: {' ,'.join(ecs_mm)}"
+        f"Found the following equivalence classes that map to multiple genes: {' ,'.join(np.array(ecs_mm).astype(str))}"
     )
 
     return ecs_mm, ec_df
