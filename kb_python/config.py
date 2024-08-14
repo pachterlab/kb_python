@@ -58,7 +58,7 @@ def get_compiled_kallisto_path(alias: str = COMPILED_DIR) -> Optional[str]:
     """Finds platform-dependent kallisto binary compiled with `compile`.
 
     Args:
-        Alias: Alias of compiled binary.
+        alias: Alias of compiled binary.
 
     Returns:
         Path to the binary, `None` if not found
@@ -74,7 +74,7 @@ def get_compiled_bustools_path(alias: str = COMPILED_DIR) -> Optional[str]:
     """Finds platform-dependent bustools binary compiled with `compile`.
 
     Args:
-        Alias: Alias of compiled binary.
+        alias: Alias of compiled binary.
 
     Returns:
         Path to the binary, `None` if not found

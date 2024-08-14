@@ -201,6 +201,7 @@ def run_executable(
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
+        # logger.info(stdout)
 
     return (p, stdout, stderr) if wait else p
 
