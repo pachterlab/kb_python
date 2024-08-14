@@ -142,7 +142,7 @@ def extract(
 
     if (not mm or target_type == "gene" or extract_all) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' or extract_all is True"
+            "t2g_path must be provided if mm flag is not provided, target_type is 'gene', OR extract_all is True"
         )
 
     make_directory(out_dir)
