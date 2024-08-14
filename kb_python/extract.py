@@ -93,16 +93,16 @@ def read_headers_from_fastq(fastq_file):
 
 def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq):
     """
-    Extracts reads from the input FASTQ file that are present in the reference FASTQ file
+    Extracts reads from the reference FASTQ file that are NOT present in the input FASTQ file
     based on headers and writes them to the output FASTQ file.
     """
     # Read headers from the reference FASTQ file
-    reference_headers = read_headers_from_fastq(reference_fastq)
+    reference_headers = read_headers_from_fastq(input_fastq)
     
-    with open(input_fastq, 'r') as infile, open(output_fastq, 'w') as outfile:
+    with open(reference_fastq, 'r') as infile, open(output_fastq, 'w') as outfile:
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
-            (record for record in SeqIO.parse(infile, 'fastq') if record.id in reference_headers),
+            (record for record in SeqIO.parse(infile, 'fastq') if record.id not in reference_headers),
             outfile,
             'fastq'
         )
