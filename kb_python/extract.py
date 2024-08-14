@@ -140,9 +140,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (not mm or target_type == "gene" or extract_all or extract_all_fast) and (t2g_path is None):
+    if (not mm or target_type == "gene" or extract_all) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if mm flag is not provided, target_type is 'gene', extract_all is True, OR extract_all_fast is True"
+            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' or extract_all is True"
         )
 
     make_directory(out_dir)
@@ -236,48 +236,12 @@ def extract(
         logger.debug("Finished removing equivalence classes with multimapped reads from BUS file")
 
     if extract_all_fast:
-        '''
-        # Read t2g to find all transcript IDs
-        with open(t2g_path, "r") as t2g_file:
-            lines = t2g_file.readlines()
-        t2g_df = pd.DataFrame()
-        t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
-
-        transcripts = list(set(t2g_df["transcript"].values))
-
-        # Create temp txt file with transcript IDs to extract
-        transcript_names_file = os.path.join(
-            temp_dir, "pull_out_reads_transcript_ids_temp.txt"
-        )
-        with open(transcript_names_file, "w") as f:
-            f.write("\n".join(transcripts))
-
-        logger.info(
-            f"Extracting all reads that pseudo-aligned to any gene in the index."
-        )
-
-        bus_out = os.path.join(temp_dir, f"output_extracted.bus")
-        '''
         bus_out_sorted = os.path.join(
             temp_dir, "output_extracted_sorted.bus"
         )
 
         try:
-            '''
-            # Capture records for this transcript ID
-            bustools_capture(
-                bus_path=bus_in,
-                capture_path=transcript_names_file,
-                ecmap_path=ecmap,
-                txnames_path=txnames,
-                capture_type="transcripts",
-                out_path=bus_out,
-                complement=False
-            )
-            '''
-    
             # Extract records for this transcript ID from fastq
-            # bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
             bustools_sort(bus_path=bus_in, flags=True, out_path=bus_out_sorted)
     
             extract_out_folder = os.path.join(out_dir, "all")
