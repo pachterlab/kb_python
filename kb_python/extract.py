@@ -137,6 +137,7 @@ def extract(
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
     extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all.
     extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast.
+    extract_all_unmapped: Extracts all unmapped reads, defaults to `False`. Set targets = None when using extract_all_unmapped.
     mm: Also extract reads that multi-mapped to several genes, defaults to `False`
     t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
@@ -148,19 +149,19 @@ def extract(
     Returns:
     Raw reads that were pseudo-aligned to the index by kallisto for each specified gene/transcript.
     """
-    if extract_all and extract_all_fast:
+    if sum([extract_all, extract_all_fast, extract_all_unmapped]) > 1:
         raise ValueError(
-            f"extract_all and extract_all_fast cannot be used simultaneously"
+            f"extract_all, extract_all_fast, and/or extract_all_unmapped cannot be used simultaneously"
         )
 
-    if targets is None and not (extract_all or extract_all_fast):
+    if targets is None and not (extract_all or extract_all_fast or extract_all_unmapped):
         raise ValueError(
-            f"targets must be provided (unless extract_all or extract_all_fast are used to extract all reads)"
+            f"targets must be provided (unless extract_all, extract_all_fast, or extract_all_unmapped are used to extract all reads)"
         )
 
-    if targets and (extract_all or extract_all_fast):
+    if targets and (extract_all or extract_all_fast or extract_all_unmapped):
         logger.warning(
-            f"targets will be ignored since extract_all or extract_all_fast is activated which will extract all reads"
+            f"targets will be ignored since extract_all, extract_all_fast, or extract_all_unmapped is activated which will extract all reads"
         )
 
     if target_type not in ["gene", "transcript"]:
@@ -168,9 +169,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (not mm or (target_type == "gene" and not extract_all_fast) or extract_all) and (t2g_path is None):
+    if (not mm or (target_type == "gene" and not (extract_all_fast or extract_all_unmapped)) or extract_all) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' (and extract_all_fast is False), OR extract_all is True"
+            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' (and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
         )
 
     make_directory(out_dir)
