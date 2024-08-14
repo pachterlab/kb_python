@@ -767,6 +767,7 @@ def parse_extract(
         target_type=args.target_type,
         extract_all=args.extract_all,
         extract_all_fast=args.extract_all_fast,
+        extract_all_unmapped=args.extract_all_unmapped,
         out_dir=args.o,
         mm=args.mm,
         t2g_path=args.g,
@@ -1582,7 +1583,15 @@ def setup_extract_args(
     parser_extract.add_argument(
         '--extract_all_fast',
         help=(
-            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript).'
+            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript; output saved in the "all" folder).'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '--extract_all_unmapped',
+        help=(
+            'Extracts all unmapped reads (output saved in the "all_unmapped" folder).'
         ),
         action='store_true',
         default=False
