@@ -236,6 +236,7 @@ def extract(
         logger.debug("Finished removing equivalence classes with multimapped reads from BUS file")
 
     if extract_all_fast:
+        '''
         # Read t2g to find all transcript IDs
         with open(t2g_path, "r") as t2g_file:
             lines = t2g_file.readlines()
@@ -256,11 +257,13 @@ def extract(
         )
 
         bus_out = os.path.join(temp_dir, f"output_extracted.bus")
+        '''
         bus_out_sorted = os.path.join(
             temp_dir, "output_extracted_sorted.bus"
         )
 
         try:
+            '''
             # Capture records for this transcript ID
             bustools_capture(
                 bus_path=bus_in,
@@ -271,9 +274,11 @@ def extract(
                 out_path=bus_out,
                 complement=False
             )
+            '''
     
             # Extract records for this transcript ID from fastq
-            bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
+            # bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
+            bustools_sort(bus_path=bus_in, flags=True, out_path=bus_out_sorted)
     
             extract_out_folder = os.path.join(out_dir, "all")
             bustools_extract(
