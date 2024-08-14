@@ -13,6 +13,7 @@ from .count import kallisto_bus, bustools_capture, bustools_sort, stream_fastqs
 
 from .logging import logger
 
+
 def bustools_text(
     bus_path: str,
     out_path: str,
@@ -26,18 +27,16 @@ def bustools_text(
         flags: Whether to include the flags columns
     """
     # logger.info('Converting BUS file {} to {}'.format(bus_path, out_path))
-    command = [get_bustools_binary_path(), 'text']
-    command += ['-o', out_path]
+    command = [get_bustools_binary_path(), "text"]
+    command += ["-o", out_path]
     if flags:
-        command += ['--flags']
+        command += ["--flags"]
     command += [bus_path]
     run_executable(command)
-    return {'bus': out_path}
+    return {"bus": out_path}
 
-def bustools_fromtext(
-    txt_path: str,
-    out_path: str
-):
+
+def bustools_fromtext(txt_path: str, out_path: str):
     """Runs `bustools fromtext`.
 
     Args:
@@ -45,11 +44,12 @@ def bustools_fromtext(
         out_dir: Path to output BUS file
     """
     # logger.info('Creating BUS file {} from {}'.format(out_path, bus_path))
-    command = [get_bustools_binary_path(), 'fromtext']
-    command += ['-o', out_path]
+    command = [get_bustools_binary_path(), "fromtext"]
+    command += ["-o", out_path]
     command += [txt_path]
     run_executable(command)
-    return {'bus': out_path}
+    return {"bus": out_path}
+
 
 def bustools_extract(
     sorted_bus_path: str,
@@ -69,27 +69,29 @@ def bustools_extract(
         Dictionary containing path to generated BUS file
     """
     logger.info(f"Extracting BUS file {sorted_bus_path} to {out_path}")
-    command = [get_bustools_binary_path(), 'extract']
+    command = [get_bustools_binary_path(), "extract"]
 
     if not isinstance(fastqs, list):
         fastqs = [fastqs]
 
-    command += ['-o', out_path]
-    command += ['-f', ",".join(fastqs)]
-    command += ['-N', num_fastqs]
+    command += ["-o", out_path]
+    command += ["-f", ",".join(fastqs)]
+    command += ["-N", num_fastqs]
     command += [sorted_bus_path]
     run_executable(command)
     return {"bus": out_path}
+
 
 def read_headers_from_fastq(fastq_file):
     """
     Reads headers from a FASTQ file and returns a set of headers.
     """
     headers = set()
-    with open(fastq_file, 'r') as file:
-        for record in SeqIO.parse(file, 'fastq'):
+    with open(fastq_file, "r") as file:
+        for record in SeqIO.parse(file, "fastq"):
             headers.add(record.id)
     return headers
+
 
 def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq):
     """
@@ -98,38 +100,141 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
     """
     # Read headers from the reference FASTQ file
     reference_headers = read_headers_from_fastq(input_fastq)
-    
-    with open(reference_fastq, 'r') as infile, open(output_fastq, 'w') as outfile:
+
+    with open(reference_fastq, "r") as infile, open(output_fastq, "w") as outfile:
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
-            (record for record in SeqIO.parse(infile, 'fastq') if record.id not in reference_headers),
+            (
+                record
+                for record in SeqIO.parse(infile, "fastq")
+                if record.id not in reference_headers
+            ),
             outfile,
-            'fastq'
+            "fastq",
         )
-        logger.info(f'Number of unmapped reads written to {output_fastq}: {writer}')
+        logger.info(f"Number of unmapped reads written to {output_fastq}: {writer}")
 
-@logger.namespaced('extract')
+
+def get_mm_ecs(t2g_path, txnames, temp_dir):
+    """
+    Gets a list of equivalence classes that map to multiple genes.
+    """
+    logger.debug("Fetching equivalence classes that map to multiple genes...")
+
+    ecmap = os.path.join(temp_dir, "matrix.ec")
+
+    # Read t2g to find all transcripts associated with a gene
+    with open(t2g_path, "r") as t2g_file:
+        lines = t2g_file.readlines()
+    t2g_df = pd.DataFrame()
+    t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
+    t2g_df["gene_id"] = [line.split("\t")[1].replace("\n", "") for line in lines]
+
+    with open(txnames) as f:
+        txs = f.read().splitlines()
+
+    ec_df = pd.read_csv(ecmap, sep="\t", header=None)
+    # List to save multimapped ecs
+    ecs_mm = []
+    for index, row in ec_df.iterrows():
+        # Get transcript IDs that mapped to this ec
+        mapped_txs = np.array(txs)[np.array(row[1].split(",")).astype(int)]
+
+        # Check if transcript IDs belong to one or more genes
+        if (
+            len(set(t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values))
+            > 1
+        ):
+            ecs_mm.append(row[0])
+
+    logger.debug(
+        f"Found the following equivalence classes that map to multiple genes: {' ,'.join(ecs_mm)}"
+    )
+
+    return ecs_mm, ec_df
+
+
+def remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in):
+    """
+    Removes rows containing equivalence classes that map to multiple genes from the bus file.
+    """
+    logger.debug(
+        f"Removing equivalence classes that map to multiple genes from {bus_in}"
+    )
+
+    # Get equivalence classes with multimapped reads
+    ecs_mm, _ = get_mm_ecs(t2g_path, txnames, temp_dir)
+
+    ## Remove mm ecs from bus file
+    bus_txt = os.path.join(temp_dir, "output.bus.txt")
+    bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
+    bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
+
+    # Convert bus to txt file
+    bustools_text(bus_path=bus_in, out_path=bus_txt, flags=True)
+
+    # Remove mm ecs
+    bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
+    new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
+    new_bus_df.to_csv(bus_txt_no_mm, sep="\t", index=False, header=None)
+
+    # Convert back to bus format
+    bustools_fromtext(txt_path=bus_txt_no_mm, out_path=bus_no_mm)
+
+    logger.debug(
+        f"BUS file without equivalence classes that map to multiple genes saved at {bus_no_mm}"
+    )
+
+    return bus_no_mm
+
+
+def remove_mm_from_mc(t2g_path, txnames, temp_dir):
+    """
+    Replaces transcript entries with -1 for equivalence classes that map to multiple genes in the matrix.ec file.
+    (These cannot simply be removed, otherwise bustools capture cannot parse the equivalence classes anymore.
+    """
+    ecmap_no_mm = os.path.join(temp_dir, "matrix_no_mm.ec")
+
+    logger.debug(
+        f"Replacing transcript entries with -1 for equivalence classes that map to multiple genes from {os.path.join(temp_dir, 'matrix.ec')}"
+    )
+
+    # Get multimapped equivalence classes
+    ecs_mm, ec_df = get_mm_ecs(t2g_path, txnames, temp_dir)
+
+    # Replace transcript entries for multimapped equivalence classes with -1
+    ec_df.loc[ec_df[0].isin(ecs_mm), 1] = -1
+    ec_df.to_csv(ecmap_no_mm, sep="\t", index=False, header=None)
+
+    logger.debug(
+        f"matrix.ec file where transcript entries were replaced with -1 for equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
+    )
+
+    return ecmap_no_mm
+
+
+@logger.namespaced("extract")
 def extract(
     fastq: str,
     index_path: str,
     targets: list[str],
     out_dir: str,
-    target_type: Literal['gene', 'transcript'],
+    target_type: Literal["gene", "transcript"],
     extract_all: bool = False,
     extract_all_fast: bool = False,
     extract_all_unmapped: bool = False,
     mm: bool = False,
     t2g_path: Optional[str] = None,
-    temp_dir: str = 'tmp',
+    temp_dir: str = "tmp",
     threads: int = 8,
     aa: bool = False,
-    strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+    strand: Optional[Literal["unstranded", "forward", "reverse"]] = None,
     numreads: Optional[int] = None,
 ):
     """
     Extracts sequencing reads that were pseudo-aligned to an index for specific genes/transcripts.
     Note: Multimapped reads will also be extracted.
-    
+
     fastq: Single fastq file containing sequencing reads
     index_path: Path to kallisto index
     targets: Gene or transcript names for which to extract the raw reads that align to the index
@@ -154,7 +259,9 @@ def extract(
             f"extract_all, extract_all_fast, and/or extract_all_unmapped cannot be used simultaneously"
         )
 
-    if targets is None and not (extract_all or extract_all_fast or extract_all_unmapped):
+    if targets is None and not (
+        extract_all or extract_all_fast or extract_all_unmapped
+    ):
         raise ValueError(
             f"targets must be provided (unless extract_all, extract_all_fast, or extract_all_unmapped are used to extract all reads)"
         )
@@ -169,7 +276,11 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (not mm or (target_type == "gene" and not (extract_all_fast or extract_all_unmapped)) or extract_all) and (t2g_path is None):
+    if (
+        not mm
+        or (target_type == "gene" and not (extract_all_fast or extract_all_unmapped))
+        or extract_all
+    ) and (t2g_path is None):
         raise ValueError(
             "t2g_path must be provided if mm flag is not provided, target_type is 'gene' (and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
         )
@@ -190,7 +301,7 @@ def extract(
         paired=False,
         aa=aa,
         strand=strand,
-        numreads=numreads
+        numreads=numreads,
     )
 
     logger.info("Alignment complete. Beginning extraction of reads using bustools...")
@@ -198,91 +309,29 @@ def extract(
     txnames = os.path.join(temp_dir, "transcripts.txt")
     bus_in = os.path.join(temp_dir, "output.bus")
 
-    if mm:
-        ecmap = os.path.join(temp_dir, "matrix.ec")
-
-    # Remove multimapped reads from matrix and bus files
-    else:
-        logger.info("Removing equivalence classes with multi-mapped reads from the matrix.ec and BUS files")
-
-        ecmap_mm = os.path.join(temp_dir, "matrix.ec")
-        ecmap = os.path.join(temp_dir, "matrix_no_mm.ec")
-
-        # Read t2g to find all transcripts associated with a gene/mutant ID
-        with open(t2g_path, "r") as t2g_file:
-            lines = t2g_file.readlines()
-        t2g_df = pd.DataFrame()
-        t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
-        t2g_df["gene_id"] = [
-            line.split("\t")[1].replace("\n", "") for line in lines
-        ]
-
-        with open(txnames) as f:
-            txs = f.read().splitlines()
-
-        ec_df = pd.read_csv(ecmap_mm, sep="\t", header=None)
-        # List to save multimapped ecs
-        ecs_mm = []
-        for index, row in ec_df.iterrows():
-            # Get transcript IDs that mapped to this ec
-            mapped_txs = np.array(txs)[np.array(row[1].split(",")).astype(int)]
-
-            # Check if transcript IDs belong to one or more genes
-            if len(set(t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values)) > 1:
-                ecs_mm.append(row[0])
-
-        # Write new matrix.ec file excluding mm ecs
-        new_ec = ec_df[~ec_df[0].isin(ecs_mm)]
-        new_ec.to_csv(ecmap, sep='\t', index=False, header=None)
-
-        logger.debug("Finished removing equivalence classes with multimapped reads from matrix.ec")
-
-        ## Remove mm ecs from bus file
-        bus_txt = os.path.join(temp_dir, "output.bus.txt")
-        bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
-        bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
-
-        # Convert bus to txt file
-        bustools_text(
-            bus_path = bus_in,
-            out_path = bus_txt,
-            flags = True
-        )
-
-        # Remove mm ecs
-        bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
-        new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
-        new_bus_df.to_csv(bus_txt_no_mm, sep='\t', index=False, header=None)
-
-        # Convert back to bus format
-        bustools_fromtext(
-            txt_path = bus_txt_no_mm,
-            out_path = bus_no_mm            
-        )
-
-        bus_in = bus_no_mm
-
-        logger.debug("Finished removing equivalence classes with multimapped reads from BUS file")
-
     if extract_all_fast or extract_all_unmapped:
-        bus_out_sorted = os.path.join(
-            temp_dir, "output_extracted_sorted.bus"
-        )
+        bus_out_sorted = os.path.join(temp_dir, "output_extracted_sorted.bus")
+
+        if not mm:
+            # Remove multimapped reads from bus file
+            bus_in = remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in)
 
         try:
             # Extract records for this transcript ID from fastq
             bustools_sort(bus_path=bus_in, flags=True, out_path=bus_out_sorted)
-    
+
             extract_out_folder = os.path.join(out_dir, "all")
             bustools_extract(
                 sorted_bus_path=bus_out_sorted,
                 out_path=extract_out_folder,
                 fastqs=fastq,
-                num_fastqs=1
+                num_fastqs=1,
             )
 
         except Exception as e:
-            logger.error(f"Extraction of reads unsuccessful due to the following error:\n{e}")
+            logger.error(
+                f"Extraction of reads unsuccessful due to the following error:\n{e}"
+            )
 
     if extract_all_unmapped:
         # Save unmapped reads in a separate fastq file
@@ -290,6 +339,10 @@ def extract(
         extract_matching_reads_by_header(extract_out_folder, fastq, unmapped_fastq)
 
     else:
+        if not mm:
+            # Replace transcript entries for equivalence classes with multimapped reads with -1
+            ecmap = remove_mm_from_mc(t2g_path, txnames, temp_dir)
+
         if target_type == "gene" or extract_all:
             # Read t2g to find all transcripts associated with a gene/mutant ID
             with open(t2g_path, "r") as t2g_file:
@@ -299,55 +352,55 @@ def extract(
             t2g_df["gene_id"] = [
                 line.split("\t")[1].replace("\n", "") for line in lines
             ]
-    
+
             if extract_all:
                 if target_type == "gene":
                     # Set targets to all genes
                     targets = list(set(t2g_df["gene_id"].values))
                     g2ts = {
-                            gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
-                            for gid in targets
-                        }
-    
+                        gid: t2g_df[t2g_df["gene_id"] == gid][
+                            "transcript"
+                        ].values.tolist()
+                        for gid in targets
+                    }
+
                 else:
                     # Set targets to all transcripts
                     targets = list(set(t2g_df["transcript"].values))
-    
+
             else:
                 g2ts = {
-                        gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
-                        for gid in targets
-                    }
-    
+                    gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
+                    for gid in targets
+                }
+
         for gid in targets:
             if target_type == "gene":
                 transcripts = g2ts[gid]
             else:
                 # if target_type==transcript, each transcript will be extracted individually
                 transcripts = [gid]
-    
+
             # Create temp txt file with transcript IDs to extract
             transcript_names_file = os.path.join(
                 temp_dir, "pull_out_reads_transcript_ids_temp.txt"
             )
             with open(transcript_names_file, "w") as f:
                 f.write("\n".join(transcripts))
-    
+
             if target_type == "gene":
                 logger.info(
                     f"Extracting reads for following transcripts for gene ID {gid}: "
                     + ", ".join(transcripts)
                 )
             else:
-                logger.info(
-                    f"Extracting reads for the following transcript: {gid}"
-                )
-    
+                logger.info(f"Extracting reads for the following transcript: {gid}")
+
             bus_out = os.path.join(temp_dir, f"output_extracted_{gid}.bus")
             bus_out_sorted = os.path.join(
                 temp_dir, f"output_extracted_{gid}_sorted.bus"
             )
-    
+
             try:
                 # Capture records for this gene
                 bustools_capture(
@@ -357,19 +410,21 @@ def extract(
                     txnames_path=txnames,
                     capture_type="transcripts",
                     out_path=bus_out,
-                    complement=False
+                    complement=False,
                 )
-        
+
                 # Extract records for this transcript ID from fastq
                 bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
-        
+
                 extract_out_folder = os.path.join(out_dir, gid)
                 bustools_extract(
                     sorted_bus_path=bus_out_sorted,
                     out_path=extract_out_folder,
                     fastqs=fastq,
-                    num_fastqs=1
+                    num_fastqs=1,
                 )
-    
+
             except Exception as e:
-                logger.error(f"Extraction of reads unsuccessful for {gid} due to the following error:\n{e}")
+                logger.error(
+                    f"Extraction of reads unsuccessful for {gid} due to the following error:\n{e}"
+                )
