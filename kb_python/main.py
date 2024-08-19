@@ -1528,8 +1528,8 @@ def setup_extract_args(
 
     parser_extract = parser.add_parser(
         'extract',
-        description='Extract sequencing reads that were pseudoaligned to the specified genes/transcripts.',
-        help='Extract sequencing reads that were pseudoaligned to the specified genes/transcripts. Note: Multimapped reads will also be extracted.',
+        description='Extract sequencing reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned).',
+        help='Extract sequencing reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned)',
         parents=[parent]
     )
     parser_extract._actions[0].help = parser_extract._actions[
