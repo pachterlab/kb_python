@@ -233,16 +233,15 @@ def extract(
 ):
     """
     Extracts sequencing reads that were pseudo-aligned to an index for specific genes/transcripts.
-    Note: Multimapped reads will also be extracted.
 
     fastq: Single fastq file containing sequencing reads
     index_path: Path to kallisto index
     targets: Gene or transcript names for which to extract the raw reads that align to the index
     out_dir: Path to output directory
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
-    extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all.
-    extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast.
-    extract_all_unmapped: Extracts all unmapped reads, defaults to `False`. Set targets = None when using extract_all_unmapped.
+    extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all
+    extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast
+    extract_all_unmapped: Extracts all unmapped reads, defaults to `False`. Set targets = None when using extract_all_unmapped
     mm: Also extract reads that multi-mapped to several genes, defaults to `False`
     t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
