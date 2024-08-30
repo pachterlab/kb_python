@@ -1608,7 +1608,7 @@ def setup_extract_args(
         '-g',
         metavar='T2G',
         help=(
-            'Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True).'
+            'Path to transcript-to-gene mapping file (required when mm = False, target_type = "gene" (and extract_all_fast and extract_all_unmapped = False), OR extract_all = True).'
         ),
         type=str,
     )
