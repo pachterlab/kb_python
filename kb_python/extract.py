@@ -243,7 +243,7 @@ def extract(
     extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast
     extract_all_unmapped: Extracts all unmapped reads, defaults to `False`. Set targets = None when using extract_all_unmapped
     mm: Also extract reads that multi-mapped to several genes, defaults to `False`
-    t2g_path: Path to transcript-to-gene mapping file (required when target_type = gene or extract_all = True)
+    t2g_path: Path to transcript-to-gene mapping file (required when mm = False, target_type = 'gene' (and extract_all_fast and extract_all_unmapped = False), OR extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
     aa: Align to index generated from a FASTA-file containing amino acid sequences, defaults to `False`
