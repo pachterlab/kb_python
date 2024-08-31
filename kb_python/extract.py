@@ -1,4 +1,5 @@
 import os
+import gzip
 from typing import Dict, List, Optional, Union
 
 from Bio import SeqIO
@@ -87,7 +88,7 @@ def read_headers_from_fastq(fastq_file):
     Reads headers from a FASTQ file and returns a set of headers.
     """
     headers = set()
-    with open(fastq_file, "r") as file:
+    with gzip.open(fastq_file, "rt") as file:
         for record in SeqIO.parse(file, "fastq"):
             headers.add(record.id)
     return headers
@@ -95,13 +96,13 @@ def read_headers_from_fastq(fastq_file):
 
 def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq):
     """
-    Extracts reads from the reference FASTQ file that are NOT present in the input FASTQ file
-    based on headers and writes them to the output FASTQ file.
+    Extracts reads from the reference FASTQ (.gz) file that are NOT present in the input FASTQ (.gz) file
+    based on headers and writes them to the output FASTQ (.gz) file.
     """
     # Read headers from the reference FASTQ file
     reference_headers = read_headers_from_fastq(input_fastq)
 
-    with open(reference_fastq, "r") as infile, open(output_fastq, "w") as outfile:
+    with gzip.open(reference_fastq, "rt") as infile, gzip.open(output_fastq, "wt") as outfile:
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
             (
@@ -112,7 +113,7 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
             outfile,
             "fastq",
         )
-        logger.info(f"Number of unmapped reads written to {output_fastq}: {writer}")
+        print(f"Number of unmapped reads written to {output_fastq}: {writer}")
 
 
 def get_mm_ecs(t2g_path, txnames, temp_dir):
