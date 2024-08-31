@@ -169,25 +169,30 @@ def remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in):
     # Get equivalence classes with multimapped reads
     ecs_mm, _ = get_mm_ecs(t2g_path, txnames, temp_dir)
 
-    ## Remove mm ecs from bus file
-    bus_txt = os.path.join(temp_dir, "output.bus.txt")
-    bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
-    bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
+    if len(ecs_mm) > 0:
+        ## Remove mm ecs from bus file
+        bus_txt = os.path.join(temp_dir, "output.bus.txt")
+        bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
+        bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
+    
+        # Convert bus to txt file
+        bustools_text(bus_path=bus_in, out_path=bus_txt, flags=True)
+    
+        # Remove mm ecs
+        bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
+        new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
+        new_bus_df.to_csv(bus_txt_no_mm, sep="\t", index=False, header=None)
+    
+        # Convert back to bus format
+        bustools_fromtext(txt_path=bus_txt_no_mm, out_path=bus_no_mm)
+    
+        logger.debug(
+            f"BUS file without equivalence classes that map to multiple genes saved at {bus_no_mm}"
+        )
 
-    # Convert bus to txt file
-    bustools_text(bus_path=bus_in, out_path=bus_txt, flags=True)
-
-    # Remove mm ecs
-    bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
-    new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
-    new_bus_df.to_csv(bus_txt_no_mm, sep="\t", index=False, header=None)
-
-    # Convert back to bus format
-    bustools_fromtext(txt_path=bus_txt_no_mm, out_path=bus_no_mm)
-
-    logger.debug(
-        f"BUS file without equivalence classes that map to multiple genes saved at {bus_no_mm}"
-    )
+    else:
+        logger.debug("No equivalence classes that map to multiple genes found.")
+        bus_no_mm = os.path.join(temp_dir, "output.bus.txt")
 
     return bus_no_mm
 
@@ -206,15 +211,20 @@ def remove_mm_from_mc(t2g_path, txnames, temp_dir):
     # Get multimapped equivalence classes
     ecs_mm, ec_df = get_mm_ecs(t2g_path, txnames, temp_dir)
 
-    # Replace transcript entries for multimapped equivalence classes with -1
-    ec_df.loc[ec_df[0].isin(ecs_mm), 1] = -1
-    ec_df.to_csv(ecmap_no_mm, sep="\t", index=False, header=None)
+    if len(ecs_mm) > 0:
+        # Replace transcript entries for multimapped equivalence classes with -1
+        ec_df.loc[ec_df[0].isin(ecs_mm), 1] = -1
+        ec_df.to_csv(ecmap_no_mm, sep="\t", index=False, header=None)
+    
+        logger.debug(
+            f"matrix.ec file where transcript entries were replaced with -1 for equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
+        )
 
-    logger.debug(
-        f"matrix.ec file where transcript entries were replaced with -1 for equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
-    )
+        return ecmap_no_mm
 
-    return ecmap_no_mm
+    else:
+        logger.debug("No equivalence classes that map to multiple genes found.")
+        return None
 
 
 @logger.namespaced("extract")
@@ -344,7 +354,10 @@ def extract(
     else:
         if not mm:
             # Replace transcript entries for equivalence classes with multimapped reads with -1
-            ecmap = remove_mm_from_mc(t2g_path, txnames, temp_dir)
+            # This will return None if no ecs were found that map to multiple genes
+            ecmap_no_mm = remove_mm_from_mc(t2g_path, txnames, temp_dir)
+            if ecmap_no_mm:
+                ecmap = ecmap_no_mm
 
         if target_type == "gene" or extract_all:
             # Read t2g to find all transcripts associated with a gene/mutant ID
