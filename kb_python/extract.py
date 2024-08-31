@@ -351,8 +351,9 @@ def extract(
 
         if extract_all_unmapped:
             # Save unmapped reads in a separate fastq file
-            unmapped_fastq = os.path.join(out_dir, "all_unmapped")
-            extract_matching_reads_by_header(extract_out_folder, fastq, unmapped_fastq)
+            unmapped_fastq = os.path.join(out_dir, "all_unmapped/1.fastq.gz")
+            mapped_fastq = os.path.join(extract_out_folder, "1.fastq.gz")
+            extract_matching_reads_by_header(mapped_fastq, fastq, unmapped_fastq)
 
     else:
         if not mm:
