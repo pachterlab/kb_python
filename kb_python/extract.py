@@ -82,6 +82,12 @@ def bustools_extract(
     run_executable(command)
     return {"bus": out_path}
 
+def is_gzipped(file_path):
+    """
+    Checks if a file is gzipped by reading its magic number.
+    """
+    with open(file_path, 'rb') as file:
+        return file.read(2) == b'\x1f\x8b'
 
 def read_headers_from_fastq(fastq_file):
     """
@@ -99,10 +105,21 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
     Extracts reads from the reference FASTQ (.gz) file that are NOT present in the input FASTQ (.gz) file
     based on headers and writes them to the output FASTQ (.gz) file.
     """
+
+    print(input_fastq)
+    print(reference_fastq)
+    print(output_fastq)
+
     # Read headers from the reference FASTQ file
     reference_headers = read_headers_from_fastq(input_fastq)
 
-    with gzip.open(reference_fastq, "rt") as infile, gzip.open(output_fastq, "wt") as outfile:
+    # Determine if reference_fastq is gzipped and open accordingly
+    if is_gzipped(reference_fastq):
+        infile_opener = gzip.open(reference_fastq, "rt")
+    else:
+        infile_opener = open(reference_fastq, "r")
+
+    with infile_opener as infile, gzip.open(output_fastq, "wt") as outfile:
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
             (
