@@ -106,10 +106,6 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
     based on headers and writes them to the output FASTQ (.gz) file.
     """
 
-    print(input_fastq)
-    print(reference_fastq)
-    print(output_fastq)
-
     # Read headers from the reference FASTQ file
     reference_headers = read_headers_from_fastq(input_fastq)
 
@@ -371,7 +367,7 @@ def extract(
             # Save unmapped reads in a separate fastq file
             unmapped_fastq = os.path.join(out_dir, "all_unmapped/1.fastq.gz")
             mapped_fastq = os.path.join(extract_out_folder, "1.fastq.gz")
-            extract_matching_reads_by_header(mapped_fastq, fastq, unmapped_fastq)
+            extract_matching_reads_by_header(mapped_fastq, fastq[0] if isinstance(fastq, list) else fastq, unmapped_fastq)
 
     else:
         if not mm:
