@@ -138,7 +138,7 @@ def get_mm_ecs(t2g_path, txnames, temp_dir):
     ecs_mm = []
     for index, row in ec_df.iterrows():
         # Get transcript IDs that mapped to this ec
-        if isinstance(row[1], int):
+        if isinstance(row[1], np.int64) or isinstance(row[1], int):
             mapped_txs = np.array(txs)[row[1]]
         else:
             mapped_txs = np.array(txs)[np.array(row[1].split(",")).astype(int)]
