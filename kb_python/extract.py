@@ -339,6 +339,7 @@ def extract(
 
     txnames = os.path.join(temp_dir, "transcripts.txt")
     bus_in = os.path.join(temp_dir, "output.bus")
+    ecmap = os.path.join(temp_dir, "matrix.ec")
 
     if extract_all_fast or extract_all_unmapped:
         bus_out_sorted = os.path.join(temp_dir, "output_extracted_sorted.bus")
