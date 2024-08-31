@@ -349,10 +349,10 @@ def extract(
                 f"Extraction of reads unsuccessful due to the following error:\n{e}"
             )
 
-    if extract_all_unmapped:
-        # Save unmapped reads in a separate fastq file
-        unmapped_fastq = os.path.join(out_dir, "all_unmapped")
-        extract_matching_reads_by_header(extract_out_folder, fastq, unmapped_fastq)
+        if extract_all_unmapped:
+            # Save unmapped reads in a separate fastq file
+            unmapped_fastq = os.path.join(out_dir, "all_unmapped")
+            extract_matching_reads_by_header(extract_out_folder, fastq, unmapped_fastq)
 
     else:
         if not mm:
