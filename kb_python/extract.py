@@ -115,6 +115,10 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
     else:
         infile_opener = open(reference_fastq, "r")
 
+    # Ensure all intermediary folders exist for the output_fastq path
+    output_dir = os.path.dirname(output_fastq)
+    os.makedirs(output_dir, exist_ok=True)
+
     with infile_opener as infile, gzip.open(output_fastq, "wt") as outfile:
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
