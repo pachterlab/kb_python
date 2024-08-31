@@ -190,11 +190,11 @@ def remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in):
             f"BUS file without equivalence classes that map to multiple genes saved at {bus_no_mm}"
         )
 
+        return bus_no_mm
+
     else:
         logger.debug("No equivalence classes that map to multiple genes found.")
-        bus_no_mm = os.path.join(temp_dir, "output.bus.txt")
-
-    return bus_no_mm
+        return None
 
 
 def remove_mm_from_mc(t2g_path, txnames, temp_dir):
@@ -327,7 +327,10 @@ def extract(
 
         if not mm:
             # Remove multimapped reads from bus file
-            bus_in = remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in)
+            # This will return None if no ecs were found that map to multiple genes
+            bus_in_no_mm = remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in)
+            if bus_in_no_mm:
+                bus_in = bus_in_no_mm
 
         try:
             # Extract records for this transcript ID from fastq
