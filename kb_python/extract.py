@@ -8,7 +8,7 @@ import numpy as np
 
 from typing_extensions import Literal
 
-from .utils import make_directory, get_bustools_binary_path, run_executable
+from .utils import make_directory, get_bustools_binary_path, run_executable, get_bustools_version
 
 from .count import kallisto_bus, bustools_capture, bustools_sort, stream_fastqs
 
