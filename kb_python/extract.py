@@ -316,6 +316,13 @@ def extract(
             "t2g_path must be provided if mm flag is not provided, target_type is 'gene' (and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
         )
 
+    # extract_all_unmapped requires bustools version > 0.43.2 since previous versions have a bug in the output fastq format that changes the sequence headers
+    bustools_version_tuple = get_bustools_version()
+    if extract_all_unmapped and not (0, 43, 2) < bustools_version_tuple:
+        raise ValueError(
+            f"extract_all_unmapped requires bustools version > 0.43.2. You are currently using bustools version {'.'.join(str(i) for i in bustools_version_tuple)}."
+        )
+
     make_directory(out_dir)
 
     fastq = stream_fastqs([fastq], temp_dir=temp_dir)
