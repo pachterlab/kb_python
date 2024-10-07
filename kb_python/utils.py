@@ -799,7 +799,7 @@ def do_sum_matrices(
                 if not mm:
                     _nums1[0] = int(_nums1[0])
                     _nums1[1] = int(_nums1[1])
-                    _nums1[2] = int(_nums1[2])
+                    _nums1[2] = int(float(_nums1[2]))
                 else:
                     _nums1[0] = int(_nums1[0])
                     _nums1[1] = int(_nums1[1])
@@ -809,7 +809,7 @@ def do_sum_matrices(
                 if not mm:
                     _nums2[0] = int(_nums2[0])
                     _nums2[1] = int(_nums2[1])
-                    _nums2[2] = int(_nums2[2])
+                    _nums2[2] = int(float(_nums2[2]))
                 else:
                     _nums2[0] = int(_nums2[0])
                     _nums2[1] = int(_nums2[1])
