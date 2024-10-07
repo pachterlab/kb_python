@@ -18,6 +18,8 @@ from .config import (
     set_dry,
     set_bustools_binary_path,
     set_kallisto_binary_path,
+    set_special_kallisto_binary,
+    get_provided_kallisto_path,
     TECHNOLOGIES,
     TEMP_DIR,
     UnsupportedOSError,
@@ -1104,6 +1106,11 @@ def setup_ref_args(
         default=bustools_path
     )
     parser_ref.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
+    )
+    parser_ref.add_argument(
         'fasta',
         help='Genomic FASTA file(s), comma-delimited',
         type=str,
@@ -1430,6 +1437,32 @@ def setup_count_args(
         '--no-inspect', help=argparse.SUPPRESS, action='store_true'
     )
     parser_count.add_argument(
+        '--long',
+        help='Use lr-kallisto for long-read mapping',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--threshold',
+        metavar='THRESH',
+        help='Set threshold for lr-kallisto read mapping (default: 0.8)',
+        type=float,
+        default=0.8
+    )
+    parser_count.add_argument(
+        '--error-rate',
+        help=argparse.SUPPRESS,
+        type=float,
+        default=None
+    )
+    parser_count.add_argument(
+        '--platform',
+        metavar='[PacBio or ONT]',
+        help='Set platform for lr-kallisto (default: ONT)',
+        type=str,
+        default='ONT',
+        choices=['PacBio', 'ONT']
+    )
+    parser_count.add_argument(
         '--kallisto',
         help=f'Path to kallisto binary to use (default: {kallisto_path})',
         type=str,
@@ -1440,6 +1473,14 @@ def setup_count_args(
         help=f'Path to bustools binary to use (default: {bustools_path})',
         type=str,
         default=bustools_path
+    )
+    parser_count.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '-k', help=argparse.SUPPRESS, type=int, default=31
     )
     parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
@@ -1662,6 +1703,14 @@ def setup_extract_args(
         type=str,
         default=bustools_path
     )
+    parser_extract.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
+    )
+    parser_extract.add_argument(
+        '-k', help=argparse.SUPPRESS, type=int, default=31
+    )
 
     return parser_extract
 
@@ -1760,6 +1809,20 @@ def main():
     # Set binary paths
     if args.command in ('ref', 'count', 'extract') and ('dry_run' not in args
                                                         or not args.dry_run):
+                                                          
+        use_kmer64 = False
+        opt_off = False
+        if args.k and args.k > 32:
+            use_kmer64 = True
+        if args.opt_off:
+            opt_off = True
+        # Handle larger k-mer sizes or disable optimizations
+        if use_kmer64 or opt_off:
+            # Only do so if --kallisto not already provided
+            if not any(arg.startswith('--kallisto') for arg in sys.argv):
+                set_special_kallisto_binary(use_kmer64, opt_off)
+                args.kallisto = get_provided_kallisto_path()
+
         if args.kallisto:
             set_kallisto_binary_path(args.kallisto)
         if args.bustools:
