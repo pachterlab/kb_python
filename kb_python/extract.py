@@ -323,7 +323,7 @@ def extract(
         )
 
     if (not mm or (target_type == "gene"
-                and not (extract_all_fast or extract_all_unmapped))
+                  and not (extract_all_fast or extract_all_unmapped))
             or extract_all) and (t2g_path is None):
         raise ValueError(
             "t2g_path must be provided if mm flag is not provided, target_type is 'gene' "
