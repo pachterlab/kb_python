@@ -82,12 +82,14 @@ def bustools_extract(
     run_executable(command)
     return {"bus": out_path}
 
+
 def is_gzipped(file_path):
     """
     Checks if a file is gzipped by reading its magic number.
     """
     with open(file_path, 'rb') as file:
         return file.read(2) == b'\x1f\x8b'
+
 
 def read_headers_from_fastq(fastq_file):
     """
@@ -188,22 +190,22 @@ def remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in):
     ecs_mm, _ = get_mm_ecs(t2g_path, txnames, temp_dir)
 
     if len(ecs_mm) > 0:
-        ## Remove mm ecs from bus file
+        # Remove mm ecs from bus file
         bus_txt = os.path.join(temp_dir, "output.bus.txt")
         bus_txt_no_mm = os.path.join(temp_dir, "output_no_mm.bus.txt")
         bus_no_mm = os.path.join(temp_dir, "output_no_mm.bus")
-    
+
         # Convert bus to txt file
         bustools_text(bus_path=bus_in, out_path=bus_txt, flags=True)
-    
+
         # Remove mm ecs
         bus_df = pd.read_csv(bus_txt, sep="\t", header=None)
         new_bus_df = bus_df[~bus_df[2].isin(ecs_mm)]
         new_bus_df.to_csv(bus_txt_no_mm, sep="\t", index=False, header=None)
-    
+
         # Convert back to bus format
         bustools_fromtext(txt_path=bus_txt_no_mm, out_path=bus_no_mm)
-    
+
         logger.debug(
             f"BUS file without equivalence classes that map to multiple genes saved at {bus_no_mm}"
         )
@@ -223,7 +225,8 @@ def remove_mm_from_mc(t2g_path, txnames, temp_dir):
     ecmap_no_mm = os.path.join(temp_dir, "matrix_no_mm.ec")
 
     logger.debug(
-        f"Replacing transcript entries with -1 for equivalence classes that map to multiple genes from {os.path.join(temp_dir, 'matrix.ec')}"
+        f"Replacing transcript entries with -1 for equivalence classes "
+        "that map to multiple genes from {os.path.join(temp_dir, 'matrix.ec')}"
     )
 
     # Get multimapped equivalence classes
@@ -233,9 +236,10 @@ def remove_mm_from_mc(t2g_path, txnames, temp_dir):
         # Replace transcript entries for multimapped equivalence classes with -1
         ec_df.loc[ec_df[0].isin(ecs_mm), 1] = -1
         ec_df.to_csv(ecmap_no_mm, sep="\t", index=False, header=None)
-    
+
         logger.debug(
-            f"matrix.ec file where transcript entries were replaced with -1 for equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
+            f"matrix.ec file where transcript entries were replaced with -1 for "
+            "equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
         )
 
         return ecmap_no_mm
@@ -271,11 +275,19 @@ def extract(
     targets: Gene or transcript names for which to extract the raw reads that align to the index
     out_dir: Path to output directory
     target_type: 'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names
-    extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`. Might take a long time to run when the reference index contains a large number of genes. Set targets = None when using extract_all
-    extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`. Does not break down output by gene/transcript. Set targets = None when using extract_all_fast
-    extract_all_unmapped: Extracts all unmapped reads, defaults to `False`. Set targets = None when using extract_all_unmapped
+    extract_all: Extracts reads for all genes or transcripts (as defined in target_type), defaults to `False`.
+        Might take a long time to run when the reference index contains a large number of genes.
+        Set targets = None when using extract_all
+    extract_all_fast: Extracts all pseudo-aligned reads, defaults to `False`.
+        Does not break down output by gene/transcript.
+        Set targets = None when using extract_all_fast
+    extract_all_unmapped: Extracts all unmapped reads, defaults to `False`.
+        Set targets = None when using extract_all_unmapped
     mm: Also extract reads that multi-mapped to several genes, defaults to `False`
-    t2g_path: Path to transcript-to-gene mapping file (required when mm = False, target_type = 'gene' (and extract_all_fast and extract_all_unmapped = False), OR extract_all = True)
+    t2g_path: Path to transcript-to-gene mapping file
+        (required when mm = False, target_type = 'gene'
+        (and extract_all_fast and extract_all_unmapped = False),
+        OR extract_all = True)
     temp_dir: Path to temporary directory, defaults to `tmp`
     threads: Number of threads to use, defaults to `8`
     aa: Align to index generated from a FASTA-file containing amino acid sequences, defaults to `False`
@@ -287,19 +299,21 @@ def extract(
     """
     if sum([extract_all, extract_all_fast, extract_all_unmapped]) > 1:
         raise ValueError(
-            f"extract_all, extract_all_fast, and/or extract_all_unmapped cannot be used simultaneously"
+            "extract_all, extract_all_fast, and/or extract_all_unmapped cannot be used simultaneously"
         )
 
     if targets is None and not (
         extract_all or extract_all_fast or extract_all_unmapped
     ):
         raise ValueError(
-            f"targets must be provided (unless extract_all, extract_all_fast, or extract_all_unmapped are used to extract all reads)"
+            "targets must be provided "
+            "(unless extract_all, extract_all_fast, or extract_all_unmapped are used to extract all reads)"
         )
 
     if targets and (extract_all or extract_all_fast or extract_all_unmapped):
         logger.warning(
-            f"targets will be ignored since extract_all, extract_all_fast, or extract_all_unmapped is activated which will extract all reads"
+            "targets will be ignored since extract_all, extract_all_fast, or extract_all_unmapped "
+            "is activated which will extract all reads"
         )
 
     if target_type not in ["gene", "transcript"]:
@@ -313,14 +327,16 @@ def extract(
         or extract_all
     ) and (t2g_path is None):
         raise ValueError(
-            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' (and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
+            "t2g_path must be provided if mm flag is not provided, target_type is 'gene' "
+            "(and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
         )
 
     # extract_all_unmapped requires bustools version > 0.43.2 since previous versions have a bug in the output fastq format that changes the sequence headers
     bustools_version_tuple = get_bustools_version()
     if extract_all_unmapped and not (0, 43, 2) < bustools_version_tuple:
         raise ValueError(
-            f"extract_all_unmapped requires bustools version > 0.43.2. You are currently using bustools version {'.'.join(str(i) for i in bustools_version_tuple)}."
+            f"extract_all_unmapped requires bustools version > 0.43.2. "
+            "You are currently using bustools version {'.'.join(str(i) for i in bustools_version_tuple)}."
         )
 
     make_directory(out_dir)
@@ -379,7 +395,11 @@ def extract(
             # Save unmapped reads in a separate fastq file
             unmapped_fastq = os.path.join(out_dir, "all_unmapped/1.fastq.gz")
             mapped_fastq = os.path.join(extract_out_folder, "1.fastq.gz")
-            extract_matching_reads_by_header(mapped_fastq, fastq[0] if isinstance(fastq, list) else fastq, unmapped_fastq)
+            extract_matching_reads_by_header(
+                mapped_fastq,
+                fastq[0] if isinstance(fastq, list) else fastq,
+                unmapped_fastq
+            )
 
     else:
         if not mm:

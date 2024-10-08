@@ -37,10 +37,10 @@ def get_provided_kallisto_path() -> Optional[str]:
     bin_name = 'kallisto'
     if '_KALLISTO_OPTOFF' in globals():
         if _KALLISTO_OPTOFF:
-            bin_name=f'{bin_name}_optoff'
+            bin_name = f'{bin_name}_optoff'
     if '_KALLISTO_KMER_64' in globals():
         if _KALLISTO_KMER_64:
-            bin_name=f'{bin_name}_k64'
+            bin_name = f'{bin_name}_k64'
     bin_filename = f'{bin_name}.exe' if PLATFORM == 'windows' else bin_name
     path = os.path.join(BINS_DIR, PLATFORM, CPU, 'kallisto', bin_filename)
     if not os.path.isfile(path):
@@ -60,11 +60,13 @@ def get_provided_bustools_path() -> Optional[str]:
         return None
     return path
 
+
 def set_special_kallisto_binary(k64: bool, optoff: bool):
     global _KALLISTO_KMER_64
     global _KALLISTO_OPTOFF
     _KALLISTO_KMER_64 = k64
     _KALLISTO_OPTOFF = optoff
+
 
 def get_compiled_kallisto_path(alias: str = COMPILED_DIR) -> Optional[str]:
     """Finds platform-dependent kallisto binary compiled with `compile`.

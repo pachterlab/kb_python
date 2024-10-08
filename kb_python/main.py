@@ -1597,8 +1597,14 @@ def setup_extract_args(
 
     parser_extract = parser.add_parser(
         'extract',
-        description='Extract sequencing reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned).',
-        help='Extract sequencing reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned)',
+        description=(
+            'Extract sequencing reads that were pseudoaligned to specific genes/transcripts '
+            '(or extract all reads that were / were not pseudoaligned).'
+        ),
+        help=(
+            'Extract sequencing reads that were pseudoaligned to specific genes/transcripts '
+            '(or extract all reads that were / were not pseudoaligned)'
+        ),
         parents=[parent]
     )
     parser_extract._actions[0].help = parser_extract._actions[
@@ -1611,7 +1617,8 @@ def setup_extract_args(
         type=str,
         help=(
             'Single fastq file containing the sequencing reads (e.g. in case of 10x data, provide the R2 file).'
-            ' Sequencing technology will be treated as bulk here since barcode and UMI tracking is not necessary to extract reads.'
+            ' Sequencing technology will be treated as bulk here since barcode and UMI tracking '
+            'is not necessary to extract reads.'
         )
     )
     required_extract.add_argument(
@@ -1643,8 +1650,10 @@ def setup_extract_args(
     parser_extract.add_argument(
         '--extract_all',
         help=(
-            'Extracts all reads that pseudo-aligned to any gene or transcript (as defined by target_type) (breaks down output by gene/transcript). '
-            'Using extract_all might take a long time to run when there are a large number of genes/transcripts in the index.'
+            'Extracts all reads that pseudo-aligned to any gene or transcript (as defined by target_type) '
+            '(breaks down output by gene/transcript). '
+            'Using extract_all might take a long time to run when there are a large number of '
+            'genes/transcripts in the index.'
         ),
         action='store_true',
         default=False
@@ -1652,7 +1661,8 @@ def setup_extract_args(
     parser_extract.add_argument(
         '--extract_all_fast',
         help=(
-            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript; output saved in the "all" folder).'
+            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript; '
+            'output saved in the "all" folder).'
         ),
         action='store_true',
         default=False
@@ -1677,7 +1687,9 @@ def setup_extract_args(
         '-g',
         metavar='T2G',
         help=(
-            'Path to transcript-to-gene mapping file (required when mm = False, target_type = "gene" (and extract_all_fast and extract_all_unmapped = False), OR extract_all = True).'
+            'Path to transcript-to-gene mapping file '
+            '(required when mm = False, target_type = "gene" '
+            '(and extract_all_fast and extract_all_unmapped = False), OR extract_all = True).'
         ),
         type=str,
     )
@@ -1837,7 +1849,7 @@ def main():
     # Set binary paths
     if args.command in ('ref', 'count', 'extract') and ('dry_run' not in args
                                                         or not args.dry_run):
-                                                          
+
         use_kmer64 = False
         opt_off = False
         if args.k and args.k > 32:

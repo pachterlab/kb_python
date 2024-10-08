@@ -721,7 +721,7 @@ def overlay_anndatas(
         ambiguous_intersection = adata_ambiguous[obs_idx][:, var_idx]
         a_layers.update({'ambiguous': ambiguous_intersection.X})
         sum_X = sum_X + ambiguous_intersection.X
-    
+
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
     return anndata.AnnData(
