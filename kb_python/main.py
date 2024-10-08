@@ -637,6 +637,7 @@ def parse_count(
             lr_platform=args.platform,
             union=args.union,
             no_jump=args.no_jump,
+            quant_umis=args.quant_umis,
             keep_flags=args.keep_flags
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
@@ -759,6 +760,7 @@ def parse_count(
             lr_platform=args.platform,
             union=args.union,
             no_jump=args.no_jump,
+            quant_umis=args.quant_umis,
             keep_flags=args.keep_flags
         )
 
@@ -1507,6 +1509,9 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--no-jump', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--quant-umis', help=argparse.SUPPRESS, action='store_true'
     )
     parser_count.add_argument(
         '--keep-flags', help=argparse.SUPPRESS, action='store_true'
