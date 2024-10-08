@@ -1633,8 +1633,9 @@ def setup_extract_args(
         nargs='+',
         required=False,
         default=None,
-        help=
-        'Gene or transcript names for which to extract the raw reads that align to the index'
+        help=(
+            'Gene or transcript names for which to extract the raw reads that align to the index'
+        )
     )
     parser_extract.add_argument(
         '-ttype',
@@ -1643,8 +1644,9 @@ def setup_extract_args(
         type=str,
         default='gene',
         choices=['gene', 'transcript'],
-        help=
-        "'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
+        help=(
+            "'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
+        )
     )
     parser_extract.add_argument(
         '--extract_all',
