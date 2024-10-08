@@ -225,8 +225,8 @@ def remove_mm_from_mc(t2g_path, txnames, temp_dir):
     ecmap_no_mm = os.path.join(temp_dir, "matrix_no_mm.ec")
 
     logger.debug(
-        f"Replacing transcript entries with -1 for equivalence classes "
-        "that map to multiple genes from {os.path.join(temp_dir, 'matrix.ec')}"
+        "Replacing transcript entries with -1 for equivalence classes "
+        f"that map to multiple genes from {os.path.join(temp_dir, 'matrix.ec')}"
     )
 
     # Get multimapped equivalence classes
@@ -238,8 +238,8 @@ def remove_mm_from_mc(t2g_path, txnames, temp_dir):
         ec_df.to_csv(ecmap_no_mm, sep="\t", index=False, header=None)
 
         logger.debug(
-            f"matrix.ec file where transcript entries were replaced with -1 for "
-            "equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
+            "matrix.ec file where transcript entries were replaced with -1 for "
+            f"equivalence classes that map to multiple genes saved at {ecmap_no_mm}"
         )
 
         return ecmap_no_mm
@@ -331,12 +331,13 @@ def extract(
             "(and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
         )
 
-    # extract_all_unmapped requires bustools version > 0.43.2 since previous versions have a bug in the output fastq format that changes the sequence headers
+    # extract_all_unmapped requires bustools version > 0.43.2 
+    # since previous versions have a bug in the output fastq format that changes the sequence headers
     bustools_version_tuple = get_bustools_version()
     if extract_all_unmapped and not (0, 43, 2) < bustools_version_tuple:
         raise ValueError(
-            f"extract_all_unmapped requires bustools version > 0.43.2. "
-            "You are currently using bustools version {'.'.join(str(i) for i in bustools_version_tuple)}."
+            "extract_all_unmapped requires bustools version > 0.43.2. "
+            f"You are currently using bustools version {'.'.join(str(i) for i in bustools_version_tuple)}."
         )
 
     make_directory(out_dir)
