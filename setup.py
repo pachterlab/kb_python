@@ -20,7 +20,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords='kallisto bustools',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     license='BSD',
     packages=find_packages(exclude=('tests', 'tests.*', 'docs')),
     zip_safe=False,
