@@ -105,6 +105,11 @@ def kallisto_bus(
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
     numreads: int = None,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    union: bool = False,
+    no_jump: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -133,6 +138,11 @@ def kallisto_bus(
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -194,6 +204,16 @@ def kallisto_bus(
         command += ['--rf-stranded']
     if inleaved:
         command += ['--inleaved']
+    if lr:
+        command += ['--long']
+    if lr_thresh:
+        command += ['-r', str(lr_thresh)]
+    if lr_error_rate:
+        command += ['-e', str(lr_error_rate)]
+    if union:
+        command += ['--union']
+    if no_jump:
+        command += ['--no-jump']
     if batch_barcodes:
         command += ['--batch-barcodes']
     if is_batch:
@@ -1178,6 +1198,13 @@ def count(
     no_fragment: bool = False,
     numreads: int = None,
     store_num: bool = False,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    lr_platform: str = 'ONT',
+    union: bool = False,
+    no_jump: bool = False,
+    keep_flags: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1242,6 +1269,13 @@ def count(
         no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
         store_num: Whether to store read numbers in BUS file, defaults to `False`
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        lr_platform: Sets the --platform for lr-kallisto, defaults to `ONT`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
+        keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1292,7 +1326,12 @@ def count(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
-            n=store_num
+            n=store_num,
+            lr=lr,
+            lr_thresh=lr_thresh,
+            lr_error_rate=lr_error_rate,
+            union=union,
+            no_jump=no_jump
         )
     else:
         logger.info(
@@ -1695,6 +1734,13 @@ def count_nac(
     batch_barcodes: bool = False,
     numreads: int = None,
     store_num: bool = False,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    lr_platform: str = 'ONT',
+    union: bool = False,
+    no_jump: bool = False,
+    keep_flags: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1756,6 +1802,13 @@ def count_nac(
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
         store_num: Whether to store read numbers in BUS file, defaults to `False`
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        lr_platform: Sets the --platform for lr-kallisto, defaults to `ONT`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
+        keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -1803,7 +1856,12 @@ def count_nac(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
-            n=store_num
+            n=store_num,
+            lr=lr,
+            lr_thresh=lr_thresh,
+            lr_error_rate=lr_error_rate,
+            union=union,
+            no_jump=no_jump
         )
     else:
         logger.info(

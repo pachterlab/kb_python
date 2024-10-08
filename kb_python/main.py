@@ -630,7 +630,14 @@ def parse_count(
             demultiplexed=demultiplexed,
             batch_barcodes=args.batch_barcodes,
             numreads=args.N,
-            store_num=args.num
+            store_num=args.num,
+            lr=args.long,
+            lr_thresh=args.threshold,
+            lr_error_rate=args.error_rate,
+            lr_platform=args.platform,
+            union=args.union,
+            no_jump=args.no_jump,
+            keep_flags=args.keep_flags
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
@@ -745,7 +752,14 @@ def parse_count(
             matrix_to_directories=args.matrix_to_directories,
             no_fragment=args.no_fragment,
             numreads=args.N,
-            store_num=args.num
+            store_num=args.num,
+            lr=args.long,
+            lr_thresh=args.threshold,
+            lr_error_rate=args.error_rate,
+            lr_platform=args.platform,
+            union=args.union,
+            no_jump=args.no_jump,
+            keep_flags=args.keep_flags
         )
 
 
@@ -1487,6 +1501,15 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--no-fragment', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--union', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--no-jump', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--keep-flags', help=argparse.SUPPRESS, action='store_true'
     )
 
     optional_bulk = parser_count.add_argument_group(
