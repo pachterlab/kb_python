@@ -168,8 +168,7 @@ def get_mm_ecs(t2g_path, txnames, temp_dir):
             mapped_txs = np.array(txs)[np.array(row[1].split(",")).astype(int)]
 
         # Check if transcript IDs belong to one or more genes
-        if (
-            len(set(
+        if (len(set(
                 t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values)
                 ) > 1):
             ecs_mm.append(row[0])
@@ -324,7 +323,7 @@ def extract(
         )
 
     if (not mm or (target_type == "gene"
-                    and not (extract_all_fast or extract_all_unmapped))
+                and not (extract_all_fast or extract_all_unmapped))
             or extract_all) and (t2g_path is None):
         raise ValueError(
             "t2g_path must be provided if mm flag is not provided, target_type is 'gene' "
