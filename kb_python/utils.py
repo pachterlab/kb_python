@@ -715,15 +715,17 @@ def overlay_anndatas(
         'mature': spliced_intersection.X,
         'nascent': unspliced_intersection.X
     }
+    sum_X = spliced_intersection.X + unspliced_intersection.X
     ambiguous_intersection = None
     if adata_ambiguous is not None:
         ambiguous_intersection = adata_ambiguous[obs_idx][:, var_idx]
         a_layers.update({'ambiguous': ambiguous_intersection.X})
-
+        sum_X = sum_X + ambiguous_intersection.X
+    
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
     return anndata.AnnData(
-        X=spliced_intersection.X, layers=a_layers, obs=df_obs, var=df_var
+        X=sum_X, layers=a_layers, obs=df_obs, var=df_var
     )
 
 
