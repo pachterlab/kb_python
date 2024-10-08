@@ -1465,10 +1465,7 @@ def setup_count_args(
         default=0.8
     )
     parser_count.add_argument(
-        '--error-rate',
-        help=argparse.SUPPRESS,
-        type=float,
-        default=None
+        '--error-rate', help=argparse.SUPPRESS, type=float, default=None
     )
     parser_count.add_argument(
         '--platform',
@@ -1636,7 +1633,8 @@ def setup_extract_args(
         nargs='+',
         required=False,
         default=None,
-        help='Gene or transcript names for which to extract the raw reads that align to the index'
+        help=
+        'Gene or transcript names for which to extract the raw reads that align to the index'
     )
     parser_extract.add_argument(
         '-ttype',
@@ -1645,7 +1643,8 @@ def setup_extract_args(
         type=str,
         default='gene',
         choices=['gene', 'transcript'],
-        help="'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
+        help=
+        "'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
     )
     parser_extract.add_argument(
         '--extract_all',
@@ -1677,9 +1676,7 @@ def setup_extract_args(
     )
     parser_extract.add_argument(
         '--mm',
-        help=(
-            'Also extract reads that multi-mapped to more than one gene.'
-        ),
+        help=('Also extract reads that multi-mapped to more than one gene.'),
         action='store_true',
         default=False
     )

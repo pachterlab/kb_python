@@ -102,7 +102,9 @@ def read_headers_from_fastq(fastq_file):
     return headers
 
 
-def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq):
+def extract_matching_reads_by_header(
+    input_fastq, reference_fastq, output_fastq
+):
     """
     Extracts reads from the reference FASTQ (.gz) file that are NOT present in the input FASTQ (.gz) file
     based on headers and writes them to the output FASTQ (.gz) file.
@@ -125,8 +127,7 @@ def extract_matching_reads_by_header(input_fastq, reference_fastq, output_fastq)
         # Create a SeqIO writer for the output FASTQ file
         writer = SeqIO.write(
             (
-                record
-                for record in SeqIO.parse(infile, "fastq")
+                record for record in SeqIO.parse(infile, "fastq")
                 if record.id not in reference_headers
             ),
             outfile,
@@ -148,7 +149,9 @@ def get_mm_ecs(t2g_path, txnames, temp_dir):
         lines = t2g_file.readlines()
     t2g_df = pd.DataFrame()
     t2g_df["transcript"] = [line.split("\t")[0] for line in lines]
-    t2g_df["gene_id"] = [line.split("\t")[1].replace("\n", "") for line in lines]
+    t2g_df["gene_id"] = [
+        line.split("\t")[1].replace("\n", "") for line in lines
+    ]
 
     with open(txnames) as f:
         txs = f.read().splitlines()
@@ -166,9 +169,9 @@ def get_mm_ecs(t2g_path, txnames, temp_dir):
 
         # Check if transcript IDs belong to one or more genes
         if (
-            len(set(t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values))
-            > 1
-        ):
+            len(set(
+                t2g_df[t2g_df["transcript"].isin(mapped_txs)]["gene_id"].values)
+                ) > 1):
             ecs_mm.append(row[0])
 
     logger.debug(
@@ -302,9 +305,8 @@ def extract(
             "extract_all, extract_all_fast, and/or extract_all_unmapped cannot be used simultaneously"
         )
 
-    if targets is None and not (
-        extract_all or extract_all_fast or extract_all_unmapped
-    ):
+    if targets is None and not (extract_all or extract_all_fast
+                                or extract_all_unmapped):
         raise ValueError(
             "targets must be provided "
             "(unless extract_all, extract_all_fast, or extract_all_unmapped are used to extract all reads)"
@@ -321,11 +323,9 @@ def extract(
             f"target_type must be 'gene' or 'transcript', not {target_type}"
         )
 
-    if (
-        not mm
-        or (target_type == "gene" and not (extract_all_fast or extract_all_unmapped))
-        or extract_all
-    ) and (t2g_path is None):
+    if (not mm or (target_type == "gene"
+                    and not (extract_all_fast or extract_all_unmapped))
+            or extract_all) and (t2g_path is None):
         raise ValueError(
             "t2g_path must be provided if mm flag is not provided, target_type is 'gene' "
             "(and extract_all_fast and extract_all_unmapped are False), OR extract_all is True"
@@ -359,7 +359,9 @@ def extract(
         numreads=numreads,
     )
 
-    logger.info("Alignment complete. Beginning extraction of reads using bustools...")
+    logger.info(
+        "Alignment complete. Beginning extraction of reads using bustools..."
+    )
 
     txnames = os.path.join(temp_dir, "transcripts.txt")
     bus_in = os.path.join(temp_dir, "output.bus")
@@ -371,7 +373,9 @@ def extract(
         if not mm:
             # Remove multimapped reads from bus file
             # This will return None if no ecs were found that map to multiple genes
-            bus_in_no_mm = remove_mm_from_bus(t2g_path, txnames, temp_dir, bus_in)
+            bus_in_no_mm = remove_mm_from_bus(
+                t2g_path, txnames, temp_dir, bus_in
+            )
             if bus_in_no_mm:
                 bus_in = bus_in_no_mm
 
@@ -397,8 +401,7 @@ def extract(
             unmapped_fastq = os.path.join(out_dir, "all_unmapped/1.fastq.gz")
             mapped_fastq = os.path.join(extract_out_folder, "1.fastq.gz")
             extract_matching_reads_by_header(
-                mapped_fastq,
-                fastq[0] if isinstance(fastq, list) else fastq,
+                mapped_fastq, fastq[0] if isinstance(fastq, list) else fastq,
                 unmapped_fastq
             )
 
@@ -425,9 +428,8 @@ def extract(
                     # Set targets to all genes
                     targets = list(set(t2g_df["gene_id"].values))
                     g2ts = {
-                        gid: t2g_df[t2g_df["gene_id"] == gid][
-                            "transcript"
-                        ].values.tolist()
+                        gid: t2g_df[t2g_df["gene_id"] == gid]
+                        ["transcript"].values.tolist()
                         for gid in targets
                     }
 
@@ -437,7 +439,8 @@ def extract(
 
             else:
                 g2ts = {
-                    gid: t2g_df[t2g_df["gene_id"] == gid]["transcript"].values.tolist()
+                    gid: t2g_df[t2g_df["gene_id"] == gid]
+                    ["transcript"].values.tolist()
                     for gid in targets
                 }
 
@@ -461,7 +464,9 @@ def extract(
                     + ", ".join(transcripts)
                 )
             else:
-                logger.info(f"Extracting reads for the following transcript: {gid}")
+                logger.info(
+                    f"Extracting reads for the following transcript: {gid}"
+                )
 
             bus_out = os.path.join(temp_dir, f"output_extracted_{gid}.bus")
             bus_out_sorted = os.path.join(
@@ -481,7 +486,9 @@ def extract(
                 )
 
                 # Extract records for this transcript ID from fastq
-                bustools_sort(bus_path=bus_out, flags=True, out_path=bus_out_sorted)
+                bustools_sort(
+                    bus_path=bus_out, flags=True, out_path=bus_out_sorted
+                )
 
                 extract_out_folder = os.path.join(out_dir, gid)
                 bustools_extract(

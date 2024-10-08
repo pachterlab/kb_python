@@ -724,9 +724,7 @@ def overlay_anndatas(
 
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
-    return anndata.AnnData(
-        X=sum_X, layers=a_layers, obs=df_obs, var=df_var
-    )
+    return anndata.AnnData(X=sum_X, layers=a_layers, obs=df_obs, var=df_var)
 
 
 def sum_anndatas(
