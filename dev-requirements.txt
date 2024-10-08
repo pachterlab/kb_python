@@ -1,5 +1,5 @@
 bumpversion==0.6.0
-coverage==5.1
+coverage==5.2.1
 flake8==3.8.2
 pytest==8.2.2
 pytest-cov==5.0.0
