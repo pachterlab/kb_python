@@ -201,6 +201,7 @@ def run_executable(
         if not quiet and p.returncode != returncode:
             logger.error('\n'.join(out))
             raise sp.CalledProcessError(p.returncode, ' '.join(command))
+        # logger.info(stdout)
 
     return (p, stdout, stderr) if wait else p
 
@@ -714,16 +715,16 @@ def overlay_anndatas(
         'mature': spliced_intersection.X,
         'nascent': unspliced_intersection.X
     }
+    sum_X = spliced_intersection.X + unspliced_intersection.X
     ambiguous_intersection = None
     if adata_ambiguous is not None:
         ambiguous_intersection = adata_ambiguous[obs_idx][:, var_idx]
         a_layers.update({'ambiguous': ambiguous_intersection.X})
+        sum_X = sum_X + ambiguous_intersection.X
 
     df_obs = unspliced_intersection.obs
     df_var = unspliced_intersection.var
-    return anndata.AnnData(
-        X=spliced_intersection.X, layers=a_layers, obs=df_obs, var=df_var
-    )
+    return anndata.AnnData(X=sum_X, layers=a_layers, obs=df_obs, var=df_var)
 
 
 def sum_anndatas(
@@ -798,7 +799,7 @@ def do_sum_matrices(
                 if not mm:
                     _nums1[0] = int(_nums1[0])
                     _nums1[1] = int(_nums1[1])
-                    _nums1[2] = int(_nums1[2])
+                    _nums1[2] = int(float(_nums1[2]))
                 else:
                     _nums1[0] = int(_nums1[0])
                     _nums1[1] = int(_nums1[1])
@@ -808,7 +809,7 @@ def do_sum_matrices(
                 if not mm:
                     _nums2[0] = int(_nums2[0])
                     _nums2[1] = int(_nums2[1])
-                    _nums2[2] = int(_nums2[2])
+                    _nums2[2] = int(float(_nums2[2]))
                 else:
                     _nums2[0] = int(_nums2[0])
                     _nums2[1] = int(_nums2[1])

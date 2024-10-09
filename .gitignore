@@ -109,3 +109,9 @@ venv.bak/
 .DS_Store
 .vscode/
 .Rhistory
+
+# PyCharm
+/.idea/
+
+# Temp files
+/scratch/

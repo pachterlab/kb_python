@@ -6,7 +6,7 @@
 Welcome to kb-python's documentation!
 =====================================
 
-This page contains **DEVELOPER** documentation for ``kb-python`` version ``0.28.2``.
+This page contains **DEVELOPER** documentation for ``kb-python`` version ``0.29.0``.
 For user documentation and tutorials, please go to `kallisto | bustools <https://www.kallistobus.tools/>`_.
 
 Development Prerequisites
@@ -18,7 +18,7 @@ necessary packages by running::
   pip install -r requirements.txt
   pip install -r dev-requirements.txt
 
-Code qualty and unit tests are strictly enforced for every pull request via
+Code quality and unit tests are strictly enforced for every pull request via
 Github actions.
 
 Code Quality
@@ -33,7 +33,7 @@ at the root of the repository.
 
 Unit-testing
 """"""""""""
-``kb-python`` uses ``nose`` to run unit tests. There is a convenient Makefile
+``kb-python`` uses ``pytest`` to run unit tests. There is a convenient Makefile
 rule in place to run all tests.::
 
   make test

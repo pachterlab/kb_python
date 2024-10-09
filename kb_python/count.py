@@ -105,6 +105,11 @@ def kallisto_bus(
     demultiplexed: bool = False,
     batch_barcodes: bool = False,
     numreads: int = None,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    union: bool = False,
+    no_jump: bool = False,
 ) -> Dict[str, str]:
     """Runs `kallisto bus`.
 
@@ -133,6 +138,11 @@ def kallisto_bus(
         demultiplexed: Whether FASTQs are demultiplexed, defaults to `False`
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -194,6 +204,16 @@ def kallisto_bus(
         command += ['--rf-stranded']
     if inleaved:
         command += ['--inleaved']
+    if lr:
+        command += ['--long']
+    if lr and lr_thresh:
+        command += ['-r', str(lr_thresh)]
+    if lr and lr_error_rate:
+        command += ['-e', str(lr_error_rate)]
+    if union:
+        command += ['--union']
+    if no_jump:
+        command += ['--no-jump']
     if batch_barcodes:
         command += ['--batch-barcodes']
     if is_batch:
@@ -224,12 +244,14 @@ def kallisto_quant_tcc(
     matrix_to_files: bool = False,
     matrix_to_directories: bool = False,
     no_fragment: bool = False,
+    lr: bool = False,
+    lr_platform: str = 'ONT',
 ) -> Dict[str, str]:
     """Runs `kallisto quant-tcc`.
 
     Args:
         mtx_path: Path to counts matrix
-        saved_index_path: Path to index.saved
+        saved_index_path: Path to index
         ecmap_path: Path to ecmap
         t2g_path: Path to T2G
         out_dir: Output directory path
@@ -241,6 +263,8 @@ def kallisto_quant_tcc(
         matrix_to_files: Whether to write quant-tcc output to files, defaults to `False`
         matrix_to_directories: Whether to write quant-tcc output to directories, defaults to `False`
         no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
+        lr: Whether to use lr-kallisto in quantification, defaults to `False`
+        lr_platform: Sets the --platform for lr-kallisto, defaults to `ONT`
 
     Returns:
         Dictionary containing path to output files
@@ -255,6 +279,10 @@ def kallisto_quant_tcc(
     command += ['-e', ecmap_path]
     command += ['-g', t2g_path]
     command += ['-t', threads]
+    if lr:
+        command += ['--long']
+    if lr and lr_platform:
+        command += ['-P', lr_platform]
     if flens_path and not no_fragment:
         command += ['-f', flens_path]
     if l and not no_fragment:
@@ -1178,6 +1206,14 @@ def count(
     no_fragment: bool = False,
     numreads: int = None,
     store_num: bool = False,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    lr_platform: str = 'ONT',
+    union: bool = False,
+    no_jump: bool = False,
+    quant_umis: bool = False,
+    keep_flags: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1242,6 +1278,14 @@ def count(
         no_fragment: Whether to disable quant-tcc effective length normalization, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
         store_num: Whether to store read numbers in BUS file, defaults to `False`
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        lr_platform: Sets the --platform for lr-kallisto, defaults to `ONT`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
+        quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
+        keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1292,7 +1336,12 @@ def count(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
-            n=store_num
+            n=store_num,
+            lr=lr,
+            lr_thresh=lr_thresh,
+            lr_error_rate=lr_error_rate,
+            union=union,
+            no_jump=no_jump
         )
     else:
         logger.info(
@@ -1309,7 +1358,7 @@ def count(
         temp_dir=temp_dir,
         threads=threads,
         memory=memory,
-        store_num=store_num
+        store_num=store_num and not keep_flags
     )
     correct = True
     if whitelist_path and whitelist_path.upper() == "NONE":
@@ -1404,6 +1453,9 @@ def count(
         technology.upper() in ('BULK', 'SMARTSEQ2', 'SMARTSEQ3')
     ) or ignore_umis
     quant = cm and tcc
+    if quant_umis:
+        quant = True
+        no_fragment = True
     suffix_to_inspect_filename = {'': ''}
     if (technology.upper() == 'SMARTSEQ3'):
         suffix_to_inspect_filename = {
@@ -1518,6 +1570,8 @@ def count(
                     matrix_to_files=matrix_to_files,
                     matrix_to_directories=matrix_to_directories,
                     no_fragment=no_fragment,
+                    lr=lr,
+                    lr_platform=lr_platform,
                 )
                 update_results_with_suffix(
                     unfiltered_results, quant_result, suffix
@@ -1695,6 +1749,14 @@ def count_nac(
     batch_barcodes: bool = False,
     numreads: int = None,
     store_num: bool = False,
+    lr: bool = False,
+    lr_thresh: float = 0.8,
+    lr_error_rate: float = None,
+    lr_platform: str = 'ONT',
+    union: bool = False,
+    no_jump: bool = False,
+    quant_umis: bool = False,
+    keep_flags: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1756,6 +1818,14 @@ def count_nac(
         batch_barcodes: Whether sample ID should be in barcode, defaults to `False`
         numreads: Maximum number of reads to process from supplied input
         store_num: Whether to store read numbers in BUS file, defaults to `False`
+        lr: Whether to use lr-kallisto in read mapping, defaults to `False`
+        lr_thresh: Sets the --threshold for lr-kallisto, defaults to `0.8`
+        lr_error_rate: Sets the --error-rate for lr-kallisto, defaults to `None`
+        lr_platform: Sets the --platform for lr-kallisto, defaults to `ONT`
+        union: Use set union for pseudoalignment, defaults to `False`
+        no_jump: Disable pseudoalignment "jumping", defaults to `False`
+        quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
+        keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -1803,7 +1873,12 @@ def count_nac(
             demultiplexed=demultiplexed,
             batch_barcodes=batch_barcodes,
             numreads=numreads,
-            n=store_num
+            n=store_num,
+            lr=lr,
+            lr_thresh=lr_thresh,
+            lr_error_rate=lr_error_rate,
+            union=union,
+            no_jump=no_jump
         )
     else:
         logger.info(
@@ -1820,7 +1895,7 @@ def count_nac(
         temp_dir=temp_dir,
         threads=threads,
         memory=memory,
-        store_num=store_num
+        store_num=store_num and not keep_flags
     )
     correct = True
     if whitelist_path and whitelist_path.upper() == "NONE":
@@ -2073,8 +2148,8 @@ def count_nac(
                         if batch_barcodes else None for prefix in prefixes
                     ],
                     genes_paths=[
-                        unfiltered_results[prefix][f'txnames{suffix}'] if tcc
-                        else unfiltered_results[prefix].get(f'genes{suffix}')
+                        unfiltered_results[prefix][f'ec{suffix}'] if tcc else
+                        unfiltered_results[prefix].get(f'genes{suffix}')
                         for prefix in prefixes
                     ],
                     t2g_path=t2g_path,
@@ -2975,7 +3050,7 @@ def count_velocity_smartseq3(
                     for prefix in prefixes
                 ],
                 genes_paths=[
-                    unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
+                    unfiltered_results[prefix][f'ec{suffix}'] if tcc else
                     unfiltered_results[prefix].get(f'genes{suffix}')
                     for prefix in prefixes
                 ],

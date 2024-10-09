@@ -2,7 +2,8 @@
 
 test:
 	rm -f .coverage
-	nosetests --verbose --with-coverage --cover-package kb_python tests/* tests/dry/*
+	pytest --verbose --cov=kb_python tests/* tests/dry/* && coverage report && coverage xml
+#	nosetests --verbose --with-coverage --cover-package kb_python tests/* tests/dry/*
 
 check:
 	flake8 kb_python && echo OK

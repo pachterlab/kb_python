@@ -1,5 +1,5 @@
 # kb-python
-![github version](https://img.shields.io/badge/Version-0.28.0-informational)
+![github version](https://img.shields.io/badge/Version-0.29.0-informational)
 [![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.28.0/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
@@ -10,7 +10,7 @@
 
 `kb-python` is a python package for processing single-cell RNA-sequencing. It wraps the [`kallisto` | `bustools`](https://www.kallistobus.tools) single-cell RNA-seq command line tools in order to unify multiple processing workflows. 
 
-`kb-python` was developed by [Kyung Hoi (Joseph) Min](https://twitter.com/lioscro) and [A. Sina Booeshaghi](https://twitter.com/sinabooeshaghi) while in [Lior Pachter](https://twitter.com/lpachter)'s lab at Caltech. If you use `kb-python` in a publication please [cite*](#cite):
+`kb-python` was first developed by [Kyung Hoi (Joseph) Min](https://twitter.com/lioscro) and [A. Sina Booeshaghi](https://twitter.com/sinabooeshaghi) while in [Lior Pachter](https://twitter.com/lpachter)'s lab at Caltech. If you use `kb-python` in a publication please [cite*](#cite):
 ```
 Melsted, P., Booeshaghi, A.S., et al. 
 Modular, efficient and constant-memory single-cell RNA-seq preprocessing. 
@@ -34,7 +34,7 @@ There are no prerequisite packages to install. The `kallisto` and `bustools` bin
 
 ## Usage
 
-`kb`  consists of four subcommands
+`kb`  consists of five subcommands
 ```bash
 $ kb
 usage: kb [-h] [--list] <CMD> ...
@@ -44,6 +44,7 @@ positional arguments:
     compile   Compile `kallisto` and `bustools` binaries from source
     ref       Build a kallisto index and transcript-to-gene mapping
     count     Generate count matrices from a set of single-cell FASTQ files
+    extract   Extract reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned)
 ```
 
 ### `kb ref`: generate a pseudoalignment index

@@ -18,6 +18,8 @@ from .config import (
     set_dry,
     set_bustools_binary_path,
     set_kallisto_binary_path,
+    set_special_kallisto_binary,
+    get_provided_kallisto_path,
     TECHNOLOGIES,
     TEMP_DIR,
     UnsupportedOSError,
@@ -628,7 +630,15 @@ def parse_count(
             demultiplexed=demultiplexed,
             batch_barcodes=args.batch_barcodes,
             numreads=args.N,
-            store_num=args.num
+            store_num=args.num,
+            lr=args.long,
+            lr_thresh=args.threshold,
+            lr_error_rate=args.error_rate,
+            lr_platform=args.platform,
+            union=args.union,
+            no_jump=args.no_jump,
+            quant_umis=args.quant_umis,
+            keep_flags=args.keep_flags
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
@@ -743,14 +753,55 @@ def parse_count(
             matrix_to_directories=args.matrix_to_directories,
             no_fragment=args.no_fragment,
             numreads=args.N,
-            store_num=args.num
+            store_num=args.num,
+            lr=args.long,
+            lr_thresh=args.threshold,
+            lr_error_rate=args.error_rate,
+            lr_platform=args.platform,
+            union=args.union,
+            no_jump=args.no_jump,
+            quant_umis=args.quant_umis,
+            keep_flags=args.keep_flags
         )
+
+
+def parse_extract(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
+    """Parser for the `extract` command.
+
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
+    """
+
+    from .extract import extract
+    extract(
+        fastq=args.fastq,
+        index_path=args.i,
+        targets=args.targets,
+        target_type=args.target_type,
+        extract_all=args.extract_all,
+        extract_all_fast=args.extract_all_fast,
+        extract_all_unmapped=args.extract_all_unmapped,
+        out_dir=args.o,
+        mm=args.mm,
+        t2g_path=args.g,
+        temp_dir=temp_dir,
+        threads=args.t,
+        aa=args.aa,
+        strand=args.strand,
+        numreads=args.N
+    )
 
 
 COMMAND_TO_FUNCTION = {
     'compile': parse_compile,
     'ref': parse_ref,
     'count': parse_count,
+    'extract': parse_extract,
 }
 
 
@@ -1069,6 +1120,11 @@ def setup_ref_args(
         help=f'Path to bustools binary to use (default: {bustools_path})',
         type=str,
         default=bustools_path
+    )
+    parser_ref.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
     )
     parser_ref.add_argument(
         'fasta',
@@ -1397,6 +1453,29 @@ def setup_count_args(
         '--no-inspect', help=argparse.SUPPRESS, action='store_true'
     )
     parser_count.add_argument(
+        '--long',
+        help='Use lr-kallisto for long-read mapping',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--threshold',
+        metavar='THRESH',
+        help='Set threshold for lr-kallisto read mapping (default: 0.8)',
+        type=float,
+        default=0.8
+    )
+    parser_count.add_argument(
+        '--error-rate', help=argparse.SUPPRESS, type=float, default=None
+    )
+    parser_count.add_argument(
+        '--platform',
+        metavar='[PacBio or ONT]',
+        help='Set platform for lr-kallisto (default: ONT)',
+        type=str,
+        default='ONT',
+        choices=['PacBio', 'ONT']
+    )
+    parser_count.add_argument(
         '--kallisto',
         help=f'Path to kallisto binary to use (default: {kallisto_path})',
         type=str,
@@ -1409,10 +1488,30 @@ def setup_count_args(
         default=bustools_path
     )
     parser_count.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '-k', help=argparse.SUPPRESS, type=int, default=31
+    )
+    parser_count.add_argument(
         '--no-validate', help=argparse.SUPPRESS, action='store_true'
     )
     parser_count.add_argument(
         '--no-fragment', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--union', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--no-jump', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--quant-umis', help=argparse.SUPPRESS, action='store_true'
+    )
+    parser_count.add_argument(
+        '--keep-flags', help=argparse.SUPPRESS, action='store_true'
     )
 
     optional_bulk = parser_count.add_argument_group(
@@ -1477,6 +1576,184 @@ def setup_count_args(
     return parser_count
 
 
+def setup_extract_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """Helper function to set up a subparser for the `extract` command.
+
+    Args:
+        parser: Parser to add the `extract` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
+    """
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
+    parser_extract = parser.add_parser(
+        'extract',
+        description=(
+            'Extract sequencing reads that were pseudoaligned to specific genes/transcripts '
+            '(or extract all reads that were / were not pseudoaligned).'
+        ),
+        help=(
+            'Extract sequencing reads that were pseudoaligned to specific genes/transcripts '
+            '(or extract all reads that were / were not pseudoaligned)'
+        ),
+        parents=[parent]
+    )
+    parser_extract._actions[0].help = parser_extract._actions[
+        0].help.capitalize()
+
+    required_extract = parser_extract.add_argument_group('required arguments')
+    required_extract.add_argument(
+        'fastq',
+        metavar='FASTQ',
+        type=str,
+        help=(
+            'Single fastq file containing the sequencing reads (e.g. in case of 10x data, provide the R2 file).'
+            ' Sequencing technology will be treated as bulk here since barcode and UMI tracking '
+            'is not necessary to extract reads.'
+        )
+    )
+    required_extract.add_argument(
+        '-i',
+        metavar='INDEX',
+        type=str,
+        required=True,
+        help='Path to kallisto index'
+    )
+    required_extract.add_argument(
+        '-ts',
+        '--targets',
+        metavar='TARGETS',
+        type=str,
+        nargs='+',
+        required=False,
+        default=None,
+        help=(
+            'Gene or transcript names for which to extract the raw reads that align to the index'
+        )
+    )
+    parser_extract.add_argument(
+        '-ttype',
+        '--target_type',
+        metavar='TYPE',
+        type=str,
+        default='gene',
+        choices=['gene', 'transcript'],
+        help=(
+            "'gene' (default) or 'transcript' -> Defines whether targets are gene or transcript names"
+        )
+    )
+    parser_extract.add_argument(
+        '--extract_all',
+        help=(
+            'Extracts all reads that pseudo-aligned to any gene or transcript (as defined by target_type) '
+            '(breaks down output by gene/transcript). '
+            'Using extract_all might take a long time to run when there are a large number of '
+            'genes/transcripts in the index.'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '--extract_all_fast',
+        help=(
+            'Extracts all reads that pseudo-aligned (does not break down output by gene/transcript; '
+            'output saved in the "all" folder).'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '--extract_all_unmapped',
+        help=(
+            'Extracts all unmapped reads (output saved in the "all_unmapped" folder).'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '--mm',
+        help=('Also extract reads that multi-mapped to more than one gene.'),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '-g',
+        metavar='T2G',
+        help=(
+            'Path to transcript-to-gene mapping file '
+            '(required when mm = False, target_type = "gene" '
+            '(and extract_all_fast and extract_all_unmapped = False), OR extract_all = True).'
+        ),
+        type=str,
+    )
+    parser_extract.add_argument(
+        '-o',
+        metavar='OUT',
+        help='Path to output directory (default: current directory)',
+        type=str,
+        default='.',
+    )
+    parser_extract.add_argument(
+        '-t',
+        metavar='THREADS',
+        help='Number of threads to use (default: 8)',
+        type=int,
+        default=8
+    )
+    parser_extract.add_argument(
+        '-s',
+        '--strand',
+        help="Strandedness (default: 'unstranded')",
+        type=str,
+        default=None,
+        choices=['unstranded', 'forward', 'reverse']
+    )
+    parser_extract.add_argument(
+        '--aa',
+        help=(
+            'Map to index generated from FASTA-file'
+            ' containing amino acid sequences'
+        ),
+        action='store_true',
+        default=False
+    )
+    parser_extract.add_argument(
+        '-N',
+        metavar='NUMREADS',
+        help='Maximum number of reads to process from supplied fastq',
+        type=int,
+        default=None
+    )
+    parser_extract.add_argument(
+        '--kallisto',
+        help=f'Path to kallisto binary to use (default: {kallisto_path})',
+        type=str,
+        default=kallisto_path
+    )
+    parser_extract.add_argument(
+        '--bustools',
+        help=f'Path to bustools binary to use (default: {bustools_path})',
+        type=str,
+        default=bustools_path
+    )
+    parser_extract.add_argument(
+        '--opt-off',
+        help='Disable performance optimizations',
+        action='store_true'
+    )
+    parser_extract.add_argument(
+        '-k', help=argparse.SUPPRESS, type=int, default=31
+    )
+
+    return parser_extract
+
+
 @logger.namespaced('main')
 def main():
     """Command-line entrypoint.
@@ -1518,11 +1795,13 @@ def main():
     parser_compile = setup_compile_args(subparsers, parent)
     parser_ref = setup_ref_args(subparsers, parent)
     parser_count = setup_count_args(subparsers, parent)
+    parser_extract = setup_extract_args(subparsers, parent)
 
     command_to_parser = {
         'compile': parser_compile,
         'ref': parser_ref,
         'count': parser_count,
+        'extract': parser_extract,
     }
     if 'info' in sys.argv:
         display_info()
@@ -1567,8 +1846,22 @@ def main():
     logger.debug('Printing verbose output')
 
     # Set binary paths
-    if args.command in ('ref', 'count') and ('dry_run' not in args
-                                             or not args.dry_run):
+    if args.command in ('ref', 'count', 'extract') and ('dry_run' not in args
+                                                        or not args.dry_run):
+
+        use_kmer64 = False
+        opt_off = False
+        if args.k and args.k > 32:
+            use_kmer64 = True
+        if args.opt_off:
+            opt_off = True
+        # Handle larger k-mer sizes or disable optimizations
+        if use_kmer64 or opt_off:
+            # Only do so if --kallisto not already provided
+            if not any(arg.startswith('--kallisto') for arg in sys.argv):
+                set_special_kallisto_binary(use_kmer64, opt_off)
+                args.kallisto = get_provided_kallisto_path()
+
         if args.kallisto:
             set_kallisto_binary_path(args.kallisto)
         if args.bustools:
