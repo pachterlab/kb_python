@@ -1,5 +1,5 @@
 # kb-python
-![github version](https://img.shields.io/badge/Version-0.28.0-informational)
+![github version](https://img.shields.io/badge/Version-0.29.0-informational)
 [![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.28.0/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
