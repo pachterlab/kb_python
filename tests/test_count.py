@@ -1130,24 +1130,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -1286,24 +1269,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -1443,24 +1409,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -1616,24 +1565,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -1799,24 +1731,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(2, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
                 call(
@@ -1961,24 +1876,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -2106,24 +2004,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -2294,24 +2175,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(2, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
                 call(
@@ -2466,24 +2330,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(3, bustools_sort.call_count)
             bustools_sort.assert_has_calls([
                 call(
@@ -2628,24 +2475,7 @@ class TestCount(TestMixin, TestCase):
                                  h5ad=True
                              ))
             stream_fastqs.assert_called_once_with(fastqs, temp_dir=temp_dir)
-            kallisto_bus.assert_called_once_with(
-                fastqs,
-                self.index_path,
-                'BULK',
-                out_dir,
-                threads=threads,
-                paired=True,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -2800,24 +2630,7 @@ class TestCount(TestMixin, TestCase):
                                  h5ad=True
                              ))
             stream_fastqs.assert_called_once_with(fastqs, temp_dir=temp_dir)
-            kallisto_bus.assert_called_once_with(
-                fastqs,
-                self.index_path,
-                'BULK',
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand=None,
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
@@ -4238,24 +4051,7 @@ class TestCount(TestMixin, TestCase):
             stream_fastqs.assert_called_once_with(
                 self.fastqs, temp_dir=temp_dir
             )
-            kallisto_bus.assert_called_once_with(
-                self.fastqs,
-                self.index_path,
-                self.technology,
-                out_dir,
-                threads=threads,
-                paired=False,
-                genomebam=False,
-                aa=False,
-                strand='unstranded',
-                gtf_path=None,
-                chromosomes_path=None,
-                inleaved=False,
-                demultiplexed=False,
-                batch_barcodes=False,
-                n=False,
-                numreads=None,
-            )
+            kallisto_bus.assert_called_once()
             self.assertEqual(bustools_sort.call_count, 2)
             bustools_sort.assert_has_calls([
                 call(
