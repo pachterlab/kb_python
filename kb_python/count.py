@@ -2148,7 +2148,7 @@ def count_nac(
                         if batch_barcodes else None for prefix in prefixes
                     ],
                     genes_paths=[
-                        unfiltered_results[prefix][f'txnames{suffix}'] if tcc
+                        unfiltered_results[prefix][f'ec{suffix}'] if tcc
                         else unfiltered_results[prefix].get(f'genes{suffix}')
                         for prefix in prefixes
                     ],
@@ -3050,7 +3050,7 @@ def count_velocity_smartseq3(
                     for prefix in prefixes
                 ],
                 genes_paths=[
-                    unfiltered_results[prefix][f'txnames{suffix}'] if tcc else
+                    unfiltered_results[prefix][f'ec{suffix}'] if tcc else
                     unfiltered_results[prefix].get(f'genes{suffix}')
                     for prefix in prefixes
                 ],
