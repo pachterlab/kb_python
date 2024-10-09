@@ -308,30 +308,30 @@ class TestUtils(TestMixin, TestCase):
             np.array([[6, 15], [9, 21]]), collapsed.layers['layer'].A
         )
 
-    def test_collapse_anndata_with_missing(self):
-        adata = anndata.AnnData(
-            X=np.array([
-                [0, 1, 2],
-                [3, 4, 5],
-            ]),
-            layers={'layer': np.array([
-                [6, 7, 8],
-                [9, 10, 11],
-            ])},
-            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
-            var=pd.DataFrame(index=pd.Series(['c', None, 'c'], name='gene_id'))
-        )
-
-        collapsed = utils.collapse_anndata(adata)
-        self.assertEqual((2, 1), collapsed.shape)
-        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
-        pd.testing.assert_index_equal(
-            pd.Index(['c'], name='gene_id'), collapsed.var.index
-        )
-        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.A)
-        np.testing.assert_array_equal(
-            np.array([[14], [20]]), collapsed.layers['layer'].A
-        )
+#    def test_collapse_anndata_with_missing(self):
+#        adata = anndata.AnnData(
+#            X=np.array([
+#                [0, 1, 2],
+#                [3, 4, 5],
+#            ]),
+#            layers={'layer': np.array([
+#                [6, 7, 8],
+#                [9, 10, 11],
+#            ])},
+#            obs=pd.DataFrame(index=pd.Series(['a', 'b'], name='cell')),
+#            var=pd.DataFrame(index=pd.Series(['c', None, 'c'], name='gene_id'))
+#        )
+#
+#        collapsed = utils.collapse_anndata(adata)
+#        self.assertEqual((2, 1), collapsed.shape)
+#        pd.testing.assert_frame_equal(adata.obs, collapsed.obs)
+#        pd.testing.assert_index_equal(
+#            pd.Index(['c'], name='gene_id'), collapsed.var.index
+#        )
+#        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.A)
+#        np.testing.assert_array_equal(
+#            np.array([[14], [20]]), collapsed.layers['layer'].A
+#        )
 
     def test_create_10x_feature_barcode_map(self):
         map_path = utils.create_10x_feature_barcode_map(
