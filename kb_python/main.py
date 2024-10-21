@@ -1872,6 +1872,17 @@ def main():
         bustools_path = get_bustools_binary_path()
         kallisto_ok, bustools_ok = test_binaries()
 
+        # If kallisto binary is not OK, try one with opt-off if applicable
+        if not kallisto_ok and not opt_off and bustools_ok:
+            # Only do so if --kallisto not already provided
+            if not any(arg.startswith('--kallisto') for arg in sys.argv):
+                opt_off = True
+                set_special_kallisto_binary(use_kmer64, opt_off)
+                args.kallisto = get_provided_kallisto_path()
+                set_kallisto_binary_path(args.kallisto)
+                kallisto_path = get_kallisto_binary_path()
+                kallisto_ok, bustools_ok = test_binaries()
+
         if not kallisto_path or not kallisto_ok:
             raise UnsupportedOSError(
                 'Failed to find compatible kallisto binary. '

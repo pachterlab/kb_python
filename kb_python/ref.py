@@ -1011,6 +1011,8 @@ def ref_nac(
         )
         t2g_result = create_t2g_from_fasta(combined_path, t2g_path)
         results.update(t2g_result)
+        if index_path.upper() == "NONE":
+            return results
 
         if k and k != 31:
             logger.warning(
