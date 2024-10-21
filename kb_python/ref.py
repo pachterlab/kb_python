@@ -430,7 +430,9 @@ def download_reference(
         if k == 63:
             long = "_long"
         elif k != 31:
-            logger.info("Only k-mer lengths 31 or 63 supported, defaulting to 31")
+            logger.info(
+                "Only k-mer lengths 31 or 63 supported, defaulting to 31"
+            )
         url = "https://github.com/pachterlab/kallisto-transcriptome-indices/"
         url = url + f'releases/download/v1/{species}_index_{workflow}{long}.tar.xz'
         path = os.path.join(temp_dir, os.path.basename(url))
