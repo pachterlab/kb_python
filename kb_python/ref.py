@@ -627,7 +627,7 @@ def ref(
 
         if len(fasta_paths) > 1:
             raise RefError((
-                'Option `--a` does not support multiple FASTA files as input'
+                'Option `--aa` does not support multiple FASTA files as input'
                 'while no GTF file(s) provided'
             ))
         else:
@@ -668,6 +668,8 @@ def ref(
     if not glob.glob(f'{index_path}*') or overwrite:
         t2g_result = create_t2g_from_fasta(cdna_path, t2g_path, aa_flag=aa)
         results.update(t2g_result)
+        if index_path.upper() == "NONE":
+            return results
 
         if k and k != 31:
             logger.warning(
