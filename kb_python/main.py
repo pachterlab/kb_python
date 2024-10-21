@@ -263,7 +263,8 @@ def parse_ref(
             args.workflow,
             files,
             overwrite=args.overwrite,
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            k=31 if not args.k else args.k
         )
     elif args.workflow == 'nac':
         ref_nac(

@@ -383,7 +383,8 @@ def download_reference(
     workflow: str,
     files: Dict[str, str],
     temp_dir: str = 'tmp',
-    overwrite: bool = False
+    overwrite: bool = False,
+    k: int = 31
 ) -> Dict[str, str]:
     """Downloads a provided reference file from a static url.
 
@@ -395,6 +396,7 @@ def download_reference(
             paths to download the given reference have been provided
         temp_dir: Path to temporary directory, defaults to `tmp`
         overwrite: Overwrite an existing index file, defaults to `False`
+        k: k-mer size, defaults to `31` (only `31` and `63` are supported)
 
     Returns:
         Dictionary containing paths to generated file(s)
@@ -424,8 +426,13 @@ def download_reference(
                 f'The following workflow option is not supported: {workflow}'
             )
 
+        long = ""
+        if k == 63:
+            long = "_long"
+        elif k != 31:
+            logger.info("Only k-mer lengths 31 or 63 supported, defaulting to 31")
         url = "https://github.com/pachterlab/kallisto-transcriptome-indices/"
-        url = url + f'releases/download/v1/{species}_index_{workflow}.tar.xz'
+        url = url + f'releases/download/v1/{species}_index_{workflow}{long}.tar.xz'
         path = os.path.join(temp_dir, os.path.basename(url))
         logger.info(
             'Downloading files for {} ({} workflow) from {} to {}'.format(
