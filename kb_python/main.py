@@ -263,7 +263,8 @@ def parse_ref(
             args.workflow,
             files,
             overwrite=args.overwrite,
-            temp_dir=temp_dir
+            temp_dir=temp_dir,
+            k=31 if not args.k else args.k
         )
     elif args.workflow == 'nac':
         ref_nac(
@@ -1846,9 +1847,8 @@ def main():
     logger.debug('Printing verbose output')
 
     # Set binary paths
-    if args.command in ('ref', 'count', 'extract') and ('dry_run' not in args
-                                                        or not args.dry_run):
-
+    if args.command in ('ref', 'count', 'extract'):
+        dry_run = not ('dry_run' not in args or not args.dry_run)
         use_kmer64 = False
         opt_off = False
         if args.k and args.k > 32:
@@ -1870,7 +1870,21 @@ def main():
         # Check
         kallisto_path = get_kallisto_binary_path()
         bustools_path = get_bustools_binary_path()
-        kallisto_ok, bustools_ok = test_binaries()
+        kallisto_ok = True
+        bustools_ok = True
+        if not dry_run:
+            kallisto_ok, bustools_ok = test_binaries()
+
+        # If kallisto binary is not OK, try one with opt-off if applicable
+        if not kallisto_ok and not opt_off and bustools_ok:
+            # Only do so if --kallisto not already provided
+            if not any(arg.startswith('--kallisto') for arg in sys.argv):
+                opt_off = True
+                set_special_kallisto_binary(use_kmer64, opt_off)
+                args.kallisto = get_provided_kallisto_path()
+                set_kallisto_binary_path(args.kallisto)
+                kallisto_path = get_kallisto_binary_path()
+                kallisto_ok, bustools_ok = test_binaries()
 
         if not kallisto_path or not kallisto_ok:
             raise UnsupportedOSError(
@@ -1885,8 +1899,9 @@ def main():
                 'run `kb compile`.'
             )
 
-        logger.debug(f'kallisto binary located at {kallisto_path}')
-        logger.debug(f'bustools binary located at {bustools_path}')
+        if not dry_run:
+            logger.debug(f'kallisto binary located at {kallisto_path}')
+            logger.debug(f'bustools binary located at {bustools_path}')
 
     temp_dir = args.tmp or (
         os.path.join(args.o, TEMP_DIR)
