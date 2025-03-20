@@ -664,7 +664,12 @@ def import_matrix_as_anndata(
         )
         df_barcodes.index = df_batch_barcodes.index + df_barcodes.index
     df_genes = pd.read_csv(
-        genes_path, header=None, index_col=0, names=[name_column], sep='\t', dtype={0: str}
+        genes_path,
+        header=None,
+        index_col=0,
+        names=[name_column],
+        sep='\t',
+        dtype={0: str}
     )
     mtx = scipy.io.mmread(matrix_path)
     adata = collapse_anndata(
