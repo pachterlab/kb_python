@@ -55,7 +55,7 @@ class TestUtils(TestMixin, TestCase):
         with mock.patch('kb_python.utils.sp') as sp_mock:
             sp_mock.Popen().returncode = 0
             utils.run_executable(['echo', 'TEST'], wait=False)
-            sp_mock.Popen().poll.assert_not_called()
+            sp_mock.Popen().pollssert_not_called()
 
     def test_run_executable_with_stream(self):
         with mock.patch('kb_python.utils.logger.debug') as debug_mock:
@@ -275,9 +275,9 @@ class TestUtils(TestMixin, TestCase):
         pd.testing.assert_index_equal(
             pd.Index(['c', 'd'], name='gene_id'), collapsed.var.index
         )
-        np.testing.assert_array_equal(np.array([[1, 2], [7, 5]]), collapsed.X.A)
+        np.testing.assert_array_equal(np.array([[1, 2], [7, 5]]), collapsed.X.toarray())
         np.testing.assert_array_equal(
-            np.array([[13, 8], [19, 11]]), collapsed.layers['layer'].A
+            np.array([[13, 8], [19, 11]]), collapsed.layers['layer'].toarray()
         )
 
     def test_collapse_anndata_by_column(self):
@@ -303,9 +303,9 @@ class TestUtils(TestMixin, TestCase):
         pd.testing.assert_index_equal(
             pd.Index(['e', 'f'], name='gene_name'), collapsed.var.index
         )
-        np.testing.assert_array_equal(np.array([[0, 3], [3, 9]]), collapsed.X.A)
+        np.testing.assert_array_equal(np.array([[0, 3], [3, 9]]), collapsed.X.toarray())
         np.testing.assert_array_equal(
-            np.array([[6, 15], [9, 21]]), collapsed.layers['layer'].A
+            np.array([[6, 15], [9, 21]]), collapsed.layers['layer'].toarray()
         )
 
 #    def test_collapse_anndata_with_missing(self):
@@ -328,9 +328,9 @@ class TestUtils(TestMixin, TestCase):
 #        pd.testing.assert_index_equal(
 #            pd.Index(['c'], name='gene_id'), collapsed.var.index
 #        )
-#        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.A)
+#        np.testing.assert_array_equal(np.array([[2], [8]]), collapsed.X.toarray())
 #        np.testing.assert_array_equal(
-#            np.array([[14], [20]]), collapsed.layers['layer'].A
+#            np.array([[14], [20]]), collapsed.layers['layer'].toarray()
 #        )
 
     def test_create_10x_feature_barcode_map(self):
