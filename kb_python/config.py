@@ -169,7 +169,8 @@ TECHNOLOGIES = sorted([
     ),
     Technology('Visium', '10x Visium', ngs.chemistry.get_chemistry('visium')),
     Technology(
-        'SPLIT-SEQ', 'SPLiT-seq (version 2)', ngs.chemistry.get_chemistry('split-seq')
+        'SPLIT-SEQ', 'SPLiT-seq (version 2)',
+        ngs.chemistry.get_chemistry('split-seq')
     ),
 ],
                       key=lambda t: t.name)

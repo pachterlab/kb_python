@@ -87,9 +87,7 @@ from .validate import validate_files
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
-def make_transcript_t2g(
-    txnames_path: str, out_path: str
-) -> str:
+def make_transcript_t2g(txnames_path: str, out_path: str) -> str:
     """Make a two-column t2g file from a transcripts file
 
     Args:

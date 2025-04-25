@@ -1245,9 +1245,7 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--exact-barcodes',
-        help=(
-            'Only exact matches are used for matching barcodes to on-list.'
-        ),
+        help=('Only exact matches are used for matching barcodes to on-list.'),
         action='store_true'
     )
     parser_count.add_argument(
