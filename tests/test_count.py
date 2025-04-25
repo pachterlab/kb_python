@@ -1156,7 +1156,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1295,7 +1295,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1435,7 +1435,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1591,7 +1591,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1757,7 +1757,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             self.assertEqual(1, bustools_count.call_count)
             bustools_count.assert_called_once_with(
@@ -1904,7 +1904,7 @@ class TestCount(TestMixin, TestCase):
                 self.technology, bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2030,7 +2030,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2201,7 +2201,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             self.assertEqual(1, bustools_count.call_count)
             bustools_count.assert_called_once_with(
@@ -2367,7 +2367,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scsps_path,
@@ -2503,7 +2503,7 @@ class TestCount(TestMixin, TestCase):
                 'SMARTSEQ2', bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2658,7 +2658,7 @@ class TestCount(TestMixin, TestCase):
                 'SMARTSEQ2', bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -4077,7 +4077,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
