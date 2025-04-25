@@ -639,7 +639,8 @@ def parse_count(
             union=args.union,
             no_jump=args.no_jump,
             quant_umis=args.quant_umis,
-            keep_flags=args.keep_flags
+            keep_flags=args.keep_flags,
+            exact_barcodes=args.exact_barcodes
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
@@ -762,7 +763,8 @@ def parse_count(
             union=args.union,
             no_jump=args.no_jump,
             quant_umis=args.quant_umis,
-            keep_flags=args.keep_flags
+            keep_flags=args.keep_flags,
+            exact_barcodes=args.exact_barcodes
         )
 
 
@@ -1240,6 +1242,11 @@ def setup_count_args(
             '(`kb --list` to view on-lists)'
         ),
         type=str
+    )
+    parser_count.add_argument(
+        '--exact-barcodes',
+        help=('Only exact matches are used for matching barcodes to on-list.'),
+        action='store_true'
     )
     parser_count.add_argument(
         '-r',

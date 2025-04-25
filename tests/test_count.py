@@ -1027,6 +1027,30 @@ class TestCount(TestMixin, TestCase):
                     line.strip() for line in f if not line.isspace()
                 ])
 
+    def test_make_transcript_t2g(self):
+        # Create a sample transcripts.txt
+        txnames_path = os.path.join(self.temp_dir, 'transcripts.txt')
+        with open(txnames_path, 'w') as f:
+            f.write('ENST00000335137.4\n')
+            f.write('ENST00000448914.6\n')
+
+        # Define output path
+        out_path = os.path.join(self.temp_dir, 't2g.txt')
+
+        # Call function
+        result_path = count.make_transcript_t2g(txnames_path, out_path)
+
+        # Check return value
+        self.assertEqual(result_path, out_path)
+
+        # Check file contents
+        with open(out_path, 'r') as f:
+            lines = [line.strip() for line in f if line.strip()]
+            self.assertEqual(lines, [
+                'ENST00000335137.4\tENST00000335137.4',
+                'ENST00000448914.6\tENST00000448914.6'
+            ])
+
     def test_matrix_to_cellranger(self):
         out_dir = self.temp_dir
         result = count.matrix_to_cellranger(
@@ -1156,7 +1180,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1295,7 +1319,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1435,7 +1459,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1591,7 +1615,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -1757,7 +1781,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             self.assertEqual(1, bustools_count.call_count)
             bustools_count.assert_called_once_with(
@@ -1904,7 +1928,7 @@ class TestCount(TestMixin, TestCase):
                 self.technology, bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2030,7 +2054,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2201,7 +2225,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             self.assertEqual(1, bustools_count.call_count)
             bustools_count.assert_called_once_with(
@@ -2367,7 +2391,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scsps_path,
@@ -2503,7 +2527,7 @@ class TestCount(TestMixin, TestCase):
                 'SMARTSEQ2', bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -2658,7 +2682,7 @@ class TestCount(TestMixin, TestCase):
                 'SMARTSEQ2', bus_s_path, out_dir
             )
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,
@@ -4077,7 +4101,7 @@ class TestCount(TestMixin, TestCase):
             )
             copy_or_create_whitelist.assert_not_called()
             bustools_correct.assert_called_once_with(
-                bus_s_path, bus_sc_path, self.whitelist_path
+                bus_s_path, bus_sc_path, self.whitelist_path, False, False
             )
             bustools_count.assert_called_once_with(
                 bus_scs_path,

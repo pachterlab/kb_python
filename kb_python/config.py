@@ -127,6 +127,7 @@ TECHNOLOGIES = sorted([
         '10XFB', '10x Feature Barcode',
         ngs.chemistry.get_chemistry('10xFBonly'), False
     ),
+    Technology('10XV4', '10x version 4', ngs.chemistry.get_chemistry('10xv4')),
     Technology('CELSEQ', 'CEL-Seq', ngs.chemistry.get_chemistry('celseq')),
     Technology(
         'CELSEQ2', 'CEL-SEQ version 2', ngs.chemistry.get_chemistry('celseq2')
@@ -168,7 +169,8 @@ TECHNOLOGIES = sorted([
     ),
     Technology('Visium', '10x Visium', ngs.chemistry.get_chemistry('visium')),
     Technology(
-        'SPLIT-SEQ', 'SPLiT-seq', ngs.chemistry.get_chemistry('split-seq')
+        'SPLIT-SEQ', 'SPLiT-seq (version 2)',
+        ngs.chemistry.get_chemistry('split-seq')
     ),
 ],
                       key=lambda t: t.name)
