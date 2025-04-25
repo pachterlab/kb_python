@@ -89,16 +89,16 @@ INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 def make_transcript_t2g(
     txnames_path: str, out_path: str
-) -> str:           
+) -> str:
     """Make a two-column t2g file from a transcripts file
-                    
-    Args:           
+
+    Args:
         txnames_path: Path to transcripts.txt
         out_path: Path to output t2g file
-                    
-    Returns:        
-       Path to output t2g file 
-    """             
+
+    Returns:
+       Path to output t2g file
+    """
     with open_as_text(txnames_path, 'r') as f, open_as_text(out_path,
                                                             'w') as out:
         for line in f:

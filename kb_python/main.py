@@ -1249,7 +1249,7 @@ def setup_count_args(
             'Only exact matches are used for matching barcodes to on-list.'
         ),
         action='store_true'
-    )   
+    )
     parser_count.add_argument(
         '-r',
         metavar='REPLACEMENT',
