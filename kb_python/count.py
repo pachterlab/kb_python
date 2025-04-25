@@ -181,7 +181,11 @@ def kallisto_bus(
     command += ['-i', index_path]
     command += ['-o', out_dir]
     if not demultiplexed:
-        command += ['-x', technology]
+        if technology.upper() == "10XV4":
+            # TODO: REMOVE THIS WHEN KALLISTO IS UPDATED
+            command += ['-x', "10XV3"]
+        else:
+            command += ['-x', technology]
     elif technology[0] == '-':
         # User supplied a custom demuxed (no-barcode) technology
         command += ['-x', technology]
