@@ -99,11 +99,10 @@ def make_transcript_t2g(
     Returns:        
        Path to output t2g file 
     """             
-    t2g = read_t2g(t2g_path)
     with open_as_text(txnames_path, 'r') as f, open_as_text(out_path,
                                                             'w') as out:
         for line in f:
-            out.write(f'{transcript}\t{transcript}\n')
+            out.write(f'{line.strip()}\t{line.strip()}\n')
     return out_path
 
 
