@@ -87,6 +87,26 @@ from .validate import validate_files
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
 
+def make_transcript_t2g(
+    txnames_path: str, out_path: str
+) -> str:           
+    """Make a two-column t2g file from a transcripts file
+                    
+    Args:           
+        txnames_path: Path to transcripts.txt
+        out_path: Path to output t2g file
+                    
+    Returns:        
+       Path to output t2g file 
+    """             
+    t2g = read_t2g(t2g_path)
+    with open_as_text(txnames_path, 'r') as f, open_as_text(out_path,
+                                                            'w') as out:
+        for line in f:
+            out.write(f'{transcript}\t{transcript}\n')
+    return out_path
+
+
 def kallisto_bus(
     fastqs: Union[List[str], str],
     index_path: str,
@@ -412,7 +432,8 @@ def bustools_correct(
     bus_path: str,
     out_path: str,
     whitelist_path: str,
-    replace: bool = False
+    replace: bool = False,
+    exact_barcodes: bool = False
 ) -> Dict[str, str]:
     """Runs `bustools correct`.
 
@@ -421,6 +442,7 @@ def bustools_correct(
         out_path: Path to output corrected BUS file
         whitelist_path: Path to whitelist
         replace: If whitelist is a replacement file, defaults to `False`
+        exact_barcodes: Use exact matching for 'correction', defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -436,6 +458,8 @@ def bustools_correct(
     command += [bus_path]
     if replace:
         command += ['--replace']
+    if exact_barcodes:
+        command += ['--nocorrect']
     run_executable(command)
     return {'bus': out_path}
 
@@ -1214,6 +1238,7 @@ def count(
     no_jump: bool = False,
     quant_umis: bool = False,
     keep_flags: bool = False,
+    exact_barcodes: bool = False,
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1286,6 +1311,7 @@ def count(
         no_jump: Disable pseudoalignment "jumping", defaults to `False`
         quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
         keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
+        exact_barcodes: Use exact match for 'correcting' barcodes to on-list, defaults to `False`
 
     Returns:
         Dictionary containing paths to generated files
@@ -1349,6 +1375,10 @@ def count(
         )
     unfiltered_results.update(bus_result)
 
+    if t2g_path.upper() == "NONE":
+        tmp_t2g = os.path.join(temp_dir, "t2g.txt")
+        t2g_path = make_transcript_t2g(bus_result['txnames'], tmp_t2g)
+
     sort_result = bustools_sort(
         bus_result['bus'],
         os.path.join(
@@ -1388,7 +1418,7 @@ def count(
                 update_filename(
                     os.path.basename(prev_result['bus']), CORRECT_CODE
                 )
-            ), whitelist_path
+            ), whitelist_path, False, exact_barcodes
         )
         prev_result = bustools_sort(
             prev_result['bus'],
@@ -1757,6 +1787,7 @@ def count_nac(
     no_jump: bool = False,
     quant_umis: bool = False,
     keep_flags: bool = False,
+    exact_barcodes: bool = False,
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1826,6 +1857,7 @@ def count_nac(
         no_jump: Disable pseudoalignment "jumping", defaults to `False`
         quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
         keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
+        exact_barcodes: Use exact match for 'correcting' barcodes to on-list, defaults to `False`
 
     Returns:
         Dictionary containing path to generated index
@@ -1886,6 +1918,10 @@ def count_nac(
         )
     unfiltered_results.update(bus_result)
 
+    if t2g_path.upper() == "NONE":
+        tmp_t2g = os.path.join(temp_dir, "t2g.txt")
+        t2g_path = make_transcript_t2g(bus_result['txnames'], tmp_t2g)
+
     sort_result = bustools_sort(
         bus_result['bus'],
         os.path.join(
@@ -1926,7 +1962,7 @@ def count_nac(
                 update_filename(
                     os.path.basename(sort_result['bus']), CORRECT_CODE
                 )
-            ), whitelist_path
+            ), whitelist_path, False, exact_barcodes
         )
         prev_result = bustools_sort(
             prev_result['bus'],
