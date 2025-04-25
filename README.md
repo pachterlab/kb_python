@@ -1,6 +1,6 @@
 # kb-python
-![github version](https://img.shields.io/badge/Version-0.29.2-informational)
-[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.29.2/)
+![github version](https://img.shields.io/badge/Version-0.29.3-informational)
+[![pypi version](https://img.shields.io/pypi/v/kb-python)](https://pypi.org/project/kb-python/0.29.3/)
 ![python versions](https://img.shields.io/pypi/pyversions/kb_python)
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/pachterlab/kb_python/branch/master/graph/badge.svg)](https://codecov.io/gh/pachterlab/kb_python)
@@ -98,9 +98,9 @@ The `kb info` command prints out package information including the version of `k
 
 ```bash
 $ kb info
-kb_python 0.29.2 ...
+kb_python 0.29.3 ...
 kallisto: 0.51.1 ...
-bustools: 0.44.1 ...
+bustools: 0.45.0 ...
 ...
 ```
 ---
