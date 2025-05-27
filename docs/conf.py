@@ -24,7 +24,7 @@ copyright = '2021, Kyung Hoi (Joseph) Min'
 author = 'Kyung Hoi (Joseph) Min'
 
 # The full version, including alpha/beta/rc tags
-release = '0.29.4'
+release = '0.29.5'
 master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
