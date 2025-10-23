@@ -659,7 +659,7 @@ def bustools_whitelist(
 
 def matrix_to_cellranger(
     matrix_path: str, barcodes_path: str, genes_path: str, t2g_path: str,
-    out_dir: str
+    out_dir: str, gzip: bool = False
 ) -> Dict[str, str]:
     """Convert bustools count matrix to cellranger-format matrix.
 
@@ -669,6 +669,7 @@ def matrix_to_cellranger(
         genes_path: Path to genes.txt
         t2g_path: Path to transcript-to-gene mapping
         out_dir: Path to output matrix
+        gzip: Whether to gzip compress the output files, defaults to `False`
 
     Returns:
         Dictionary of matrix files
@@ -676,15 +677,24 @@ def matrix_to_cellranger(
     make_directory(out_dir)
     logger.info(f'Writing matrix in cellranger format to {out_dir}')
 
-    cr_matrix_path = os.path.join(out_dir, CELLRANGER_MATRIX)
-    cr_barcodes_path = os.path.join(out_dir, CELLRANGER_BARCODES)
-    cr_genes_path = os.path.join(out_dir, CELLRANGER_GENES)
+    # Add .gz extension if gzip is enabled
+    gz_ext = '.gz' if gzip else ''
+    cr_matrix_path = os.path.join(out_dir, CELLRANGER_MATRIX + gz_ext)
+    cr_barcodes_path = os.path.join(out_dir, CELLRANGER_BARCODES + gz_ext)
+    cr_genes_path = os.path.join(out_dir, CELLRANGER_GENES + gz_ext)
 
     # Cellranger outputs genes x cells matrix
     mtx = scipy.io.mmread(matrix_path)
-    scipy.io.mmwrite(cr_matrix_path, mtx.T, field='integer')
+    # Write to temporary file first, then optionally gzip
+    temp_mtx = os.path.join(out_dir, CELLRANGER_MATRIX)
+    scipy.io.mmwrite(temp_mtx, mtx.T, field='integer')
+    if gzip:
+        from .utils import compress_gzip
+        compress_gzip(temp_mtx, cr_matrix_path)
+        os.remove(temp_mtx)
 
-    with open(barcodes_path, 'r') as f, open(cr_barcodes_path, 'w') as out:
+    opener = open_as_text if gzip else open
+    with open(barcodes_path, 'r') as f, opener(cr_barcodes_path, 'w') as out:
         for line in f:
             if line.isspace():
                 continue
@@ -700,13 +710,14 @@ def matrix_to_cellranger(
             if len(split) > 2:
                 gene_to_name[split[1]] = split[2]
 
-    with open(genes_path, 'r') as f, open(cr_genes_path, 'w') as out:
+    with opener(genes_path, 'r') as f, opener(cr_genes_path, 'w') as out:
         for line in f:
             if line.isspace():
                 continue
-            gene = line.strip()
-            gene_name = gene_to_name.get(gene, gene)
-            out.write(f'{gene}\t{gene_name}\n')
+            gene_id = line.strip()
+            gene_symbol = gene_to_name.get(gene_id, gene_id)
+            # CellRanger format: GENE_ID\tGENE_SYMBOL (or FEATURE_ID\tFEATURE_NAME for features)
+            out.write(f'{gene_id}\t{gene_symbol}\n')
 
     return {
         'mtx': cr_matrix_path,
@@ -939,6 +950,7 @@ def filter_with_bustools(
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
+    gzip: bool = False,
     umi_gene: bool = True,
     em: bool = False,
 ) -> Dict[str, str]:
@@ -1055,7 +1067,8 @@ def filter_with_bustools(
                 cr_result = matrix_to_cellranger(
                     count_result['mtx'], count_result['barcodes'],
                     count_result['genes'], t2g_path,
-                    os.path.join(counts_dir, CELLRANGER_DIR)
+                    os.path.join(counts_dir, CELLRANGER_DIR),
+                    gzip=gzip
                 )
                 results.update({'cellranger': cr_result})
             else:
@@ -1210,6 +1223,8 @@ def count(
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
+    gzip: bool = False,
+    delete_bus: bool = False,
     inspect: bool = True,
     report: bool = False,
     fragment_l: Optional[int] = None,
@@ -1275,6 +1290,10 @@ def count(
         by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
+        gzip: Whether to gzip compress cellranger output matrices, 
+            defaults to `False`
+        delete_bus: Whether to delete intermediate BUS files after successful count,
+            defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
         report: Generate an HTMl report, defaults to `False`
@@ -1632,7 +1651,8 @@ def count(
                 cr_result = matrix_to_cellranger(
                     count_result['mtx'], count_result['barcodes'],
                     count_result['genes'], t2g_path,
-                    os.path.join(counts_dir, f'{CELLRANGER_DIR}{suffix}')
+                    os.path.join(counts_dir, f'{CELLRANGER_DIR}{suffix}'),
+                    gzip=gzip
                 )
                 update_results_with_suffix(
                     unfiltered_results, {'cellranger': cr_result}, suffix
@@ -1704,6 +1724,7 @@ def count(
             loom_names=loom_names,
             h5ad=h5ad,
             by_name=by_name,
+            gzip=gzip,
             umi_gene=umi_gene,
             em=em,
         )
@@ -1735,6 +1756,34 @@ def count(
         )
         unfiltered_results.update(report_result)
 
+    # Delete intermediate BUS files if requested
+    if delete_bus:
+        logger.info('Deleting intermediate BUS files to save disk space')
+        bus_files_to_delete = []
+        
+        # Collect all .bus files from results
+        if 'bus' in unfiltered_results:
+            bus_files_to_delete.append(unfiltered_results['bus'])
+        if 'bus_scs' in unfiltered_results:
+            bus_files_to_delete.append(unfiltered_results['bus_scs'])
+        
+        # For smartseq3, delete suffix versions too
+        for suffix in ['', INTERNAL_SUFFIX, UMI_SUFFIX]:
+            if f'bus{suffix}' in unfiltered_results:
+                bus_files_to_delete.append(unfiltered_results[f'bus{suffix}'])
+            if f'bus_scs{suffix}' in unfiltered_results:
+                bus_files_to_delete.append(unfiltered_results[f'bus_scs{suffix}'])
+        
+        # Delete filtered bus if exists
+        if 'filtered' in results and 'bus_scs' in results['filtered']:
+            bus_files_to_delete.append(results['filtered']['bus_scs'])
+        
+        # Delete each BUS file
+        for bus_file in bus_files_to_delete:
+            if bus_file and os.path.exists(bus_file):
+                logger.debug(f'Deleting {bus_file}')
+                os.remove(bus_file)
+
     return results
 
 
@@ -1762,6 +1811,9 @@ def count_nac(
     h5ad: bool = False,
     by_name: bool = False,
     cellranger: bool = False,
+    gzip: bool = False,
+    cellranger_style: bool = False,
+    delete_bus: bool = False,
     inspect: bool = True,
     report: bool = False,
     nucleus: bool = False,
@@ -1823,6 +1875,12 @@ def count_nac(
         by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
+        gzip: Whether to gzip compress cellranger output matrices, 
+            defaults to `False`
+        cellranger_style: Whether to organize output in CellRanger-style directories
+            (spliced/ and unspliced/ subdirectories), defaults to `False`
+        delete_bus: Whether to delete intermediate BUS files after successful count,
+            defaults to `False`
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
         report: Generate HTML reports, defaults to `False`
@@ -2115,12 +2173,23 @@ def count_nac(
                     prefix_results, count_result[i], suffix
                 )
                 if cellranger:
+                    # Determine output directory based on cellranger_style
+                    if cellranger_style:
+                        # Create spliced/unspliced subdirectories for CellRanger style
+                        if i == 0:  # processed/spliced
+                            cr_dir = os.path.join(counts_dir, 'spliced')
+                        elif i == 1:  # unprocessed/unspliced
+                            cr_dir = os.path.join(counts_dir, 'unspliced')
+                        else:  # ambiguous
+                            cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                    else:
+                        cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                    
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
-                        os.path.join(
-                            counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}'
-                        )
+                        cr_dir,
+                        gzip=gzip
                     )
                     update_results_with_suffix(
                         prefix_results, {'cellranger': cr_result}, suffix
@@ -2159,7 +2228,8 @@ def count_nac(
                             res['mtx'], res['barcodes'], res['genes'], t2g_path,
                             os.path.join(
                                 counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}'
-                            )
+                            ),
+                            gzip=gzip
                         )
                         update_results_with_suffix(
                             prefix_results, {'cellranger': cr_result}, suffix
@@ -2278,12 +2348,23 @@ def count_nac(
                                 )
                         })
                 if cellranger:
+                    # Determine output directory based on cellranger_style
+                    if cellranger_style:
+                        # Create spliced/unspliced subdirectories for CellRanger style
+                        if i == 0:  # processed/spliced
+                            cr_dir = os.path.join(filtered_counts_dir, 'spliced')
+                        elif i == 1:  # unprocessed/unspliced
+                            cr_dir = os.path.join(filtered_counts_dir, 'unspliced')
+                        else:  # ambiguous
+                            cr_dir = os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                    else:
+                        cr_dir = os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
+                    
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
-                        os.path.join(
-                            filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}'
-                        )
+                        cr_dir,
+                        gzip=gzip
                     )
                     filtered_results[prefix].update({'cellranger': cr_result})
                 filtered_results[prefix].update(count_result[i])
@@ -2319,7 +2400,8 @@ def count_nac(
                             os.path.join(
                                 filtered_counts_dir,
                                 f'{CELLRANGER_DIR}_{prefix}'
-                            )
+                            ),
+                            gzip=gzip
                         )
                         filtered_results[prefix].update({
                             'cellranger': cr_result
@@ -2401,6 +2483,29 @@ def count_nac(
             logger.warning(
                 'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
             )
+
+    # Delete intermediate BUS files if requested
+    if delete_bus:
+        logger.info('Deleting intermediate BUS files to save disk space')
+        bus_files_to_delete = []
+        
+        # Collect all .bus files from results
+        prefixes = ['processed', 'unprocessed', 'ambiguous']
+        for prefix in prefixes:
+            if prefix in unfiltered_results:
+                for suffix in ['', INTERNAL_SUFFIX, UMI_SUFFIX]:
+                    if f'bus{suffix}' in unfiltered_results[prefix]:
+                        bus_files_to_delete.append(unfiltered_results[prefix][f'bus{suffix}'])
+        
+        # Delete filtered bus files if they exist
+        if 'filtered' in results and 'bus_scs' in results['filtered']:
+            bus_files_to_delete.append(results['filtered']['bus_scs'])
+        
+        # Delete each BUS file
+        for bus_file in bus_files_to_delete:
+            if bus_file and os.path.exists(bus_file):
+                logger.debug(f'Deleting {bus_file}')
+                os.remove(bus_file)
 
     return results
 
