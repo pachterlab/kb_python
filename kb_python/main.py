@@ -591,6 +591,11 @@ def parse_count(
             parser.error(
                 f'Option `--aa` cannot be used with workflow {args.workflow}.'
             )
+        
+        # Auto-enable gzip and cellranger-style when --cellranger is used
+        use_gzip = args.cellranger and not args.no_gzip or args.gzip
+        use_cellranger_style = args.cellranger
+        
         from .count import count_nac
         count_nac(
             args.i,
@@ -613,6 +618,9 @@ def parse_count(
             loom_names=loom_names,
             h5ad=args.h5ad,
             cellranger=args.cellranger,
+            gzip=use_gzip,
+            cellranger_style=use_cellranger_style,
+            delete_bus=args.delete_bus,
             report=args.report,
             inspect=not args.no_inspect,
             temp_dir=temp_dir,
@@ -711,6 +719,9 @@ def parse_count(
                 '`kite:10xFB` workflow is only supported with technology `10XV3`'
             )
 
+        # Auto-enable gzip when --cellranger is used (unless --no-gzip is specified)
+        use_gzip = (args.cellranger and not args.no_gzip) or args.gzip
+
         from .count import count
         count(
             args.i,
@@ -733,6 +744,8 @@ def parse_count(
             loom_names=loom_names,
             h5ad=args.h5ad,
             cellranger=args.cellranger,
+            gzip=use_gzip,
+            delete_bus=args.delete_bus,
             report=args.report,
             inspect=not args.no_inspect,
             temp_dir=temp_dir,
@@ -1286,7 +1299,19 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--genomebam',
-        help=argparse.SUPPRESS,
+        help=(
+            'Generate genome-aligned BAM file from pseudoalignments. '
+            'Requires --gtf to be specified. --chromosomes is recommended.'
+        ),
+        action='store_true',
+        default=False,
+    )
+    parser_count.add_argument(
+        '--cram',
+        help=(
+            'Convert BAM output to CRAM format (requires --genomebam). '
+            'CRAM provides better compression than BAM.'
+        ),
         action='store_true',
         default=False,
     )
@@ -1428,7 +1453,26 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--cellranger',
-        help='Convert count matrices to cellranger-compatible format',
+        help=(
+            'Convert count matrices to cellranger-compatible format. '
+            'For nac/lamanno workflows, automatically creates spliced/ and unspliced/ subdirectories. '
+            'Gzip compression is enabled by default (use --no-gzip to disable)'
+        ),
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--gzip',
+        help='Gzip compress output matrices (matrix.mtx.gz, barcodes.tsv.gz, genes.tsv.gz). Automatically enabled with --cellranger',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--no-gzip',
+        help='Disable gzip compression for cellranger matrices',
+        action='store_true'
+    )
+    parser_count.add_argument(
+        '--delete-bus',
+        help='Delete intermediate BUS files after successful count to save disk space',
         action='store_true'
     )
     parser_count.add_argument(
