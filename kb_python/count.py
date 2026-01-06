@@ -86,6 +86,60 @@ from .validate import validate_files
 
 INSPECT_PARSER = re.compile(r'^.*?(?P<count>[0-9]+)')
 
+def check_kwargs(kwargs):
+    if not kwargs:
+        return
+    try:
+        import inspect as inspect_module
+        import cellsweep
+        sig = inspect_module.signature(cellsweep.denoise_count_matrix.__wrapped__)
+        cellsweep_arg_names = list(sig.parameters.keys())
+        if any(param not in cellsweep_arg_names for param in kwargs):
+            invalid_params = [
+                param for param in kwargs
+                if param not in cellsweep_arg_names
+            ]
+            raise TypeError(
+                f"count() got an unexpected keyword argument(s): {', '.join(invalid_params)}"
+            )
+    except Exception as e:
+        pass
+
+def run_cellsweep(counts_dir, out_dir, threads=2, kwargs=None):
+    try:
+        import inspect as inspect_module
+        import cellsweep
+        sig = inspect_module.signature(cellsweep.denoise_count_matrix.__wrapped__)
+        cellsweep_arg_names = list(sig.parameters.keys())
+        cellsweep_kwargs = {}
+        if kwargs:
+            cellsweep_kwargs = {k: v for k, v in kwargs.items() if k in cellsweep_arg_names}
+        cellsweep_counts_dir = os.path.join(out_dir, "counts_swept")
+        cellsweep_adata_path = os.path.join(cellsweep_counts_dir, "swept_adata.h5ad")
+
+        matrix_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.mtx")
+        barcodes_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.barcodes.txt")
+        genes_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.genes.names.txt")
+        adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
+        # adata = cellsweep.utils.read_kb_mtx_as_adata(counts_dir)
+
+        # TODO:
+        #* 1. think of how to do automatic celltyping
+        #* 2. implement the requirement for expected_cells or umi_cutoff, or have a way to auto-detect
+
+        # add celltypes
+        # adata = cs_utils.determine_cell_types(adata, model_pkl=model_pkl, filter_empty=True, expected_cells=expected_cells, celltypist_convert=celltypist_convert, celltypist_map_file=celltypist_map_file, verbose=verbose)
+
+        _ = cellsweep.denoise_count_matrix(
+            adata=adata,
+            adata_out=cellsweep_adata_path,
+            threads=threads,
+            **cellsweep_kwargs
+        )
+        return cellsweep_adata_path
+    except Exception as e:
+        logger.error(f"Error running cellsweep: {e}")
+        return None
 
 def make_transcript_t2g(txnames_path: str, out_path: str) -> str:
     """Make a two-column t2g file from a transcripts file
@@ -1255,6 +1309,8 @@ def count(
     quant_umis: bool = False,
     keep_flags: bool = False,
     exact_barcodes: bool = False,
+    remove_ambient: bool = False,
+    **kwargs
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for single-cell RNA seq.
 
@@ -1332,12 +1388,17 @@ def count(
         quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
         keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
         exact_barcodes: Use exact match for 'correcting' barcodes to on-list, defaults to `False`
+        remove_ambient: Whether to remove ambient RNA using CellSweep, defaults to `False`
+        **kwargs: Additional keyword arguments to pass to CellSweep
 
     Returns:
         Dictionary containing paths to generated files
     """
     STATS.start()
     is_batch = isinstance(fastqs, str)
+
+    #* kwargs is only added for cellsweep, so check accordingly
+    check_kwargs(kwargs)
 
     results = {}
     make_directory(out_dir)
@@ -1755,6 +1816,10 @@ def count(
             temp_dir=temp_dir
         )
         unfiltered_results.update(report_result)
+    
+    if remove_ambient:
+        logger.info('Removing ambient RNA using CellSweep')
+        results['swept_counts'] = run_cellsweep(counts_dir=counts_dir, out_dir=out_dir, threads=threads, kwargs=kwargs)
 
     # Delete intermediate BUS files if requested
     if delete_bus:
@@ -1841,6 +1906,8 @@ def count_nac(
     quant_umis: bool = False,
     keep_flags: bool = False,
     exact_barcodes: bool = False,
+    remove_ambient: bool = False,
+    **kwargs
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices for single-cell RNA seq.
 
@@ -1917,12 +1984,17 @@ def count_nac(
         quant_umis: Whether to run quant-tcc when there are UMIs, defaults to `False`
         keep_flags: Preserve flag column when sorting BUS file, defaults to `False`
         exact_barcodes: Use exact match for 'correcting' barcodes to on-list, defaults to `False`
+        remove_ambient: Whether to remove ambient RNA using CellSweep, defaults to `False`
+        **kwargs: Additional keyword arguments to pass to CellSweep
 
     Returns:
         Dictionary containing path to generated index
     """
     STATS.start()
     is_batch = isinstance(fastqs, str)
+
+    #* kwargs is only added for cellsweep, so check accordingly
+    check_kwargs(kwargs)
 
     results = {}
     make_directory(out_dir)
@@ -2483,6 +2555,10 @@ def count_nac(
             logger.warning(
                 'Plots for TCC matrices have not yet been implemented. The HTML report will not contain any plots.'
             )
+    
+    if remove_ambient:
+        logger.info('Removing ambient RNA using CellSweep')
+        results['swept_counts'] = run_cellsweep(counts_dir=counts_dir, out_dir=out_dir, threads=threads, kwargs=kwargs)
 
     # Delete intermediate BUS files if requested
     if delete_bus:
@@ -2541,6 +2617,8 @@ def count_velocity(
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
     umi_gene: bool = False,
     em: bool = False,
+    remove_ambient: bool = False,
+    **kwargs
 ) -> Dict[str, Union[Dict[str, str], str]]:
     """Generates RNA velocity matrices (DEPRECATED).
 
@@ -2588,7 +2666,8 @@ def count_velocity(
             `False`
         em: Whether to estimate gene abundances using EM algorithm, defaults to
             `False`
-
+        remove_ambient: Whether to remove ambient RNA using CellSweep, defaults to `False`
+        **kwargs: Additional keyword arguments to pass to CellSweep
     Returns:
         Dictionary containing path to generated index
     """
@@ -2596,6 +2675,9 @@ def count_velocity(
     is_batch = isinstance(fastqs, str)
     BUS_CDNA_PREFIX = 'spliced'
     BUS_INTRON_PREFIX = 'unspliced'
+
+    #* kwargs is only added for cellsweep, so check accordingly
+    check_kwargs(kwargs)
 
     results = {}
     make_directory(out_dir)
@@ -2893,6 +2975,10 @@ def count_velocity(
     stats_path = STATS.save(os.path.join(out_dir, KB_INFO_FILENAME))
     results.update({'stats': stats_path})
 
+    if remove_ambient:
+        logger.info('Removing ambient RNA using CellSweep')
+        results['swept_counts'] = run_cellsweep(counts_dir=counts_dir, out_dir=out_dir, threads=threads, kwargs=kwargs)
+
     # Reports
     nb_path = os.path.join(out_dir, REPORT_NOTEBOOK_FILENAME)
     html_path = os.path.join(out_dir, REPORT_HTML_FILENAME)
@@ -2962,6 +3048,8 @@ def count_velocity_smartseq3(
     by_name: bool = False,
     inspect: bool = True,
     strand: Optional[Literal['unstranded', 'forward', 'reverse']] = None,
+    remove_ambient: bool = False,
+    **kwargs
 ) -> Dict[str, Union[str, Dict[str, str]]]:
     """Generates count matrices for Smartseq3 (DEPRECATED).
 
@@ -2988,6 +3076,8 @@ def count_velocity_smartseq3(
         inspect: Whether or not to inspect the output BUS file and generate
             the inspect.json
         strand: Strandedness, defaults to `None`
+        remove_ambient: Whether to remove ambient RNA using CellSweep, defaults to `False`
+        **kwargs: Additional keyword arguments to pass to CellSweep
 
     Returns:
         Dictionary containing paths to generated files
@@ -2996,6 +3086,9 @@ def count_velocity_smartseq3(
     is_batch = isinstance(fastqs, str)
     BUS_CDNA_PREFIX = 'spliced'
     BUS_INTRON_PREFIX = 'unspliced'
+
+    #* kwargs is only added for cellsweep, so check accordingly
+    check_kwargs(kwargs)
 
     results = {}
     make_directory(out_dir)
