@@ -117,9 +117,9 @@ def run_cellsweep(counts_dir, out_dir, threads=2, kwargs=None):
         cellsweep_counts_dir = os.path.join(out_dir, "counts_swept")
         cellsweep_adata_path = os.path.join(cellsweep_counts_dir, "swept_adata.h5ad")
 
-        matrix_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.mtx")
-        barcodes_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.barcodes.txt")
-        genes_path = os.path.join(counts_dir, "counts_unfiltered", "cells_x_genes.genes.names.txt")
+        matrix_path = os.path.join(counts_dir, "cells_x_genes.mtx")
+        barcodes_path = os.path.join(counts_dir, "cells_x_genes.barcodes.txt")
+        genes_path = os.path.join(counts_dir, "cells_x_genes.genes.names.txt")
         adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
         # adata = cellsweep.utils.read_kb_mtx_as_adata(counts_dir)
 
@@ -129,6 +129,10 @@ def run_cellsweep(counts_dir, out_dir, threads=2, kwargs=None):
 
         # add celltypes
         # adata = cs_utils.determine_cell_types(adata, model_pkl=model_pkl, filter_empty=True, expected_cells=expected_cells, celltypist_convert=celltypist_convert, celltypist_map_file=celltypist_map_file, verbose=verbose)
+        
+        import numpy as np  #!!! erase
+        celltypes = ["celltype1", "celltype2", "celltype3"]   #!!! erase
+        adata.obs["celltype"] = np.random.choice(celltypes, size=adata.n_obs)  #!!! erase
 
         _ = cellsweep.denoise_count_matrix(
             adata=adata,
