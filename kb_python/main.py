@@ -648,25 +648,7 @@ def parse_count(
             no_jump=args.no_jump,
             quant_umis=args.quant_umis,
             keep_flags=args.keep_flags,
-            exact_barcodes=args.exact_barcodes,
-            remove_ambient=args.remove_ambient,
-            max_iter=args.max_iter,
-            init_alpha=args.init_alpha,
-            beta=args.beta,
-            eps=args.eps,
-            log_eps=args.log_eps,
-            dirichlet_lambda=args.dirichlet_lambda,
-            integer_out=args.integer_out,
-            fixed_celltype=args.disable_fixed_celltype,
-            freeze_empty=args.disable_freeze_empty,
-            freeze_ambient_profile=args.disable_freeze_ambient_profile,
-            empty_droplet_method=args.empty_droplet_method,
-            ambient_threshold=args.ambient_threshold,
-            umi_cutoff=args.umi_cutoff,
-            expected_cells=args.expected_cells,
-            tol=args.tol,
-            min_tol=args.min_tol,
-            random_state=args.random_state
+            exact_barcodes=args.exact_barcodes
         )
     elif args.workflow in {'nucleus', 'lamanno'}:
         # Smartseq can not be used with lamanno or nucleus.
@@ -696,25 +678,7 @@ def parse_count(
                 h5ad=args.h5ad,
                 inspect=not args.no_inspect,
                 strand=args.strand,
-                by_name=args.gene_names,
-                remove_ambient=args.remove_ambient,
-                max_iter=args.max_iter,
-                init_alpha=args.init_alpha,
-                beta=args.beta,
-                eps=args.eps,
-                log_eps=args.log_eps,
-                dirichlet_lambda=args.dirichlet_lambda,
-                integer_out=args.integer_out,
-                fixed_celltype=args.disable_fixed_celltype,
-                freeze_empty=args.disable_freeze_empty,
-                freeze_ambient_profile=args.disable_freeze_ambient_profile,
-                empty_droplet_method=args.empty_droplet_method,
-                ambient_threshold=args.ambient_threshold,
-                umi_cutoff=args.umi_cutoff,
-                expected_cells=args.expected_cells,
-                tol=args.tol,
-                min_tol=args.min_tol,
-                random_state=args.random_state
+                by_name=args.gene_names
             )
         else:
             from .count import count_velocity
@@ -747,25 +711,7 @@ def parse_count(
                 strand=args.strand,
                 umi_gene=args.x.upper() not in ('BULK', 'SMARTSEQ2'),
                 em=args.em,
-                by_name=args.gene_names,
-                remove_ambient=args.remove_ambient,
-                max_iter=args.max_iter,
-                init_alpha=args.init_alpha,
-                beta=args.beta,
-                eps=args.eps,
-                log_eps=args.log_eps,
-                dirichlet_lambda=args.dirichlet_lambda,
-                integer_out=args.integer_out,
-                fixed_celltype=args.disable_fixed_celltype,
-                freeze_empty=args.disable_freeze_empty,
-                freeze_ambient_profile=args.disable_freeze_ambient_profile,
-                empty_droplet_method=args.empty_droplet_method,
-                ambient_threshold=args.ambient_threshold,
-                umi_cutoff=args.umi_cutoff,
-                expected_cells=args.expected_cells,
-                tol=args.tol,
-                min_tol=args.min_tol,
-                random_state=args.random_state
+                by_name=args.gene_names
             )
     else:
         if args.workflow == 'kite:10xFB' and args.x.upper() != '10XV3':
@@ -831,25 +777,7 @@ def parse_count(
             no_jump=args.no_jump,
             quant_umis=args.quant_umis,
             keep_flags=args.keep_flags,
-            exact_barcodes=args.exact_barcodes,
-            remove_ambient=args.remove_ambient,
-            max_iter=args.max_iter,
-            init_alpha=args.init_alpha,
-            beta=args.beta,
-            eps=args.eps,
-            log_eps=args.log_eps,
-            dirichlet_lambda=args.dirichlet_lambda,
-            integer_out=args.integer_out,
-            fixed_celltype=args.disable_fixed_celltype,
-            freeze_empty=args.disable_freeze_empty,
-            freeze_ambient_profile=args.disable_freeze_ambient_profile,
-            empty_droplet_method=args.empty_droplet_method,
-            ambient_threshold=args.ambient_threshold,
-            umi_cutoff=args.umi_cutoff,
-            expected_cells=args.expected_cells,
-            tol=args.tol,
-            min_tol=args.min_tol,
-            random_state=args.random_state
+            exact_barcodes=args.exact_barcodes
         )
 
 
@@ -884,121 +812,56 @@ def parse_extract(
         numreads=args.N
     )
 
+def parse_sweep(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+    temp_dir: str = 'tmp'
+):
+    """Parser for the `sweep` command.
+
+    Args:
+        parser: The argument parser
+        args: Parsed command-line arguments
+    """
+
+    from .sweep import sweep
+    sweep(
+        kb_count_dir=args.kb_count_dir,
+        adata_out=args.adata_out,
+        max_iter=args.max_iter,
+        init_alpha=args.init_alpha,
+        beta=args.beta,
+        eps=args.eps,
+        log_eps=args.log_eps,
+        dirichlet_lambda=args.dirichlet_lambda,
+        integer_out=args.integer_out,
+        threads=args.threads,
+        fixed_celltype=args.fixed_celltype,
+        freeze_empty=args.freeze_empty,
+        freeze_ambient_profile=args.freeze_ambient_profile,
+        empty_droplet_method=args.empty_droplet_method,
+        ambient_threshold=args.ambient_threshold,
+        umi_cutoff=args.umi_cutoff,
+        expected_cells=args.expected_cells,
+        tol=args.tol,
+        min_tol=args.min_tol,
+        leiden_resolution=args.leiden_resolution,
+        random_state=args.random_state,
+        verbose=args.verbose,
+        quiet=args.quiet,
+        log_file=args.log_file,
+        debug=args.debug
+    )
+
 
 COMMAND_TO_FUNCTION = {
     'compile': parse_compile,
     'ref': parse_ref,
     'count': parse_count,
     'extract': parse_extract,
+    'sweep': parse_sweep,
 }
 
-
-def setup_cellsweep_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    """Helper function to set up a subparser for the `denoise-count-matrix` command.
-    """
-    parser.add_argument(
-        "--max_iter",
-        type=int,
-        default=500,
-        help=argparse.SUPPRESS  # "Maximum number of EM iterations.",
-    )
-    parser.add_argument(
-        "--init_alpha",
-        type=float,
-        default=0.9,
-        help=argparse.SUPPRESS  # "Initial value of alpha_n for each cell. Works better when close to 1.",
-    )
-    parser.add_argument(
-        "--beta",
-        type=float,
-        default=0.1,
-        help=argparse.SUPPRESS  # "Initial beta (percent bulk contamination) value for each cell. Works better when set to a higher number than expected (expected is around 0.05).",
-    )
-    parser.add_argument(
-        "--eps",
-        type=float,
-        default=1e-12,
-        help=argparse.SUPPRESS  # "Numerical stability constant to prevent division by zero or log(0).",
-    )
-    parser.add_argument(
-        "--log_eps",
-        type=float,
-        default=1e-300,
-        help=argparse.SUPPRESS  # "Numerical stability constant to prevent division by zero or log(0). Lower than eps for log values.",
-    )
-    parser.add_argument(
-        "--dirichlet_lambda",
-        type=float,
-        default=10,
-        help=argparse.SUPPRESS  # "Pseudocount. Sometimes used for clipping.",
-    )
-    parser.add_argument(
-        "--integer_out",
-        action="store_true",
-        help=argparse.SUPPRESS  # "If True, rounds denoised counts to nearest integer before saving.",
-    )
-    parser.add_argument(
-        "--disable_fixed_celltype",
-        action="store_false",
-        help=argparse.SUPPRESS  # "Use fixed cell type annotations from adata.obs['cell_type'] if available.",
-    )
-    parser.add_argument(
-        "--disable_freeze_empty",
-        action="store_false",
-        help=argparse.SUPPRESS  # "If True, does not attempt to reestimate empty droplets."
-    )
-    parser.add_argument(
-        "--disable_freeze_ambient_profile",
-        action="store_false",
-        help=argparse.SUPPRESS  # "If True, does not update the ambient profile (a) based on alpha."
-    )
-    parser.add_argument(
-        "--empty_droplet_method",
-        type=str,
-        default="threshold",
-        help=argparse.SUPPRESS  # (
-        #     "Strategy to infer empty droplets if `is_empty` is not present. "
-        #     "Options include: 'threshold', 'quantile', or model-based approaches. "
-        #     "(default: 'threshold')"
-        # ),
-    )
-    parser.add_argument(
-        "--ambient_threshold",
-        type=float,
-        default=0.0,
-        help=argparse.SUPPRESS  # "Strategy to infer empty droplets if `is_empty` is not present. Options may include 'threshold', 'quantile', or model-based approaches."
-    )
-    parser.add_argument(
-        "--umi_cutoff",
-        type=int,
-        default=None,
-        help=argparse.SUPPRESS  # "Optional absolute UMI count threshold for classifying droplets as empty. (default: None)"
-    )
-    parser.add_argument(
-        "--expected_cells",
-        type=int,
-        default=None,
-        help=argparse.SUPPRESS  # "Expected number of real cells, used when estimating thresholds. (default: None)"
-    )
-    parser.add_argument(
-        "--tol",
-        type=float,
-        default=1e-3,
-        help=argparse.SUPPRESS  # "Relative change in likelihood below which training stops. (default: 1e-3)"
-    )
-    parser.add_argument(
-        "--min_tol",
-        type=float,
-        default=1e-6,
-        help=argparse.SUPPRESS  # "The minimum absolute change in likelihood below which training is discontinued. (default: 1e-6)"
-    )
-    parser.add_argument(
-        "--random_state",
-        type=int,
-        default=42,
-        help=argparse.SUPPRESS  # "Random seed. (default: 42)"
-    )
-    return parser
 
 def setup_info_args(
     parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
@@ -1724,11 +1587,6 @@ def setup_count_args(
         action='store_true'
     )
     parser_count.add_argument(
-        '--remove-ambient',
-        help='Whether to remove ambient RNA using CellSweep',
-        action='store_true'
-    )
-    parser_count.add_argument(
         '-k', help=argparse.SUPPRESS, type=int, default=31
     )
     parser_count.add_argument(
@@ -1797,8 +1655,6 @@ def setup_count_args(
         ),
         action='store_true'
     )
-
-    parser_count = setup_cellsweep_args(parser_count)
 
     parser_count.add_argument(
         'fastqs',
@@ -1991,6 +1847,206 @@ def setup_extract_args(
 
     return parser_extract
 
+def setup_sweep_args(
+    parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
+) -> argparse.ArgumentParser:
+    """Helper function to set up a subparser for the `sweep` command.
+
+    Args:
+        parser: Parser to add the `sweep` command to
+        parent: Parser parent of the newly added subcommand.
+            used to inherit shared commands/flags
+
+    Returns:
+        The newly added parser
+    """
+    kallisto_path = get_kallisto_binary_path()
+    bustools_path = get_bustools_binary_path()
+
+    parser_sweep = parser.add_parser(
+        'sweep',
+        description=(
+            'remove ambient counts from the count matrix with cellsweep.'
+        ),
+        help=(
+            'remove ambient counts from the count matrix with cellsweep.'
+        ),
+        parents=[parent]
+    )
+    parser_sweep._actions[0].help = parser_sweep._actions[
+        0].help.capitalize()
+
+    required_sweep = parser_sweep.add_argument_group('required arguments')
+    required_sweep.add_argument(
+        "kb_count_dir",
+        type=str,
+        help="Path to kb count output directory or an AnnData (.h5ad) file.",
+    )
+
+    # ---- output ----
+    parser_sweep.add_argument(
+        "--adata-out",
+        type=str,
+        default="adata_denoised.h5ad",
+        help="Path to write denoised AnnData (.h5ad).",
+    )
+
+    # ---- EM / optimization ----
+    parser_sweep.add_argument(
+        "--max-iter",
+        type=int,
+        default=500,
+        help="Maximum number of EM iterations.",
+    )
+    parser_sweep.add_argument(
+        "--init-alpha",
+        type=float,
+        default=0.9,
+        help="Initial ambient fraction per cell.",
+    )
+    parser_sweep.add_argument(
+        "--beta",
+        type=float,
+        default=0.1,
+        help="Initial bulk contamination fraction.",
+    )
+    parser_sweep.add_argument(
+        "--eps",
+        type=float,
+        default=1e-12,
+        help="Numerical stability constant.",
+    )
+    parser_sweep.add_argument(
+        "--log-eps",
+        type=float,
+        default=1e-300,
+        help="Numerical stability constant for log-space.",
+    )
+    parser_sweep.add_argument(
+        "--dirichlet-lambda",
+        type=float,
+        default=500,
+        help="Dirichlet pseudocount (divided by number of genes).",
+    )
+
+    # ---- output behavior ----
+    parser_sweep.add_argument(
+        "--integer-out",
+        action="store_true",
+        help="Round denoised counts to nearest integer.",
+    )
+
+    # ---- threading ----
+    parser_sweep.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        help="Number of numba threads.",
+    )
+
+    # ---- model constraints ----
+    parser_sweep.add_argument(
+        "--fixed-celltype",
+        action="store_true",
+        help="Keep cell-type assignments fixed during EM.",
+    )
+    parser_sweep.add_argument(
+        "--no-freeze-empty",
+        dest="freeze_empty",
+        action="store_false",
+        help="Allow empty droplet contamination to be re-estimated.",
+    )
+    parser_sweep.add_argument(
+        "--no-freeze-ambient-profile",
+        dest="freeze_ambient_profile",
+        action="store_false",
+        help="Allow ambient profile to be updated during EM.",
+    )
+    parser.set_defaults(freeze_empty=True, freeze_ambient_profile=True)
+
+    # ---- empty droplet handling ----
+    parser_sweep.add_argument(
+        "--empty-droplet-method",
+        type=str,
+        default="threshold",
+        choices=["threshold", "quantile", "model"],
+        help="Method for identifying empty droplets.",
+    )
+    parser_sweep.add_argument(
+        "--ambient-threshold",
+        type=float,
+        default=0.0,
+        help="Ambient fraction threshold for classifying empty droplets.",
+    )
+    parser_sweep.add_argument(
+        "--umi-cutoff",
+        type=int,
+        default=None,
+        help="Absolute UMI cutoff for empty droplet classification.",
+    )
+    parser_sweep.add_argument(
+        "--expected-cells",
+        type=int,
+        default=None,
+        help="Expected number of real cells.",
+    )
+
+    # ---- convergence ----
+    parser_sweep.add_argument(
+        "--tol",
+        type=float,
+        default=1e-3,
+        help="Relative likelihood change convergence threshold.",
+    )
+    parser_sweep.add_argument(
+        "--min-tol",
+        type=float,
+        default=1e-6,
+        help="Minimum absolute likelihood change threshold.",
+    )
+
+    # ---- clustering ----
+    parser_sweep.add_argument(
+        "--leiden-resolution",
+        type=float,
+        default=1.0,
+        help="Resolution parameter for Leiden clustering.",
+    )
+
+    # ---- reproducibility ----
+    parser_sweep.add_argument(
+        "--random-state",
+        type=int,
+        default=42,
+        help="Random seed.",
+    )
+
+    # ---- logging / verbosity ----
+    parser_sweep.add_argument(
+        "-v",
+        "--verbose",
+        type=int,
+        default=0,
+        help="Verbosity level (2=debug, 1=info, 0=warning).",
+    )
+    parser_sweep.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress most log output.",
+    )
+    parser_sweep.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Optional path to save EM iteration logs.",
+    )
+    parser_sweep.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode.",
+    )
+
+    return parser_sweep
 
 @logger.namespaced('main')
 def main():
@@ -2034,12 +2090,14 @@ def main():
     parser_ref = setup_ref_args(subparsers, parent)
     parser_count = setup_count_args(subparsers, parent)
     parser_extract = setup_extract_args(subparsers, parent)
+    parser_sweep = setup_sweep_args(subparsers, parent)
 
     command_to_parser = {
         'compile': parser_compile,
         'ref': parser_ref,
         'count': parser_count,
         'extract': parser_extract,
+        'sweep': parser_sweep,
     }
     if 'info' in sys.argv:
         display_info()
