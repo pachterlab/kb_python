@@ -2254,7 +2254,7 @@ class TestCount(TestMixin, TestCase):
                 counts_prefix=os.path.join(
                     out_dir, FILTERED_COUNTS_DIR, FEATURE_PREFIX
                 ),
-                kite=False,
+                kite=True,
                 tcc=False,
                 temp_dir=temp_dir,
                 threads=threads,

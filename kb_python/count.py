@@ -1780,7 +1780,9 @@ def count(
             if f'bus{suffix}' in unfiltered_results:
                 bus_files_to_delete.append(unfiltered_results[f'bus{suffix}'])
             if f'bus_scs{suffix}' in unfiltered_results:
-                bus_files_to_delete.append(unfiltered_results[f'bus_scs{suffix}'])
+                bus_files_to_delete.append(
+                    unfiltered_results[f'bus_scs{suffix}']
+                )
 
         # Delete filtered bus if exists
         if 'filtered' in results and 'bus_scs' in results['filtered']:
@@ -2189,9 +2191,13 @@ def count_nac(
                         elif i == 1:  # unprocessed/unspliced
                             cr_dir = os.path.join(counts_dir, 'unspliced')
                         else:  # ambiguous
-                            cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                            cr_dir = os.path.join(
+                                counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}'
+                            )
                     else:
-                        cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
+                        cr_dir = os.path.join(
+                            counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}'
+                        )
 
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'],
@@ -2235,7 +2241,10 @@ def count_nac(
                     update_results_with_suffix(prefix_results, res, suffix)
                     if cellranger:
                         cr_result = matrix_to_cellranger(
-                            res['mtx'], res['barcodes'], res['genes'], t2g_path,
+                            res['mtx'],
+                            res['barcodes'],
+                            res['genes'],
+                            t2g_path,
                             os.path.join(
                                 counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}'
                             ),
@@ -2376,13 +2385,14 @@ def count_nac(
                             )
                     else:
                         cr_dir = os.path.join(
-                            filtered_counts_dir,
-                            f'{CELLRANGER_DIR}_{prefix}'
+                            filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}'
                         )
 
                     cr_result = matrix_to_cellranger(
-                        count_result[i]['mtx'], count_result[i]['barcodes'],
-                        count_result[i]['genes'], t2g_path,
+                        count_result[i]['mtx'],
+                        count_result[i]['barcodes'],
+                        count_result[i]['genes'],
+                        t2g_path,
                         cr_dir,
                         gzip=gzip
                     )
@@ -2871,10 +2881,8 @@ def count_velocity(
                 if cellranger:
                     if not tcc:
                         cr_result = matrix_to_cellranger(
-                            count_result['mtx'],
-                            count_result['barcodes'],
-                            count_result['genes'],
-                            t2g_path,
+                            count_result['mtx'], count_result['barcodes'],
+                            count_result['genes'], t2g_path,
                             os.path.join(
                                 filtered_counts_dir,
                                 f'{CELLRANGER_DIR}_{prefix}'
