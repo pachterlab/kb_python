@@ -872,11 +872,8 @@ def do_sum_matrices(
                         "Summing up two matrix files failed: Assertion failed"
                     )
 
-                if (
-                    to_write
-                    and to_write[0] == nums[0]
-                    and to_write[1] == nums[1]
-                ):
+                if (to_write and to_write[0] == nums[0]
+                        and to_write[1] == nums[1]):
                     to_write[2] += nums[2]
                 else:
                     if to_write:
