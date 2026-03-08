@@ -408,7 +408,7 @@ def parse_count(
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
-    # Note: We are currently not supporting --genomebam
+
     if args.genomebam:
         parser.error('--genomebam is not currently supported')
     if args.genomebam and not args.gtf:
