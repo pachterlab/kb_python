@@ -531,7 +531,8 @@ def collapse_anndata(
     data = np.ones(n_old)
 
     # S maps from old columns to new columns (summing duplicates)
-    S = sparse.coo_matrix((data, (row_indices, col_indices)), shape=(n_old, n_new)).tocsr()
+    S = sparse.coo_matrix((data, (row_indices, col_indices)),
+                          shape=(n_old, n_new)).tocsr()
 
     X = sparse.csr_matrix(adata.X)
     new_X = X @ S
@@ -810,15 +811,31 @@ def do_sum_matrices(
                 if not eof1 and s1[0] != '%':
                     tokens1 = s1.split()
                     if not mm:
-                        _nums1 = [int(tokens1[0]), int(tokens1[1]), int(float(tokens1[2]))]
+                        _nums1 = [
+                            int(tokens1[0]),
+                            int(tokens1[1]),
+                            int(float(tokens1[2]))
+                        ]
                     else:
-                        _nums1 = [int(tokens1[0]), int(tokens1[1]), float(tokens1[2])]
+                        _nums1 = [
+                            int(tokens1[0]),
+                            int(tokens1[1]),
+                            float(tokens1[2])
+                        ]
                 if not eof2 and s2[0] != '%':
                     tokens2 = s2.split()
                     if not mm:
-                        _nums2 = [int(tokens2[0]), int(tokens2[1]), int(float(tokens2[2]))]
+                        _nums2 = [
+                            int(tokens2[0]),
+                            int(tokens2[1]),
+                            int(float(tokens2[2]))
+                        ]
                     else:
-                        _nums2 = [int(tokens2[0]), int(tokens2[1]), float(tokens2[2])]
+                        _nums2 = [
+                            int(tokens2[0]),
+                            int(tokens2[1]),
+                            float(tokens2[2])
+                        ]
 
                 if nums1 is not None:
                     _nums1, nums1 = nums1, None
@@ -836,7 +853,9 @@ def do_sum_matrices(
                     continue
                 elif not header:
                     if (_nums1[0] != _nums2[0] or _nums1[1] != _nums2[1]):
-                        raise Exception("Summing up two matrix files failed: Headers incompatible")
+                        raise Exception(
+                            "Summing up two matrix files failed: Headers incompatible"
+                        )
                     header = [_nums1[0], _nums1[1]]
                     continue
                 elif (_nums1[0] > _nums2[0]
@@ -849,7 +868,9 @@ def do_sum_matrices(
                     nums, pause1, pause2, nums1, nums2 = _nums1, False, False, None, None
                     nums[2] += _nums2[2]
                 else:
-                    raise Exception("Summing up two matrix files failed: Assertion failed")
+                    raise Exception(
+                        "Summing up two matrix files failed: Assertion failed"
+                    )
 
                 if to_write and to_write[0] == nums[0] and to_write[1] == nums[1]:
                     to_write[2] += nums[2]
@@ -870,7 +891,9 @@ def do_sum_matrices(
                 n += 1
 
         if header is None:
-            raise Exception(f"Summing up two matrix files failed: Missing header in {mtx1_path} or {mtx2_path}")
+            raise Exception(
+                f"Summing up two matrix files failed: Missing header in {mtx1_path} or {mtx2_path}"
+            )
 
         # Final assembly: Prepend header and copy body
         with open(out_path, 'w') as out, open(tmp_body_path, 'r') as body:

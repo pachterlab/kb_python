@@ -1475,7 +1475,8 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--delete-bus',
-        help='Delete intermediate BUS files after successful count to save disk space',
+        help=
+        'Delete intermediate BUS files after successful count to save disk space',
         action='store_true'
     )
     parser_count.add_argument(

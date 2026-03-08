@@ -1810,20 +1810,17 @@ class TestCount(TestMixin, TestCase):
                     out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
                 ),
                 kite=False,
+                tcc=False,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
                 loom=False,
+                loom_names=['barcode', 'target_name'],
                 h5ad=False,
                 by_name=False,
-                tcc=False,
-                umi_gene=True,
-                em=False,
-                loom_names=['barcode', 'target_name'],
-                mm=False,
-                cellranger=False,
                 gzip=False,
-                count=True
+                umi_gene=True,
+                em=False
             )
             convert_matrix.assert_not_called()
 
@@ -2257,21 +2254,18 @@ class TestCount(TestMixin, TestCase):
                 counts_prefix=os.path.join(
                     out_dir, FILTERED_COUNTS_DIR, FEATURE_PREFIX
                 ),
-                kite=True,
+                kite=False,
+                tcc=False,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
                 loom=False,
+                loom_names=['barcode', 'target_name'],
                 h5ad=False,
                 by_name=False,
-                tcc=False,
-                umi_gene=True,
-                em=False,
-                loom_names=['barcode', 'target_name'],
-                mm=False,
-                cellranger=False,
                 gzip=False,
-                count=True
+                umi_gene=True,
+                em=False
             )
             convert_matrix.assert_not_called()
 
