@@ -947,6 +947,7 @@ class TestCount(TestMixin, TestCase):
                 '{}.genes.txt'.format(counts_prefix),
                 t2g_path,
                 cellranger_dir,
+                gzip=False
             )
 
     def test_stream_fastqs_local(self):
@@ -1642,7 +1643,7 @@ class TestCount(TestMixin, TestCase):
                 '{}.mtx'.format(counts_prefix),
                 '{}.barcodes.txt'.format(counts_prefix),
                 '{}.genes.txt'.format(counts_prefix), self.t2g_path,
-                cellranger_dir
+                cellranger_dir, gzip=False
             )
 
     def test_count_filter(self):
@@ -1819,6 +1820,10 @@ class TestCount(TestMixin, TestCase):
                 umi_gene=True,
                 em=False,
                 loom_names=['barcode', 'target_name'],
+                mm=False,
+                cellranger=False,
+                gzip=False,
+                count=True
             )
             convert_matrix.assert_not_called()
 
@@ -2263,6 +2268,10 @@ class TestCount(TestMixin, TestCase):
                 umi_gene=True,
                 em=False,
                 loom_names=['barcode', 'target_name'],
+                mm=False,
+                cellranger=False,
+                gzip=False,
+                count=True
             )
             convert_matrix.assert_not_called()
 
