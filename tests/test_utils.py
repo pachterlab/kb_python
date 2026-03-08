@@ -340,3 +340,66 @@ class TestUtils(TestMixin, TestCase):
         self.assertTrue(os.path.exists(map_path))
         with open(map_path, 'r') as f:
             self.assertIn('\t', f.readline())
+
+    def test_do_sum_matrices(self):
+        import scipy.io
+        import scipy.sparse
+        
+        m1 = scipy.sparse.csr_matrix([[1, 2], [3, 4]])
+        m2 = scipy.sparse.csr_matrix([[5, 6], [7, 8]])
+        
+        m1_path = os.path.join(self.temp_dir, 'm1.mtx')
+        m2_path = os.path.join(self.temp_dir, 'm2.mtx')
+        out_path = os.path.join(self.temp_dir, 'sum.mtx')
+        
+        scipy.io.mmwrite(m1_path, m1)
+        scipy.io.mmwrite(m2_path, m2)
+        
+        utils.do_sum_matrices(m1_path, m2_path, out_path)
+        
+        m_sum = scipy.io.mmread(out_path)
+        expected = np.array([[6, 8], [10, 12]])
+        
+        np.testing.assert_array_equal(m_sum.toarray(), expected)
+
+        # Verify robust integer formatting in output
+        with open(out_path, 'r') as f:
+            for line in f:
+                if line.startswith('%'):
+                    continue
+                parts = line.split()
+                if len(parts) == 3:
+                    self.assertTrue(parts[0].isdigit())
+                    self.assertTrue(parts[1].isdigit())
+                    # Value might be negative, though not in this test
+                    self.assertTrue(parts[2].lstrip('-').isdigit())
+
+    def test_do_sum_matrices_complex(self):
+        import scipy.io
+        import scipy.sparse
+        
+        # Test case with:
+        # - Overlapping coordinates (1,1)
+        # - Unique coordinates in m1 (1,2)
+        # - Unique coordinates in m2 (2,1)
+        # - Sparse structure
+        m1 = scipy.sparse.coo_matrix(([1, 2], ([0, 0], [0, 1])), shape=(2, 2))
+        m2 = scipy.sparse.coo_matrix(([3, 4], ([0, 1], [0, 0])), shape=(2, 2))
+        
+        # m1: [[1, 2], [0, 0]]
+        # m2: [[3, 0], [4, 0]]
+        # sum: [[4, 2], [4, 0]]
+        
+        m1_path = os.path.join(self.temp_dir, 'm1_complex.mtx')
+        m2_path = os.path.join(self.temp_dir, 'm2_complex.mtx')
+        out_path = os.path.join(self.temp_dir, 'sum_complex.mtx')
+        
+        scipy.io.mmwrite(m1_path, m1)
+        scipy.io.mmwrite(m2_path, m2)
+        
+        utils.do_sum_matrices(m1_path, m2_path, out_path)
+        
+        m_sum = scipy.io.mmread(out_path)
+        expected = np.array([[4, 2], [4, 0]])
+        
+        np.testing.assert_array_equal(m_sum.toarray(), expected)

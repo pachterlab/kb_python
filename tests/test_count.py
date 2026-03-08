@@ -947,6 +947,7 @@ class TestCount(TestMixin, TestCase):
                 '{}.genes.txt'.format(counts_prefix),
                 t2g_path,
                 cellranger_dir,
+                gzip=False
             )
 
     def test_stream_fastqs_local(self):
@@ -1642,7 +1643,7 @@ class TestCount(TestMixin, TestCase):
                 '{}.mtx'.format(counts_prefix),
                 '{}.barcodes.txt'.format(counts_prefix),
                 '{}.genes.txt'.format(counts_prefix), self.t2g_path,
-                cellranger_dir
+                cellranger_dir, gzip=False
             )
 
     def test_count_filter(self):
@@ -1809,16 +1810,17 @@ class TestCount(TestMixin, TestCase):
                     out_dir, FILTERED_COUNTS_DIR, COUNTS_PREFIX
                 ),
                 kite=False,
+                tcc=False,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
                 loom=False,
+                loom_names=['barcode', 'target_name'],
                 h5ad=False,
                 by_name=False,
-                tcc=False,
+                gzip=False,
                 umi_gene=True,
-                em=False,
-                loom_names=['barcode', 'target_name'],
+                em=False
             )
             convert_matrix.assert_not_called()
 
@@ -2253,16 +2255,17 @@ class TestCount(TestMixin, TestCase):
                     out_dir, FILTERED_COUNTS_DIR, FEATURE_PREFIX
                 ),
                 kite=True,
+                tcc=False,
                 temp_dir=temp_dir,
                 threads=threads,
                 memory=memory,
                 loom=False,
+                loom_names=['barcode', 'target_name'],
                 h5ad=False,
                 by_name=False,
-                tcc=False,
+                gzip=False,
                 umi_gene=True,
-                em=False,
-                loom_names=['barcode', 'target_name'],
+                em=False
             )
             convert_matrix.assert_not_called()
 

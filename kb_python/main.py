@@ -408,7 +408,7 @@ def parse_count(
             'Plots for TCC matrices have not yet been implemented. '
             'The HTML report will not contain any plots.'
         )
-    # Note: We are currently not supporting --genomebam
+
     if args.genomebam:
         parser.error('--genomebam is not currently supported')
     if args.genomebam and not args.gtf:
@@ -591,11 +591,11 @@ def parse_count(
             parser.error(
                 f'Option `--aa` cannot be used with workflow {args.workflow}.'
             )
-        
+
         # Auto-enable gzip and cellranger-style when --cellranger is used
         use_gzip = args.cellranger and not args.no_gzip or args.gzip
         use_cellranger_style = args.cellranger
-        
+
         from .count import count_nac
         count_nac(
             args.i,
@@ -1462,7 +1462,10 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--gzip',
-        help='Gzip compress output matrices (matrix.mtx.gz, barcodes.tsv.gz, genes.tsv.gz). Automatically enabled with --cellranger',
+        help=(
+            'Gzip compress output matrices (matrix.mtx.gz, barcodes.tsv.gz, genes.tsv.gz). '
+            'Automatically enabled with --cellranger. '
+        ),
         action='store_true'
     )
     parser_count.add_argument(
@@ -1472,7 +1475,9 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--delete-bus',
-        help='Delete intermediate BUS files after successful count to save disk space',
+        help=(
+            'Delete intermediate BUS files after successful count to save disk space'
+        ),
         action='store_true'
     )
     parser_count.add_argument(
