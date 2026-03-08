@@ -1,5 +1,4 @@
 import glob
-import itertools
 import os
 import tarfile
 from collections import defaultdict
@@ -72,7 +71,7 @@ def generate_kite_fasta(
     lengths = set()
     features = {}
     variants = {}
-    
+
     # Store all original sequences to check for collisions with variants
     original_sequences = set()
 
@@ -89,7 +88,7 @@ def generate_kite_fasta(
         lengths.add(len(row.sequence))
         features[row['name']] = row.sequence
         original_sequences.add(row.sequence)
-        
+
         variants[row['name']] = {
             name: seq
             for name, seq in generate_mismatches(row['name'], row.sequence)
@@ -122,8 +121,8 @@ def generate_kite_fasta(
         # 1. Check collision with original barcodes
         if seq in original_sequences:
             logger.warning(
-                f'Collision detected between variants of feature barcode(s) {",".join(set(v[0] for v in variant_list))} '
-                f'and original feature barcode {seq}. These variants will be removed.'
+                f'Collision detected between variants of feature barcode(s) {",".join(set(v[0] for v in variant_list))}'
+                f' and original feature barcode {seq}. These variants will be removed.'
             )
             for feature_name, variant_name in variant_list:
                 if variant_name in variants[feature_name]:

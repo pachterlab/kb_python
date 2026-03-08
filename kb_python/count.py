@@ -1290,7 +1290,7 @@ def count(
         by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
-        gzip: Whether to gzip compress cellranger output matrices, 
+        gzip: Whether to gzip compress cellranger output matrices,
             defaults to `False`
         delete_bus: Whether to delete intermediate BUS files after successful count,
             defaults to `False`
@@ -1760,24 +1760,24 @@ def count(
     if delete_bus:
         logger.info('Deleting intermediate BUS files to save disk space')
         bus_files_to_delete = []
-        
+
         # Collect all .bus files from results
         if 'bus' in unfiltered_results:
             bus_files_to_delete.append(unfiltered_results['bus'])
         if 'bus_scs' in unfiltered_results:
             bus_files_to_delete.append(unfiltered_results['bus_scs'])
-        
+
         # For smartseq3, delete suffix versions too
         for suffix in ['', INTERNAL_SUFFIX, UMI_SUFFIX]:
             if f'bus{suffix}' in unfiltered_results:
                 bus_files_to_delete.append(unfiltered_results[f'bus{suffix}'])
             if f'bus_scs{suffix}' in unfiltered_results:
                 bus_files_to_delete.append(unfiltered_results[f'bus_scs{suffix}'])
-        
+
         # Delete filtered bus if exists
         if 'filtered' in results and 'bus_scs' in results['filtered']:
             bus_files_to_delete.append(results['filtered']['bus_scs'])
-        
+
         # Delete each BUS file
         for bus_file in bus_files_to_delete:
             if bus_file and os.path.exists(bus_file):
@@ -1875,7 +1875,7 @@ def count_nac(
         by_name: Aggregate counts by name instead of ID.
         cellranger: Whether to convert the final count matrix into a
             cellranger-compatible matrix, defaults to `False`
-        gzip: Whether to gzip compress cellranger output matrices, 
+        gzip: Whether to gzip compress cellranger output matrices,
             defaults to `False`
         cellranger_style: Whether to organize output in CellRanger-style directories
             (spliced/ and unspliced/ subdirectories), defaults to `False`
@@ -2184,7 +2184,7 @@ def count_nac(
                             cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
                     else:
                         cr_dir = os.path.join(counts_dir, f'{CELLRANGER_DIR}_{prefix}{suffix}')
-                    
+
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
@@ -2359,7 +2359,7 @@ def count_nac(
                             cr_dir = os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
                     else:
                         cr_dir = os.path.join(filtered_counts_dir, f'{CELLRANGER_DIR}_{prefix}')
-                    
+
                     cr_result = matrix_to_cellranger(
                         count_result[i]['mtx'], count_result[i]['barcodes'],
                         count_result[i]['genes'], t2g_path,
@@ -2488,7 +2488,7 @@ def count_nac(
     if delete_bus:
         logger.info('Deleting intermediate BUS files to save disk space')
         bus_files_to_delete = []
-        
+
         # Collect all .bus files from results
         prefixes = ['processed', 'unprocessed', 'ambiguous']
         for prefix in prefixes:
@@ -2496,11 +2496,11 @@ def count_nac(
                 for suffix in ['', INTERNAL_SUFFIX, UMI_SUFFIX]:
                     if f'bus{suffix}' in unfiltered_results[prefix]:
                         bus_files_to_delete.append(unfiltered_results[prefix][f'bus{suffix}'])
-        
+
         # Delete filtered bus files if they exist
         if 'filtered' in results and 'bus_scs' in results['filtered']:
             bus_files_to_delete.append(results['filtered']['bus_scs'])
-        
+
         # Delete each BUS file
         for bus_file in bus_files_to_delete:
             if bus_file and os.path.exists(bus_file):

@@ -591,11 +591,11 @@ def parse_count(
             parser.error(
                 f'Option `--aa` cannot be used with workflow {args.workflow}.'
             )
-        
+
         # Auto-enable gzip and cellranger-style when --cellranger is used
         use_gzip = args.cellranger and not args.no_gzip or args.gzip
         use_cellranger_style = args.cellranger
-        
+
         from .count import count_nac
         count_nac(
             args.i,
@@ -1462,7 +1462,10 @@ def setup_count_args(
     )
     parser_count.add_argument(
         '--gzip',
-        help='Gzip compress output matrices (matrix.mtx.gz, barcodes.tsv.gz, genes.tsv.gz). Automatically enabled with --cellranger',
+        help=(
+            'Gzip compress output matrices (matrix.mtx.gz, barcodes.tsv.gz, genes.tsv.gz). '
+            'Automatically enabled with --cellranger. '
+        ),
         action='store_true'
     )
     parser_count.add_argument(
