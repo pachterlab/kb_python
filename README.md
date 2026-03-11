@@ -5,7 +5,6 @@
 ![status](https://github.com/pachterlab/kb_python/workflows/CI/badge.svg)
 [![codecov](https://codecov.io/gh/pachterlab/kb_python/branch/master/graph/badge.svg)](https://codecov.io/gh/pachterlab/kb_python)
 [![pypi downloads](https://img.shields.io/pypi/dm/kb-python)](https://pypi.org/project/kb-python/)
-[![docs](https://readthedocs.org/projects/kb-python/badge/?version=latest)](https://kb-python.readthedocs.io/en/latest/?badge=latest)
 [![license](https://img.shields.io/pypi/l/kb-python)](LICENSE)
 
 `kb-python` is a python package for processing single-cell RNA-sequencing. It wraps the [`kallisto` | `bustools`](https://www.kallistobus.tools) single-cell RNA-seq command line tools in order to unify multiple processing workflows. 
@@ -127,11 +126,10 @@ Submitted by [@sbooeshaghi](https://github.com/sbooeshaghi/).
 
 Do you have a cool use case for `kb-python`? Submit a PR (including the goal, code snippet, and your username) so that we can feature it here.
 
-## Tutorials
-For a list of tutorials that use `kb-python` please see [https://www.kallistobus.tools/](https://www.kallistobus.tools/).
+## Documentation and Tutorials
 
-## Documentation
-Developer documentation is hosted on [Read the Docs](https://kb-python.readthedocs.io/en/latest/).
+Documentation and tutorials for `kb-python` usage are available at [https://kallisto.readthedocs.io/en/latest/](https://kallisto.readthedocs.io/en/latest/).
+
 
 ## Contributing
 Thank you for wanting to improve `kb-python`! If you have believe you've found a bug, please submit an issue. 
