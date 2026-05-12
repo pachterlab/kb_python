@@ -928,6 +928,27 @@ def ref_nac(
                 gtf_path, use_version=True, filter_func=filter_func
             )
 
+            # ngs_tools uses gene_id as transcript_id for genes with no real
+            # transcripts. In the NAC workflow this collides with nascent FASTA
+            # entries (also named by gene_id), producing duplicate index entries
+            # and out-of-bounds accesses in bustools. Rename each such synthetic
+            # transcript to gene_id + '-T' before the FASTA splitters run.
+            for gene_id, gene_info in gene_infos.items():
+                if (gene_id in transcript_infos and
+                        transcript_infos[gene_id].get('gene_id') == gene_id):
+                    synthetic_id = gene_id + '-T'
+                    if synthetic_id not in transcript_infos:
+                        gene_info['transcripts'] = [
+                            synthetic_id if t == gene_id else t
+                            for t in gene_info['transcripts']
+                        ]
+                        transcript_infos[synthetic_id] = transcript_infos.pop(gene_id)
+                    else:
+                        logger.warning(
+                            f'Cannot rename synthetic transcript `{gene_id}` to '
+                            f'`{synthetic_id}`: ID already exists in this GTF.'
+                        )
+
             # Split cDNA
             cdna_temp_path = get_temporary_filename(temp_dir)
             logger.info(
