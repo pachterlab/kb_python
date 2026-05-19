@@ -942,7 +942,9 @@ def ref_nac(
                             synthetic_id if t == gene_id else t
                             for t in gene_info['transcripts']
                         ]
-                        transcript_infos[synthetic_id] = transcript_infos.pop(gene_id)
+                        transcript_infos[synthetic_id] = transcript_infos.pop(
+                            gene_id
+                        )
                     else:
                         logger.warning(
                             f'Cannot rename synthetic transcript `{gene_id}` to '
