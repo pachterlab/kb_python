@@ -827,7 +827,7 @@ def parse_sweep(
     from .sweep import sweep
     sweep(
         kb_count_dir=args.kb_count_dir,
-        adata_out=args.adata_out,
+        out=args.out,
         max_iter=args.max_iter,
         init_alpha=args.init_alpha,
         beta=args.beta,
@@ -847,10 +847,10 @@ def parse_sweep(
         min_tol=args.min_tol,
         leiden_resolution=args.leiden_resolution,
         random_state=args.random_state,
-        verbose=args.verbose,
+        verbose=int(args.verbose),
         quiet=args.quiet,
         log_file=args.log_file,
-        debug=args.debug
+        overwrite=args.overwrite,
     )
 
 
@@ -1890,9 +1890,9 @@ def setup_sweep_args(
 
     # ---- output ----
     parser_sweep.add_argument(
-        "--adata-out",
+        "-o", "--out",
         type=str,
-        default="adata_denoised.h5ad",
+        default=None,
         help="Path to write denoised AnnData (.h5ad).",
     )
 
@@ -1967,14 +1967,14 @@ def setup_sweep_args(
         action="store_false",
         help="Allow ambient profile to be updated during EM.",
     )
-    parser.set_defaults(freeze_empty=True, freeze_ambient_profile=True)
+    parser_sweep.set_defaults(freeze_empty=True, freeze_ambient_profile=True)
 
     # ---- empty droplet handling ----
     parser_sweep.add_argument(
         "--empty-droplet-method",
         type=str,
-        default="threshold",
-        choices=["threshold", "quantile", "model"],
+        default="mx_filter",
+        choices=["mx_filter", "threshold"],
         help="Method for identifying empty droplets.",
     )
     parser_sweep.add_argument(
@@ -2027,13 +2027,7 @@ def setup_sweep_args(
     )
 
     # ---- logging / verbosity ----
-    parser_sweep.add_argument(
-        "-v",
-        "--verbose",
-        type=int,
-        default=0,
-        help="Verbosity level (2=debug, 1=info, 0=warning).",
-    )
+    # Note: `--verbose` is inherited from the shared parent parser.
     parser_sweep.add_argument(
         "--quiet",
         action="store_true",
@@ -2046,9 +2040,9 @@ def setup_sweep_args(
         help="Optional path to save EM iteration logs.",
     )
     parser_sweep.add_argument(
-        "--debug",
+        "--overwrite",
         action="store_true",
-        help="Enable debug mode.",
+        help="Overwrite existing output files.",
     )
 
     return parser_sweep

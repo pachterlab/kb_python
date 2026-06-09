@@ -10,7 +10,7 @@ from .logging import logger
 @logger.namespaced("sweep")
 def sweep(
     kb_count_dir: str | ad.AnnData,
-    adata_out: Optional[str] = "adata_denoised.h5ad",
+    out: Optional[str] = None,
     max_iter: int = 500,
     init_alpha: float = 0.9,
     beta: float = 0.1,
@@ -22,7 +22,7 @@ def sweep(
     fixed_celltype: bool = True,
     freeze_empty: bool = True,
     freeze_ambient_profile: bool = True,
-    empty_droplet_method: str = "threshold",
+    empty_droplet_method: str = "mx_filter",
     ambient_threshold: Optional[float] = 0.0,
     umi_cutoff: Optional[int] = None,
     expected_cells: Optional[int] = None,
@@ -33,7 +33,7 @@ def sweep(
     verbose: int = 0,
     quiet: bool = False,
     log_file: Optional[str] = None,
-    debug: bool = False,
+    overwrite: bool = False,
 ):
     """
     Wraps cellsweep
@@ -55,7 +55,7 @@ def sweep(
         1. Output of kb count
         2. An AnnData object containing the unfiltered count matrix
 
-    adata_out : str, default "adata_straightened.h5ad"
+    out : str, default <kb_count_dir>/adata_denoised.h5ad
         Path to write the denoised AnnData object (must end with `.h5ad`).
 
     max_iter : int, default 500
@@ -92,9 +92,9 @@ def sweep(
     freeze_ambient_profile: bool, default True
         If True, does not update the ambient profile (a) based upon alpha
 
-    empty_droplet_method : str, default "threshold"
+    empty_droplet_method : str, default "mx_filter"
         Strategy to infer empty droplets if `is_empty` is not present.
-        Options may include "threshold", "quantile", or model-based approaches.
+        Options include "threshold" (knee plot thresholding) and "mx_filter" (see https://github.com/cellatlas/mx).
     
     ambient_threshold : float | None, default 0.0
         Optional ambient RNA fraction threshold for classifying droplets as empty.
@@ -125,6 +125,7 @@ def sweep(
 
     log_file : str | None, default None
         Optional path to save EM iteration logs.
+    
 
     Returns
     -------
@@ -149,7 +150,10 @@ def sweep(
       2. M-step: Update parameters (alpha, beta, p_k, a).
       3. Iterate until convergence (relative change in ll < `tol`) or reaching `max_iter`.
     """
-    import cellsweep
+    try:
+        import cellsweep
+    except ImportError:
+        raise ImportError("cellsweep is not installed. Please install it using 'pip install cellsweep[analysis]'.")
 
     #* load adata
     logger.info("Loading count matrix into AnnData object...")
@@ -161,43 +165,58 @@ def sweep(
             barcodes_path = os.path.join(kb_count_dir, "counts_unfiltered", "cells_x_genes.barcodes.txt")
             genes_path = os.path.join(kb_count_dir, "counts_unfiltered", "cells_x_genes.genes.names.txt")
             adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-            adata = cellsweep.utils.read_kb_mtx_as_adata(kb_count_dir)
+            
+            if out is None:
+                out = os.path.join(kb_count_dir, "counts_unfiltered", "adata_denoised.h5ad")
         elif os.path.isfile(kb_count_dir):
             if not kb_count_dir.endswith(".h5ad"):
                 raise ValueError(f"Provided kb_count_dir file {kb_count_dir} is not an .h5ad file.")
             adata = ad.read_h5ad(kb_count_dir)
+
+            if out is None:
+                out = kb_count_dir.replace(".h5ad", "_denoised.h5ad")
         else:
             raise ValueError(f"Provided kb_count_dir path {kb_count_dir} is neither a directory nor a file.")
+    else:
+        raise ValueError(f"kb_count_dir must be a string path to a directory or .h5ad file, but got {type(kb_count_dir)}")
+
+    if os.path.exists(out):
+        if overwrite:
+            logger.warning(f"Output file {out} already exists and will be overwritten.")
+        else:
+            raise FileExistsError(f"Output file {out} already exists. Set overwrite=True to overwrite it.")
     
     #* add leiden clusters as celltypes
-    logger.info("Preprocessing and clustering with Scanpy to assign cell types...")
-    adata_processed_tmp = cellsweep.utils.run_scanpy_preprocessing_and_clustering(
-        adata=adata,
-        filter_empty_droplets=False,
-        min_genes=None,
-        min_counts=None,
-        min_cells=None,
-        umi_top_percentile_to_remove=None,
-        unique_genes_top_percentile_to_remove=None,
-        mt_gene_percentile_to_remove=None,
-        max_mt_percentage=None,
-        n_top_genes=2000,
-        hvg_flavor="seurat_v3",
-        n_pcs=50,
-        n_neighbors=15,
-        leiden_resolution=leiden_resolution,
-        seed=random_state,
-        verbose=verbose,
-        quiet=quiet
-    )
-    adata.obs["celltype"] = adata_processed_tmp.obs["leiden"].reindex(adata.obs.index)
-    del adata_processed_tmp
+    if "celltype" not in adata.obs.columns:
+        logger.info("Preprocessing and clustering with Scanpy to assign cell types...")
+        # Pass a copy: the preprocessing function mutates adata in place
+        # (normalize_total, log1p, gene filtering). We only want the leiden
+        # labels, so the raw counts in `adata` must be preserved for denoising.
+        adata_processed_tmp = cellsweep.utils.run_scanpy_preprocessing_and_clustering(
+            adata=adata.copy(),
+            min_genes=None,
+            min_cells=3,
+            umi_top_percentile_to_remove=None,
+            unique_genes_top_percentile_to_remove=None,
+            mt_gene_percentile_to_remove=None,
+            max_mt_percentage=None,
+            n_top_genes=2000,
+            hvg_flavor="seurat_v3",
+            n_pcs=50,
+            n_neighbors=15,
+            leiden_resolution=leiden_resolution,
+            seed=random_state,
+            verbose=verbose,
+            quiet=quiet
+        )
+        adata.obs["celltype"] = adata_processed_tmp.obs["leiden"].reindex(adata.obs.index)
+        del adata_processed_tmp
 
     #* run cellsweep
     logger.info("Running CellSweep denoising...")
     adata_cellsweep = cellsweep.denoise_count_matrix(
         adata=adata,
-        adata_out=adata_out,
+        adata_out=out,
         max_iter=max_iter,
         init_alpha=init_alpha,
         beta=beta,
@@ -219,7 +238,6 @@ def sweep(
         verbose=verbose,
         quiet=quiet,
         log_file=log_file,
-        debug=debug,
     )
 
     logger.info("CellSweep denoising complete.")
