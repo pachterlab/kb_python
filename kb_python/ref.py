@@ -1,7 +1,7 @@
 import glob
-import itertools
 import os
 import tarfile
+from collections import defaultdict
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import ngs_tools as ngs
@@ -71,6 +71,10 @@ def generate_kite_fasta(
     lengths = set()
     features = {}
     variants = {}
+
+    # Store all original sequences to check for collisions with variants
+    original_sequences = set()
+
     # Generate all feature barcode variations before saving to check for collisions.
     for i, row in df_features.iterrows():
         # Check that the first column contains the sequence
@@ -83,6 +87,8 @@ def generate_kite_fasta(
 
         lengths.add(len(row.sequence))
         features[row['name']] = row.sequence
+        original_sequences.add(row.sequence)
+
         variants[row['name']] = {
             name: seq
             for name, seq in generate_mismatches(row['name'], row.sequence)
@@ -103,45 +109,36 @@ def generate_kite_fasta(
                 ','.join(str(l) for l in lengths)  # noqa
             )
         )
-    # Find & remove collisions between barcode and variants
-    for feature in variants.keys():
-        _variants = variants[feature]
-        collisions = set(_variants.values()) & set(features.values())
-        if collisions:
-            # Remove collisions
+
+    # Invert variants: sequence -> list of (feature_name, variant_name)
+    seq_to_variants = defaultdict(list)
+    for feature_name, feature_variants in variants.items():
+        for variant_name, seq in feature_variants.items():
+            seq_to_variants[seq].append((feature_name, variant_name))
+
+    # Process collisions
+    for seq, variant_list in seq_to_variants.items():
+        # 1. Check collision with original barcodes
+        if seq in original_sequences:
             logger.warning(
-                f'Colision detected between variants of feature barcode {feature} '
-                'and feature barcode(s). These variants will be removed.'
+                f'Collision detected between variants of feature barcode(s) {",".join(set(v[0] for v in variant_list))}'
+                f' and original feature barcode {seq}. These variants will be removed.'
             )
-            variants[feature] = {
-                name: seq
-                for name, seq in _variants.items()
-                if seq not in collisions
-            }
+            for feature_name, variant_name in variant_list:
+                if variant_name in variants[feature_name]:
+                    del variants[feature_name][variant_name]
+            continue
 
-    # Find & remove collisions between variants
-    for f1, f2 in itertools.combinations(variants.keys(), 2):
-        v1 = variants[f1]
-        v2 = variants[f2]
-
-        collisions = set(v1.values()) & set(v2.values())
-        if collisions:
+        # 2. Check collision between variants of DIFFERENT features
+        features_involved = set(v[0] for v in variant_list)
+        if len(features_involved) > 1:
             logger.warning(
-                f'Collision(s) detected between variants of feature barcodes {f1} and {f2}: '
-                f'{",".join(collisions)}. These variants will be removed.'
+                f'Collision(s) detected between variants of feature barcodes {",".join(features_involved)}: '
+                f'{seq}. These variants will be removed.'
             )
-
-            # Remove collisions
-            variants[f1] = {
-                name: seq
-                for name, seq in v1.items()
-                if seq not in collisions
-            }
-            variants[f2] = {
-                name: seq
-                for name, seq in v2.items()
-                if seq not in collisions
-            }
+            for feature_name, variant_name in variant_list:
+                if variant_name in variants[feature_name]:
+                    del variants[feature_name][variant_name]
 
     # Write FASTA
     with ngs.fasta.Fasta(out_path, 'w') as f:
@@ -930,6 +927,29 @@ def ref_nac(
             gene_infos, transcript_infos = ngs.gtf.genes_and_transcripts_from_gtf(
                 gtf_path, use_version=True, filter_func=filter_func
             )
+
+            # ngs_tools uses gene_id as transcript_id for genes with no real
+            # transcripts. In the NAC workflow this collides with nascent FASTA
+            # entries (also named by gene_id), producing duplicate index entries
+            # and out-of-bounds accesses in bustools. Rename each such synthetic
+            # transcript to gene_id + '-T' before the FASTA splitters run.
+            for gene_id, gene_info in gene_infos.items():
+                if (gene_id in transcript_infos and
+                        transcript_infos[gene_id].get('gene_id') == gene_id):
+                    synthetic_id = gene_id + '-T'
+                    if synthetic_id not in transcript_infos:
+                        gene_info['transcripts'] = [
+                            synthetic_id if t == gene_id else t
+                            for t in gene_info['transcripts']
+                        ]
+                        transcript_infos[synthetic_id] = transcript_infos.pop(
+                            gene_id
+                        )
+                    else:
+                        logger.warning(
+                            f'Cannot rename synthetic transcript `{gene_id}` to '
+                            f'`{synthetic_id}`: ID already exists in this GTF.'
+                        )
 
             # Split cDNA
             cdna_temp_path = get_temporary_filename(temp_dir)

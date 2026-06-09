@@ -65,6 +65,7 @@ instance/
 
 # Mac stuff:
 .DS_Store
+*.swp
 
 # Sphinx documentation
 docs/_build/

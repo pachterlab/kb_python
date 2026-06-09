@@ -52,7 +52,7 @@ def validate_mtx(path: str):
         ValidateError: If the file failed verification
     """
     try:
-        scipy.io.mmread(path)
+        scipy.io.mminfo(path)
     except ValueError:
         raise ValidateError(f'{path} is not a valid matrix market file')
 

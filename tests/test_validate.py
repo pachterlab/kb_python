@@ -47,8 +47,8 @@ class TestValidate(TestMixin, TestCase):
         validate.validate_mtx(self.matrix_path)
 
     def test_validate_mtx_raises_on_error(self):
-        with mock.patch('kb_python.validate.scipy.io.mmread') as mmread:
-            mmread.side_effect = ValueError('test')
+        with mock.patch('kb_python.validate.scipy.io.mminfo') as mminfo:
+            mminfo.side_effect = ValueError('test')
             with self.assertRaises(validate.ValidateError):
                 validate.validate_mtx('path')
 
