@@ -1,16 +1,74 @@
 import os
+from importlib.metadata import PackageNotFoundError, version
 from typing import Optional
+
 import anndata as ad
+import pandas as pd
 from .utils import (
     import_matrix_as_anndata,
 )
 
 from .logging import logger
 
+CELLSWEEP_VERSION = "1.0.0"
+
+
+def check_cellsweep_version():
+    """Ensure the pinned version of cellsweep is installed.
+
+    Raises:
+        ImportError: If cellsweep is missing or is not version `CELLSWEEP_VERSION`
+    """
+    try:
+        installed = version("cellsweep")
+    except PackageNotFoundError:
+        raise ImportError(
+            f"cellsweep is not installed. Please install it using "
+            f"'pip install cellsweep[analysis]=={CELLSWEEP_VERSION}'."
+        )
+    if installed != CELLSWEEP_VERSION:
+        raise ImportError(
+            f"cellsweep version {installed} is installed, but kb sweep requires "
+            f"version {CELLSWEEP_VERSION}. Please install it using "
+            f"'pip install cellsweep[analysis]=={CELLSWEEP_VERSION}'."
+        )
+
+
+def read_celltypes(celltypes_path: str) -> pd.Series:
+    """Read a barcode-to-celltype mapping file.
+
+    Each line contains a barcode and its celltype, separated by a tab
+    (or, if the line has no tab, the first whitespace).
+
+    Args:
+        celltypes_path: Path to the mapping file
+
+    Returns:
+        Series of celltypes indexed by barcode
+    """
+    mapping = {}
+    with open(celltypes_path, "r") as f:
+        for line in f:
+            line = line.rstrip("\r\n")
+            if not line.strip():
+                continue
+            parts = line.split("\t") if "\t" in line else line.split(maxsplit=1)
+            if len(parts) != 2:
+                raise ValueError(
+                    f"Malformed line in celltypes file {celltypes_path}: {line!r}. "
+                    "Expected two columns: barcode and celltype."
+                )
+            mapping[parts[0].strip()] = parts[1].strip()
+    return pd.Series(mapping, dtype=object)
+
+
 @logger.namespaced("sweep")
 def sweep(
-    kb_count_dir: str | ad.AnnData,
+    kb_count_dir: str,
     out: Optional[str] = None,
+    h5ad: bool = False,
+    celltypes_path: Optional[str] = None,
+    celltype_column: str = "celltype",
     max_iter: int = 500,
     init_alpha: float = 0.9,
     beta: float = 0.1,
@@ -28,7 +86,7 @@ def sweep(
     expected_cells: Optional[int] = None,
     tol: float = 1e-3,
     min_tol: float = 1e-6,
-    leiden_resolution: float = 1.0,
+    leiden_resolution: Optional[float] = None,
     random_state: Optional[int] = 42,
     verbose: int = 0,
     quiet: bool = False,
@@ -50,13 +108,25 @@ def sweep(
 
     Parameters
     ----------
-    kb_count_dir : str | AnnData
+    kb_count_dir : str
         Path to one of the following:
-        1. Output of kb count
-        2. An AnnData object containing the unfiltered count matrix
+        1. Output directory of kb count
+        2. An AnnData (.h5ad) file containing the unfiltered count matrix
 
-    out : str, default <kb_count_dir>/adata_denoised.h5ad
+    out : str, default <kb_count_dir>/counts_unfiltered/adata_denoised.h5ad
         Path to write the denoised AnnData object (must end with `.h5ad`).
+
+    h5ad : bool, default False
+        If True and `kb_count_dir` is a directory, read the count matrix from
+        `counts_unfiltered/adata.h5ad` instead of the .mtx and associated files.
+
+    celltypes_path : str | None, default None
+        Path to a text file mapping barcode to celltype (two columns, tab-separated).
+        Takes precedence over `celltype_column` and `leiden_resolution`.
+
+    celltype_column : str, default "celltype"
+        Column of the input AnnData's `obs` holding celltypes (h5ad input only).
+        Used if `celltypes_path` is not provided.
 
     max_iter : int, default 500
         Maximum number of EM iterations.
@@ -111,8 +181,10 @@ def sweep(
     min_tol: float, default 1e-6
         The minimum absolute change in likelihood below which training is discontinued.
     
-    leiden_resolution : float, default 1.0
-        Resolution parameter for Leiden clustering.
+    leiden_resolution : float | None, default None
+        Resolution parameter for Leiden clustering. Celltypes are assigned by
+        Leiden clustering only if neither `celltypes_path` nor `celltype_column`
+        (h5ad input) supplies them.
 
     random_state: int | None, default 42
         Random seed
@@ -150,44 +222,61 @@ def sweep(
       2. M-step: Update parameters (alpha, beta, p_k, a).
       3. Iterate until convergence (relative change in ll < `tol`) or reaching `max_iter`.
     """
-    try:
-        import cellsweep
-    except ImportError:
-        raise ImportError("cellsweep is not installed. Please install it using 'pip install cellsweep[analysis]'.")
+    check_cellsweep_version()
+    import cellsweep
 
     #* load adata
     logger.info("Loading count matrix into AnnData object...")
-    if isinstance(kb_count_dir, str):
-        if os.path.isdir(kb_count_dir):
-            if not os.path.exists(os.path.join(kb_count_dir, "counts_unfiltered")):
-                raise ValueError(f"Provided kb_count_dir path {kb_count_dir} does not contain 'counts_unfiltered' directory.")
-            matrix_path = os.path.join(kb_count_dir, "counts_unfiltered", "cells_x_genes.mtx")
-            barcodes_path = os.path.join(kb_count_dir, "counts_unfiltered", "cells_x_genes.barcodes.txt")
-            genes_path = os.path.join(kb_count_dir, "counts_unfiltered", "cells_x_genes.genes.names.txt")
-            adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
-            
-            if out is None:
-                out = os.path.join(kb_count_dir, "counts_unfiltered", "adata_denoised.h5ad")
-        elif os.path.isfile(kb_count_dir):
-            if not kb_count_dir.endswith(".h5ad"):
-                raise ValueError(f"Provided kb_count_dir file {kb_count_dir} is not an .h5ad file.")
-            adata = ad.read_h5ad(kb_count_dir)
-
-            if out is None:
-                out = kb_count_dir.replace(".h5ad", "_denoised.h5ad")
-        else:
-            raise ValueError(f"Provided kb_count_dir path {kb_count_dir} is neither a directory nor a file.")
-    else:
+    if not isinstance(kb_count_dir, str):
         raise ValueError(f"kb_count_dir must be a string path to a directory or .h5ad file, but got {type(kb_count_dir)}")
+    if os.path.isdir(kb_count_dir):
+        counts_dir = os.path.join(kb_count_dir, "counts_unfiltered")
+        if not os.path.exists(counts_dir):
+            raise ValueError(f"Provided kb_count_dir path {kb_count_dir} does not contain 'counts_unfiltered' directory.")
+        if h5ad:
+            h5ad_path = os.path.join(counts_dir, "adata.h5ad")
+            if not os.path.isfile(h5ad_path):
+                raise ValueError(f"--h5ad was specified but {h5ad_path} does not exist.")
+            adata = ad.read_h5ad(h5ad_path)
+        else:
+            matrix_path = os.path.join(counts_dir, "cells_x_genes.mtx")
+            barcodes_path = os.path.join(counts_dir, "cells_x_genes.barcodes.txt")
+            genes_path = os.path.join(counts_dir, "cells_x_genes.genes.names.txt")
+            adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
+
+        if out is None:
+            out = os.path.join(counts_dir, "adata_denoised.h5ad")
+    elif os.path.isfile(kb_count_dir):
+        if not kb_count_dir.endswith(".h5ad"):
+            raise ValueError(f"Provided kb_count_dir file {kb_count_dir} is not an .h5ad file.")
+        h5ad = True
+        adata = ad.read_h5ad(kb_count_dir)
+
+        if out is None:
+            out = kb_count_dir[:-len(".h5ad")] + "_denoised.h5ad"
+    else:
+        raise ValueError(f"Provided kb_count_dir path {kb_count_dir} is neither a directory nor a file.")
 
     if os.path.exists(out):
         if overwrite:
             logger.warning(f"Output file {out} already exists and will be overwritten.")
         else:
             raise FileExistsError(f"Output file {out} already exists. Set overwrite=True to overwrite it.")
-    
-    #* add leiden clusters as celltypes
-    if "celltype" not in adata.obs.columns:
+
+    #* assign celltypes: (1) celltypes file, (2) h5ad obs column, (3) leiden clustering
+    if celltypes_path is not None:
+        logger.info(f"Assigning celltypes from {celltypes_path}")
+        celltypes = read_celltypes(celltypes_path)
+        adata.obs["celltype"] = celltypes.reindex(adata.obs_names).values
+        n_unmapped = adata.obs["celltype"].isna().sum()
+        if n_unmapped == adata.n_obs:
+            raise ValueError(f"No barcodes in the count matrix were found in celltypes file {celltypes_path}.")
+        if n_unmapped > 0:
+            logger.warning(f"{n_unmapped} of {adata.n_obs} barcodes have no celltype in {celltypes_path}")
+    elif h5ad and celltype_column in adata.obs.columns:
+        logger.info(f"Using celltypes from column '{celltype_column}' of the input AnnData")
+        adata.obs["celltype"] = adata.obs[celltype_column]
+    elif leiden_resolution is not None:
         logger.info("Preprocessing and clustering with Scanpy to assign cell types...")
         # Pass a copy: the preprocessing function mutates adata in place
         # (normalize_total, log1p, gene filtering). We only want the leiden
@@ -211,6 +300,16 @@ def sweep(
         )
         adata.obs["celltype"] = adata_processed_tmp.obs["leiden"].reindex(adata.obs.index)
         del adata_processed_tmp
+    else:
+        if h5ad:
+            raise ValueError(
+                f"No celltypes available: column '{celltype_column}' is not in the input AnnData. "
+                "Provide a celltypes file with -c, a different --celltype-column, or --leiden-resolution to cluster."
+            )
+        raise ValueError(
+            "No celltypes available. Provide a celltypes file with -c, "
+            "an h5ad input with a celltype column (--h5ad), or --leiden-resolution to cluster."
+        )
 
     #* run cellsweep
     logger.info("Running CellSweep denoising...")

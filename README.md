@@ -33,7 +33,7 @@ There are no prerequisite packages to install. The `kallisto` and `bustools` bin
 
 ## Usage
 
-`kb`  consists of five subcommands
+`kb`  consists of six subcommands
 ```bash
 $ kb
 usage: kb [-h] [--list] <CMD> ...
@@ -44,6 +44,7 @@ positional arguments:
     ref       Build a kallisto index and transcript-to-gene mapping
     count     Generate count matrices from a set of single-cell FASTQ files
     extract   Extract reads that were pseudoaligned to specific genes/transcripts (or extract all reads that were / were not pseudoaligned)
+    sweep     Remove ambient counts from the count matrix with cellsweep
 ```
 
 ### `kb ref`: generate a pseudoalignment index
@@ -105,6 +106,29 @@ bustools: 0.45.1 ...
 ---
 ### `kb compile`: compile `kallisto` and `bustools` binaries from source
 The `kb compile` command grabs the latest `kallisto` and `bustools` source and compiles the binaries. **Note**: this is not required to run `kb-python`.
+
+---
+### `kb sweep`: remove ambient RNA with cellsweep
+The `kb sweep` command removes ambient and bulk RNA contamination from the unfiltered count matrix produced by `kb count`, using [`cellsweep`](https://github.com/pachterlab/cellsweep). `cellsweep` is not installed with `kb-python`; install the required version with `pip install cellsweep[analysis]==1.0.0`. See [How `kb sweep` works](#how-kb-sweep-works) for details.
+
+```bash
+kb sweep [-c CELLTYPES] [--h5ad] [--celltype-column COLUMN] [--leiden-resolution RESOLUTION] -o OUT <KB_COUNT_DIR>
+```
+- `<KB_COUNT_DIR>` refers to the output directory of `kb count` (or an `.h5ad` file with the unfiltered count matrix)
+- `--h5ad` reads `counts_unfiltered/adata.h5ad` instead of the `.mtx` and associated files
+- `-c` is a tab-delimited file containing barcode<tab>celltype
+- `--celltype-column` is the column in the h5ad `obs` holding celltypes (default: `celltype`)
+- `--leiden-resolution` assigns celltypes by Leiden clustering at the given resolution
+
+#### Examples
+```bash
+# Denoise using a barcode-to-celltype mapping
+$ kb sweep -c celltypes.txt -o out/adata_denoised.h5ad out/
+# Denoise the h5ad from kb count --h5ad, using its "celltype" column
+$ kb sweep --h5ad out/
+# Denoise, assigning celltypes by Leiden clustering
+$ kb sweep --leiden-resolution 1.0 out/
+```
 
 ## Use cases
 `kb-python` facilitates fast and uniform pre-processing of single-cell sequencing data to answer relevant research questions. 
@@ -208,3 +232,17 @@ If you use `kb-python` in a publication, please cite the following papers:
 ```
 
 `kb-python` was inspired by Sten Linnarsson’s `loompy fromfq` command (http://linnarssonlab.org/loompy/kallisto/index.html)
+
+# How `kb sweep` works
+`kb sweep` is a wrapper around `cellsweep.denoise_count_matrix`. It runs in three steps.
+
+**1. Load the count matrix.** If the input is a `kb count` output directory, `kb sweep` reads the unfiltered matrix from `counts_unfiltered/`: `adata.h5ad` if `--h5ad` is given, otherwise `cells_x_genes.mtx` with `cells_x_genes.barcodes.txt` and `cells_x_genes.genes.names.txt`. An `.h5ad` file can also be given directly, and is treated as h5ad input. By default the output is written to `counts_unfiltered/adata_denoised.h5ad` (or `<input>_denoised.h5ad` for an `.h5ad` file); use `--overwrite` to replace an existing output.
+
+**2. Assign celltypes.** `cellsweep` needs a celltype for each cell, which it reads from `adata.obs["celltype"]`. `kb sweep` takes the celltypes from the first of these sources that is available, and copies them into that column:
+1. The `-c` file, if provided. Each line holds a barcode and its celltype, separated by a tab. Barcodes missing from the file are left without a celltype (a warning reports how many), and it is an error if no barcodes match.
+2. The `--celltype-column` column (default `celltype`) of the input AnnData's `obs`. This is only checked for h5ad input, since the `.mtx` files carry no celltype annotations.
+3. Leiden clustering, if `--leiden-resolution` is provided. A copy of the matrix is preprocessed and clustered with Scanpy (2,000 highly variable genes, 50 principal components, 15 neighbors), and the Leiden clusters are used as celltypes. The raw counts that are denoised are left untouched.
+
+If none of these is available, `kb sweep` exits with an error asking for `-c`, a celltype column, or `--leiden-resolution`.
+
+**3. Run cellsweep.** `kb sweep` first checks that `cellsweep` version 1.0.0 is installed. It then calls `cellsweep.denoise_count_matrix`. This identifies empty droplets (with `--empty-droplet-method`, `--umi-cutoff` and `--expected-cells`) and computes a mean expression profile for each celltype. It then fits an Expectation-Maximization model in which each observed count is a mixture of ambient RNA, bulk RNA, and the cell's true celltype signal. The model estimates the ambient fraction of each cell, the bulk contamination fraction, the celltype profiles and the ambient profile, and it stops when the relative change in log-likelihood falls below `--tol` or after `--max-iter` iterations. The denoised matrix is stored in `adata.X`, with the raw counts in `adata.layers["raw"]` and the fitted parameters in `adata.obs` and `adata.uns`.

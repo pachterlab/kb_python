@@ -828,6 +828,9 @@ def parse_sweep(
     sweep(
         kb_count_dir=args.kb_count_dir,
         out=args.out,
+        h5ad=args.h5ad,
+        celltypes_path=args.c,
+        celltype_column=args.celltype_column,
         max_iter=args.max_iter,
         init_alpha=args.init_alpha,
         beta=args.beta,
@@ -1896,6 +1899,37 @@ def setup_sweep_args(
         help="Path to write denoised AnnData (.h5ad).",
     )
 
+    # ---- input / celltypes ----
+    parser_sweep.add_argument(
+        "--h5ad",
+        action="store_true",
+        help=(
+            "Read the count matrix from counts_unfiltered/adata.h5ad "
+            "(default: read the .mtx and associated files)."
+        ),
+    )
+    parser_sweep.add_argument(
+        "-c", "--celltypes",
+        dest="c",
+        metavar="CELLTYPES",
+        type=str,
+        default=None,
+        help=(
+            "Path to a text file mapping barcode to celltype (two columns, "
+            "tab-separated). Takes precedence over --celltype-column and "
+            "--leiden-resolution."
+        ),
+    )
+    parser_sweep.add_argument(
+        "--celltype-column",
+        type=str,
+        default="celltype",
+        help=(
+            "Column in the h5ad obs holding celltypes, used if -c is not "
+            "provided (default: celltype)."
+        ),
+    )
+
     # ---- EM / optimization ----
     parser_sweep.add_argument(
         "--max-iter",
@@ -2014,8 +2048,11 @@ def setup_sweep_args(
     parser_sweep.add_argument(
         "--leiden-resolution",
         type=float,
-        default=1.0,
-        help="Resolution parameter for Leiden clustering.",
+        default=None,
+        help=(
+            "Assign celltypes by Leiden clustering at this resolution, used if "
+            "neither -c nor the h5ad celltype column provides celltypes."
+        ),
     )
 
     # ---- reproducibility ----
