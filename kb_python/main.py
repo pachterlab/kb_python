@@ -824,36 +824,34 @@ def parse_sweep(
         args: Parsed command-line arguments
     """
 
-    from .sweep import sweep
+    from .sweep import EM_KWARGS, sweep
+    # Advanced EM hyperparameters: only forward the ones the user set, so the
+    # others take cellsweep's own defaults.
+    em_kwargs = {
+        name: getattr(args, name)
+        for name in EM_KWARGS
+        if getattr(args, name, None) is not None
+    }
     sweep(
         kb_count_dir=args.kb_count_dir,
         out=args.out,
         h5ad=args.h5ad,
         celltypes_path=args.c,
         celltype_column=args.celltype_column,
-        max_iter=args.max_iter,
-        init_alpha=args.init_alpha,
-        beta=args.beta,
-        eps=args.eps,
-        log_eps=args.log_eps,
-        dirichlet_lambda=args.dirichlet_lambda,
-        integer_out=args.integer_out,
+        leiden_resolution=args.leiden_resolution,
+        round_X=args.round_X,
+        keep_empties=args.keep_empties,
         threads=args.threads,
-        fixed_celltype=args.fixed_celltype,
-        freeze_empty=args.freeze_empty,
         freeze_ambient_profile=args.freeze_ambient_profile,
         empty_droplet_method=args.empty_droplet_method,
-        ambient_threshold=args.ambient_threshold,
         umi_cutoff=args.umi_cutoff,
         expected_cells=args.expected_cells,
-        tol=args.tol,
-        min_tol=args.min_tol,
-        leiden_resolution=args.leiden_resolution,
         random_state=args.random_state,
         verbose=int(args.verbose),
         quiet=args.quiet,
         log_file=args.log_file,
         overwrite=args.overwrite,
+        **em_kwargs,
     )
 
 
@@ -1930,49 +1928,23 @@ def setup_sweep_args(
         ),
     )
 
-    # ---- EM / optimization ----
-    parser_sweep.add_argument(
-        "--max-iter",
-        type=int,
-        default=500,
-        help="Maximum number of EM iterations.",
-    )
-    parser_sweep.add_argument(
-        "--init-alpha",
-        type=float,
-        default=0.9,
-        help="Initial ambient fraction per cell.",
-    )
-    parser_sweep.add_argument(
-        "--beta",
-        type=float,
-        default=0.1,
-        help="Initial bulk contamination fraction.",
-    )
-    parser_sweep.add_argument(
-        "--eps",
-        type=float,
-        default=1e-12,
-        help="Numerical stability constant.",
-    )
-    parser_sweep.add_argument(
-        "--log-eps",
-        type=float,
-        default=1e-300,
-        help="Numerical stability constant for log-space.",
-    )
-    parser_sweep.add_argument(
-        "--dirichlet-lambda",
-        type=float,
-        default=500,
-        help="Dirichlet pseudocount (divided by number of genes).",
-    )
-
     # ---- output behavior ----
     parser_sweep.add_argument(
-        "--integer-out",
+        "--round-X",
+        dest="round_X",
         action="store_true",
-        help="Round denoised counts to nearest integer.",
+        help=(
+            "Round denoised counts to the nearest integer (stochastic "
+            "rounding, seeded by --random-state)."
+        ),
+    )
+    parser_sweep.add_argument(
+        "--keep-empties",
+        action="store_true",
+        help=(
+            "Keep the empty droplets in the output (default: only the real "
+            "cells are written). They are always used to fit the model."
+        ),
     )
 
     # ---- threading ----
@@ -1985,23 +1957,15 @@ def setup_sweep_args(
 
     # ---- model constraints ----
     parser_sweep.add_argument(
-        "--fixed-celltype",
-        action="store_true",
-        help="Keep cell-type assignments fixed during EM.",
-    )
-    parser_sweep.add_argument(
-        "--no-freeze-empty",
-        dest="freeze_empty",
-        action="store_false",
-        help="Allow empty droplet contamination to be re-estimated.",
-    )
-    parser_sweep.add_argument(
         "--no-freeze-ambient-profile",
         dest="freeze_ambient_profile",
         action="store_false",
-        help="Allow ambient profile to be updated during EM.",
+        help=(
+            "Model the ambient profile as a mixture of celltype profiles "
+            "updated during EM, instead of anchoring it on the empty droplets."
+        ),
     )
-    parser_sweep.set_defaults(freeze_empty=True, freeze_ambient_profile=True)
+    parser_sweep.set_defaults(freeze_ambient_profile=True)
 
     # ---- empty droplet handling ----
     parser_sweep.add_argument(
@@ -2009,13 +1973,7 @@ def setup_sweep_args(
         type=str,
         default="mx_filter",
         choices=["mx_filter", "threshold"],
-        help="Method for identifying empty droplets.",
-    )
-    parser_sweep.add_argument(
-        "--ambient-threshold",
-        type=float,
-        default=0.0,
-        help="Ambient fraction threshold for classifying empty droplets.",
+        help="Method for identifying empty droplets (default: mx_filter).",
     )
     parser_sweep.add_argument(
         "--umi-cutoff",
@@ -2030,18 +1988,167 @@ def setup_sweep_args(
         help="Expected number of real cells.",
     )
 
-    # ---- convergence ----
-    parser_sweep.add_argument(
-        "--tol",
-        type=float,
-        default=1e-3,
-        help="Relative likelihood change convergence threshold.",
+    # ---- advanced EM hyperparameters ----
+    # All default to None so that, unless set, cellsweep's own defaults apply.
+    em_sweep = parser_sweep.add_argument_group(
+        'advanced EM arguments',
+        'Hyperparameters forwarded to cellsweep.denoise_count_matrix. '
+        'Unset arguments take the cellsweep defaults (given in parentheses).'
     )
-    parser_sweep.add_argument(
-        "--min-tol",
+    em_sweep.add_argument(
+        "--max-iter",
+        type=int,
+        default=None,
+        help="Maximum number of EM iterations (2000).",
+    )
+    em_sweep.add_argument(
+        "--init-alpha",
         type=float,
-        default=1e-6,
-        help="Minimum absolute likelihood change threshold.",
+        default=None,
+        help="Initial ambient fraction per cell, in [0.1, 0.9] (0.7).",
+    )
+    em_sweep.add_argument(
+        "--init-beta",
+        type=float,
+        default=None,
+        help="Initial bulk contamination fraction (0.01).",
+    )
+    em_sweep.add_argument(
+        "--alpha-cap",
+        type=float,
+        default=None,
+        help=(
+            "Maximum ambient fraction per cell during burn-in, in [0, 1] (0.9)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--repulsion-strength",
+        type=float,
+        default=None,
+        help=(
+            "Strength of repulsion between the ambient and celltype profiles "
+            "(1e-3)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--max-frac-gene-repulsion",
+        type=float,
+        default=None,
+        help=(
+            "Maximum fraction of a celltype profile entry removed by repulsion "
+            "per iteration, in (0, 1] (0.25)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--beta-prior-mode",
+        type=float,
+        default=None,
+        help="Mode of the Beta prior on the bulk contamination fraction (0.01).",
+    )
+    em_sweep.add_argument(
+        "--beta-prior-strength",
+        type=float,
+        default=None,
+        help=(
+            "Weight of the beta prior as a fraction of total counts; 0 "
+            "disables it (1e-2)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--celltype-lambda",
+        type=float,
+        default=None,
+        help="Pseudocount for celltype profile updates (50).",
+    )
+    em_sweep.add_argument(
+        "--ambient-lambda",
+        type=float,
+        default=None,
+        help="Pseudocount for ambient profile updates (50).",
+    )
+    em_sweep.add_argument(
+        "--bulk-lambda",
+        type=float,
+        default=None,
+        help="Pseudocount for the bulk profile estimate (10).",
+    )
+    em_sweep.add_argument(
+        "--eps",
+        type=float,
+        default=None,
+        help="Numerical stability constant (1e-12).",
+    )
+    em_sweep.add_argument(
+        "--log-eps",
+        type=float,
+        default=None,
+        help="Numerical stability constant for log-space (1e-300).",
+    )
+    em_sweep.add_argument(
+        "--del0-ll-tol",
+        type=float,
+        default=None,
+        help=(
+            "Change in log-likelihood, relative to the first step, below which "
+            "it is considered stable (1e-3)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--min-ll-tol",
+        type=float,
+        default=None,
+        help=(
+            "Change in log-likelihood, relative to the current step, below "
+            "which it is considered stable (1e-6)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--burnin-patience",
+        type=int,
+        default=None,
+        help=(
+            "Consecutive iterations without celltype reassignment required to "
+            "end burn-in (10)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--burnin-max-iter",
+        type=int,
+        default=None,
+        help="Maximum number of burn-in iterations (500).",
+    )
+    em_sweep.add_argument(
+        "--tol-p",
+        type=float,
+        default=None,
+        help="Maximum change in celltype profiles below which EM stops (1e-4).",
+    )
+    em_sweep.add_argument(
+        "--tol-f",
+        type=float,
+        default=None,
+        help=(
+            "Maximum change in total contamination fraction below which EM "
+            "stops (1e-4)."
+        ),
+    )
+    em_sweep.add_argument(
+        "--celltype-profile-key",
+        type=str,
+        default=None,
+        help="Key in uns holding initial celltype profiles (celltype_profile).",
+    )
+    em_sweep.add_argument(
+        "--ambient-profile-key",
+        type=str,
+        default=None,
+        help="Column in var holding the initial ambient profile (ambient_profile).",
+    )
+    em_sweep.add_argument(
+        "--bulk-profile-key",
+        type=str,
+        default=None,
+        help="Column in var holding the bulk profile (bulk_profile).",
     )
 
     # ---- clustering ----
