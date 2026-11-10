@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 from unittest import mock, skipUnless, TestCase
@@ -7,6 +8,7 @@ import numpy as np
 import scipy.io
 import scipy.sparse as sp
 
+import kb_python.main as main
 import kb_python.sweep as sweep
 from tests.mixins import TestMixin
 
@@ -75,11 +77,124 @@ class TestSweep(TestMixin, TestCase):
             adata.obs['ct'] = ['h5'] * adata.n_obs
         self.write_counts_dir(X, barcodes, genes, adata=adata)
 
-    def write_celltypes(self):
+    def write_celltypes(self, text='bc0\tT cell\nbc1\tB cell\n'):
         path = os.path.join(self.temp_dir, 'celltypes.txt')
         with open(path, 'w') as f:
-            f.write('bc0\tT cell\nbc1\tB cell\n')
+            f.write(text)
         return path
+
+    def run_with_celltypes(self, text, **kwargs):
+        """Run the mocked sweep on 6 barcodes (bc0-bc5) with a celltypes file,
+        returning the AnnData and the logged warnings."""
+        self.make_h5ad_dir(with_column=False)
+        with mock.patch.object(sweep.logger, 'warning') as warning:
+            result, _ = self.run_mocked_sweep(
+                self.temp_dir,
+                h5ad=True,
+                celltypes_path=self.write_celltypes(text),
+                **kwargs,
+            )
+        return result, [call.args[0] for call in warning.call_args_list]
+
+    def test_celltypes_missing_barcodes_are_empty(self):
+        result, warnings = self.run_with_celltypes('bc0\tT\nbc1\tB\n')
+        self.assertEqual(
+            [False, False, True, True, True, True],
+            result.obs['is_empty'].tolist()
+        )
+        self.assertEqual(1, len(warnings))
+        self.assertIn('4 of 6 barcodes', warnings[0])
+        self.assertIn('treated as empty', warnings[0])
+
+    def test_celltypes_extra_barcodes_ignored(self):
+        result, warnings = self.run_with_celltypes(
+            ''.join(f'bc{i}\tT\n' for i in range(6)) + 'other\tB\n'
+        )
+        self.assertEqual(6, result.n_obs)
+        self.assertEqual(1, len(warnings))
+        self.assertIn('Ignoring 1 of 7 barcodes', warnings[0])
+        # every barcode listed and no status column: empties are left to cellsweep
+        self.assertNotIn('is_empty', result.obs.columns)
+
+    def test_celltypes_empty_status_column(self):
+        result, warnings = self.run_with_celltypes(
+            'bc0\tT\tfalse\n'
+            'bc1\tB\tFALSE\n'
+            'bc2\tT\ttrue\n'
+            'bc3\t\t1\n'
+            'bc4\tB\t0\n'
+            'bc5\tB\tno\n'
+        )
+        self.assertEqual(
+            [False, False, True, True, False, False],
+            result.obs['is_empty'].tolist()
+        )
+        self.assertEqual([], warnings)
+        # empty droplets carry no celltype, even if the file gave one
+        self.assertEqual(
+            ['T', 'B'], result.obs['celltype'].iloc[:2].tolist()
+        )
+        self.assertTrue(result.obs['celltype'].iloc[2:4].isna().all())
+
+    def test_celltypes_status_with_missing_and_extra(self):
+        result, warnings = self.run_with_celltypes(
+            'bc0\tT\tfalse\nbc1\tB\ttrue\nother\tB\tfalse\n'
+        )
+        self.assertEqual(
+            [False, True, True, True, True, True],
+            result.obs['is_empty'].tolist()
+        )
+        self.assertEqual(2, len(warnings))
+
+    def test_celltypes_replaces_is_empty_and_ignores_cutoffs(self):
+        X, barcodes, genes = self.make_matrix(4, 2, 3)
+        adata = ad.AnnData(X=X)
+        adata.obs_names = barcodes
+        adata.var_names = genes
+        adata.obs['is_empty'] = [True] * adata.n_obs
+        self.write_counts_dir(X, barcodes, genes, adata=adata)
+        with mock.patch.object(sweep.logger, 'warning') as warning:
+            result, _ = self.run_mocked_sweep(
+                self.temp_dir, h5ad=True, expected_cells=3,
+                celltypes_path=self.write_celltypes('bc0\tT\n'),
+            )
+        self.assertEqual(
+            [False] + [True] * 5, result.obs['is_empty'].tolist()
+        )
+        messages = ' '.join(c.args[0] for c in warning.call_args_list)
+        self.assertIn("'is_empty'", messages)
+        self.assertIn('expected_cells', messages)
+
+    def test_celltypes_invalid(self):
+        for text in (
+            'bc0\tT\tmaybe\n',  # unrecognized status
+            'bc0\tT\tfalse\nbc1\tB\n',  # inconsistent columns
+            'bc0\t\tfalse\n',  # real cell without celltype
+            'bc0\t\n',  # no status, so a real cell, without celltype
+            'bc0\tT\tfalse\tx\n',  # too many columns
+            'bc0\n',  # too few columns
+            'other\tT\n',  # no barcodes in common
+            ''.join(f'bc{i}\tT\ttrue\n' for i in range(6)),  # no real cells
+        ):
+            with self.subTest(text=text):
+                self.tearDown()
+                self.setUp()
+                with self.assertRaises(ValueError):
+                    self.run_with_celltypes(text)
+
+    def test_em_args_hidden_but_settable(self):
+        parser = argparse.ArgumentParser()
+        sweep_parser = main.setup_sweep_args(
+            parser.add_subparsers(dest='command'),
+            argparse.ArgumentParser(add_help=False),
+        )
+        help_text = sweep_parser.format_help()
+        for name in sweep.EM_KWARGS:
+            flag = '--' + name.replace('_', '-')
+            self.assertNotIn(flag, help_text)
+            value = 'x' if name.endswith('_key') else '1'
+            args = parser.parse_args(['sweep', 'in', flag, value])
+            self.assertIsNotNone(getattr(args, name))
 
     def test_sweep_celltypes_file_takes_precedence(self):
         self.make_h5ad_dir()
@@ -176,10 +291,10 @@ class TestSweep(TestMixin, TestCase):
         with mock.patch.object(sweep, 'version', return_value='0.1.0'):
             with self.assertRaises(ImportError):
                 sweep.check_cellsweep_version()
-        with mock.patch.object(sweep, 'version', return_value='1.0.0'):
+        with mock.patch.object(sweep, 'version', return_value=sweep.CELLSWEEP_VERSION):
             sweep.check_cellsweep_version()
 
-    @skipUnless(CELLSWEEP_INSTALLED, 'cellsweep 1.0.0 is not installed')
+    @skipUnless(CELLSWEEP_INSTALLED, f'cellsweep {sweep.CELLSWEEP_VERSION} is not installed')
     def test_sweep_h5ad(self):
         # Pre-assign a `celltype` column so `sweep` skips the heavy Scanpy
         # clustering step and exercises the cellsweep denoising path directly.
@@ -220,7 +335,7 @@ class TestSweep(TestMixin, TestCase):
         for key in ('p_hat', 'beta_hat', 'loglike'):
             self.assertIn(key, written.uns)
 
-    @skipUnless(CELLSWEEP_INSTALLED, 'cellsweep 1.0.0 is not installed')
+    @skipUnless(CELLSWEEP_INSTALLED, f'cellsweep {sweep.CELLSWEEP_VERSION} is not installed')
     def test_sweep_h5ad_keep_empties_custom_column(self):
         # celltypes in a non-default column, read by cellsweep directly; with
         # keep_empties the output has every input barcode.
@@ -252,7 +367,37 @@ class TestSweep(TestMixin, TestCase):
         # rounded output is integer-valued
         self.assertTrue(np.allclose(result.X.data, np.round(result.X.data)))
 
-    @skipUnless(CELLSWEEP_INSTALLED, 'cellsweep 1.0.0 is not installed')
+    @skipUnless(CELLSWEEP_INSTALLED, f'cellsweep {sweep.CELLSWEEP_VERSION} is not installed')
+    def test_sweep_celltypes_file_empties(self):
+        # end to end: 60 real cells listed (one marked empty), 40 unlisted
+        X, barcodes, genes = self.make_matrix(60, 40, 30)
+        adata = ad.AnnData(X=X)
+        adata.obs_names = barcodes
+        adata.var_names = genes
+        in_path = os.path.join(self.temp_dir, 'in.h5ad')
+        out_path = os.path.join(self.temp_dir, 'out.h5ad')
+        adata.write_h5ad(in_path)
+        rows = [
+            f'bc{i}\t{"AB"[i % 2]}\t{"true" if i == 0 else "false"}\n'
+            for i in range(60)
+        ]
+
+        result = sweep.sweep(
+            in_path,
+            out=out_path,
+            celltypes_path=self.write_celltypes(''.join(rows)),
+            keep_empties=True,
+            max_iter=5,
+            threads=1,
+            quiet=True,
+        )
+        self.assertEqual(41, int(result.obs['is_empty'].sum()))
+        self.assertTrue(result.obs.loc['bc0', 'is_empty'])
+        written = ad.read_h5ad(out_path)
+        self.assertEqual(41, int(written.obs['is_empty'].sum()))
+        self.assertEqual(59, int(written.obs['celltype'].notna().sum()))
+
+    @skipUnless(CELLSWEEP_INSTALLED, f'cellsweep {sweep.CELLSWEEP_VERSION} is not installed')
     def test_sweep_kb_count_dir(self):
         # No `celltype` column here, so this additionally exercises matrix
         # loading from a kb count directory and the Scanpy clustering path.

@@ -1913,9 +1913,10 @@ def setup_sweep_args(
         type=str,
         default=None,
         help=(
-            "Path to a text file mapping barcode to celltype (two columns, "
-            "tab-separated). Takes precedence over --celltype-column and "
-            "--leiden-resolution."
+            "Path to a tab-separated text file with columns barcode, celltype "
+            "and, optionally, empty status (true/false). Barcodes of the count "
+            "matrix missing from the file are treated as empty droplets. Takes "
+            "precedence over --celltype-column and --leiden-resolution."
         ),
     )
     parser_sweep.add_argument(
@@ -1971,9 +1972,14 @@ def setup_sweep_args(
     parser_sweep.add_argument(
         "--empty-droplet-method",
         type=str,
-        default="mx_filter",
-        choices=["mx_filter", "threshold"],
-        help="Method for identifying empty droplets (default: mx_filter).",
+        default="kneed",
+        choices=["kneed", "mx_filter", "manual"],
+        help=(
+            "Method for identifying empty droplets (default: kneed). kneed and "
+            "mx_filter detect the UMI cutoff automatically. manual requires "
+            "--umi-cutoff or --expected-cells, and is selected automatically "
+            "when either is given."
+        ),
     )
     parser_sweep.add_argument(
         "--umi-cutoff",
@@ -1989,167 +1995,35 @@ def setup_sweep_args(
     )
 
     # ---- advanced EM hyperparameters ----
-    # All default to None so that, unless set, cellsweep's own defaults apply.
-    em_sweep = parser_sweep.add_argument_group(
-        'advanced EM arguments',
-        'Hyperparameters forwarded to cellsweep.denoise_count_matrix. '
-        'Unset arguments take the cellsweep defaults (given in parentheses).'
-    )
-    em_sweep.add_argument(
-        "--max-iter",
-        type=int,
-        default=None,
-        help="Maximum number of EM iterations (2000).",
-    )
-    em_sweep.add_argument(
-        "--init-alpha",
-        type=float,
-        default=None,
-        help="Initial ambient fraction per cell, in [0.1, 0.9] (0.7).",
-    )
-    em_sweep.add_argument(
-        "--init-beta",
-        type=float,
-        default=None,
-        help="Initial bulk contamination fraction (0.01).",
-    )
-    em_sweep.add_argument(
-        "--alpha-cap",
-        type=float,
-        default=None,
-        help=(
-            "Maximum ambient fraction per cell during burn-in, in [0, 1] (0.9)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--repulsion-strength",
-        type=float,
-        default=None,
-        help=(
-            "Strength of repulsion between the ambient and celltype profiles "
-            "(1e-3)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--max-frac-gene-repulsion",
-        type=float,
-        default=None,
-        help=(
-            "Maximum fraction of a celltype profile entry removed by repulsion "
-            "per iteration, in (0, 1] (0.25)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--beta-prior-mode",
-        type=float,
-        default=None,
-        help="Mode of the Beta prior on the bulk contamination fraction (0.01).",
-    )
-    em_sweep.add_argument(
-        "--beta-prior-strength",
-        type=float,
-        default=None,
-        help=(
-            "Weight of the beta prior as a fraction of total counts; 0 "
-            "disables it (1e-2)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--celltype-lambda",
-        type=float,
-        default=None,
-        help="Pseudocount for celltype profile updates (50).",
-    )
-    em_sweep.add_argument(
-        "--ambient-lambda",
-        type=float,
-        default=None,
-        help="Pseudocount for ambient profile updates (50).",
-    )
-    em_sweep.add_argument(
-        "--bulk-lambda",
-        type=float,
-        default=None,
-        help="Pseudocount for the bulk profile estimate (10).",
-    )
-    em_sweep.add_argument(
-        "--eps",
-        type=float,
-        default=None,
-        help="Numerical stability constant (1e-12).",
-    )
-    em_sweep.add_argument(
-        "--log-eps",
-        type=float,
-        default=None,
-        help="Numerical stability constant for log-space (1e-300).",
-    )
-    em_sweep.add_argument(
-        "--del0-ll-tol",
-        type=float,
-        default=None,
-        help=(
-            "Change in log-likelihood, relative to the first step, below which "
-            "it is considered stable (1e-3)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--min-ll-tol",
-        type=float,
-        default=None,
-        help=(
-            "Change in log-likelihood, relative to the current step, below "
-            "which it is considered stable (1e-6)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--burnin-patience",
-        type=int,
-        default=None,
-        help=(
-            "Consecutive iterations without celltype reassignment required to "
-            "end burn-in (10)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--burnin-max-iter",
-        type=int,
-        default=None,
-        help="Maximum number of burn-in iterations (500).",
-    )
-    em_sweep.add_argument(
-        "--tol-p",
-        type=float,
-        default=None,
-        help="Maximum change in celltype profiles below which EM stops (1e-4).",
-    )
-    em_sweep.add_argument(
-        "--tol-f",
-        type=float,
-        default=None,
-        help=(
-            "Maximum change in total contamination fraction below which EM "
-            "stops (1e-4)."
-        ),
-    )
-    em_sweep.add_argument(
-        "--celltype-profile-key",
-        type=str,
-        default=None,
-        help="Key in uns holding initial celltype profiles (celltype_profile).",
-    )
-    em_sweep.add_argument(
-        "--ambient-profile-key",
-        type=str,
-        default=None,
-        help="Column in var holding the initial ambient profile (ambient_profile).",
-    )
-    em_sweep.add_argument(
-        "--bulk-profile-key",
-        type=str,
-        default=None,
-        help="Column in var holding the bulk profile (bulk_profile).",
-    )
+    # Hidden from --help, as in `cellsweep denoise`, but still settable. All
+    # default to None so that, unless set, cellsweep's own defaults apply.
+    for flag, flag_type in (
+        ("--max-iter", int),
+        ("--init-alpha", float),
+        ("--init-beta", float),
+        ("--alpha-cap", float),
+        ("--repulsion-strength", float),
+        ("--max-frac-gene-repulsion", float),
+        ("--beta-prior-mode", float),
+        ("--beta-prior-strength", float),
+        ("--celltype-lambda", float),
+        ("--ambient-lambda", float),
+        ("--bulk-lambda", float),
+        ("--eps", float),
+        ("--log-eps", float),
+        ("--del0-ll-tol", float),
+        ("--min-ll-tol", float),
+        ("--burnin-patience", int),
+        ("--burnin-max-iter", int),
+        ("--tol-p", float),
+        ("--tol-f", float),
+        ("--celltype-profile-key", str),
+        ("--ambient-profile-key", str),
+        ("--bulk-profile-key", str),
+    ):
+        parser_sweep.add_argument(
+            flag, type=flag_type, default=None, help=argparse.SUPPRESS
+        )
 
     # ---- clustering ----
     parser_sweep.add_argument(

@@ -10,7 +10,7 @@ from .utils import (
 
 from .logging import logger
 
-CELLSWEEP_VERSION = "1.0.0"
+CELLSWEEP_VERSION = "1.0.2"
 
 # Advanced EM hyperparameters accepted by `cellsweep.denoise_count_matrix` as
 # keyword arguments. Any of these given to `sweep` is forwarded unchanged;
@@ -40,6 +40,10 @@ EM_KWARGS = (
     "tol_f",
 )
 
+# Accepted values (case-insensitive) of the empty status column of a celltypes file.
+EMPTY_STATUS_TRUE = frozenset({"true", "t", "yes", "y", "1"})
+EMPTY_STATUS_FALSE = frozenset({"false", "f", "no", "n", "0"})
+
 
 def check_cellsweep_version():
     """Ensure the pinned version of cellsweep is installed.
@@ -62,32 +66,139 @@ def check_cellsweep_version():
         )
 
 
-def read_celltypes(celltypes_path: str) -> pd.Series:
+def parse_empty_status(value: str) -> bool:
+    """Parse the empty status column of a celltypes file.
+
+    Args:
+        value: The text of the column
+
+    Returns:
+        Whether the barcode is an empty droplet
+
+    Raises:
+        ValueError: If `value` is not a recognized boolean
+    """
+    normalized = value.strip().lower()
+    if normalized in EMPTY_STATUS_TRUE:
+        return True
+    if normalized in EMPTY_STATUS_FALSE:
+        return False
+    raise ValueError(
+        f"Invalid empty status {value!r}. Expected one of: "
+        f"{sorted(EMPTY_STATUS_TRUE | EMPTY_STATUS_FALSE)}"
+    )
+
+
+def read_celltypes(celltypes_path: str) -> pd.DataFrame:
     """Read a barcode-to-celltype mapping file.
 
-    Each line contains a barcode and its celltype, separated by a tab
-    (or, if the line has no tab, the first whitespace).
+    Each line contains a barcode, its celltype and, optionally, its empty
+    status, separated by tabs. A line with no tab is split on the first
+    whitespace into a barcode and a celltype, so the third column requires tabs.
+    Either every line or no line has the third column. The celltype may be
+    blank only for a barcode marked empty.
 
     Args:
         celltypes_path: Path to the mapping file
 
     Returns:
-        Series of celltypes indexed by barcode
+        DataFrame indexed by barcode with a `celltype` column and, if the file
+        has a third column, a boolean `is_empty` column
     """
     mapping = {}
+    n_columns = None
     with open(celltypes_path, "r") as f:
         for line in f:
             line = line.rstrip("\r\n")
             if not line.strip():
                 continue
             parts = line.split("\t") if "\t" in line else line.split(maxsplit=1)
-            if len(parts) != 2:
+            if len(parts) not in (2, 3):
                 raise ValueError(
                     f"Malformed line in celltypes file {celltypes_path}: {line!r}. "
-                    "Expected two columns: barcode and celltype."
+                    "Expected two or three columns: barcode, celltype and, "
+                    "optionally, empty status."
                 )
-            mapping[parts[0].strip()] = parts[1].strip()
-    return pd.Series(mapping, dtype=object)
+            if n_columns is None:
+                n_columns = len(parts)
+            elif len(parts) != n_columns:
+                raise ValueError(
+                    f"Malformed line in celltypes file {celltypes_path}: {line!r}. "
+                    f"Expected {n_columns} columns, as on the first line."
+                )
+            barcode, celltype = parts[0].strip(), parts[1].strip()
+            row = [celltype or None]
+            if n_columns == 3:
+                try:
+                    row.append(parse_empty_status(parts[2]))
+                except ValueError as e:
+                    raise ValueError(
+                        f"Malformed line in celltypes file {celltypes_path}: {line!r}. {e}"
+                    )
+            if not celltype and not (n_columns == 3 and row[1]):
+                raise ValueError(
+                    f"Malformed line in celltypes file {celltypes_path}: {line!r}. "
+                    "Only a barcode marked empty may have a blank celltype."
+                )
+            mapping[barcode] = row
+    columns = ["celltype", "is_empty"] if n_columns == 3 else ["celltype"]
+    return pd.DataFrame.from_dict(mapping, orient="index", columns=columns)
+
+
+def assign_celltypes_from_file(
+    adata: ad.AnnData, celltypes_path: str, celltype_key: str = "celltype"
+) -> bool:
+    """Set the celltypes and empty droplets of an AnnData from a celltypes file.
+
+    Barcodes of `adata` missing from the file are treated as empty droplets, and
+    barcodes in the file missing from `adata` are ignored. `adata.obs["is_empty"]`
+    is left alone only if the file has no empty status column and lists every
+    barcode of `adata`, as it then says nothing about which are empty.
+
+    Args:
+        adata: AnnData to modify in place
+        celltypes_path: Path to the mapping file (see `read_celltypes`)
+        celltype_key: Column of `adata.obs` to store the celltypes in
+
+    Returns:
+        Whether `adata.obs["is_empty"]` was set from the file
+
+    Raises:
+        ValueError: If no barcode is in both, or no barcode is a real cell
+    """
+    if celltype_key in adata.obs.columns:
+        logger.warning(f"Existing column '{celltype_key}' of the input AnnData will be replaced by the celltypes from {celltypes_path}")
+    table = read_celltypes(celltypes_path)
+
+    listed = adata.obs_names.isin(table.index)
+    if not listed.any():
+        raise ValueError(f"No barcodes in the count matrix were found in celltypes file {celltypes_path}.")
+    n_ignored = int((~table.index.isin(adata.obs_names)).sum())
+    if n_ignored > 0:
+        logger.warning(f"Ignoring {n_ignored} of {len(table)} barcodes in {celltypes_path} that are not in the count matrix.")
+    n_missing = int((~listed).sum())
+    if n_missing > 0:
+        logger.warning(f"{n_missing} of {adata.n_obs} barcodes in the count matrix are not in {celltypes_path} and will be treated as empty droplets.")
+
+    celltypes = table["celltype"].reindex(adata.obs_names)
+    has_status = "is_empty" in table.columns
+    if not has_status and n_missing == 0:
+        adata.obs[celltype_key] = celltypes.values
+        return False
+
+    is_empty = ~listed
+    if has_status:
+        is_empty[listed] = table.loc[adata.obs_names[listed], "is_empty"].values.astype(bool)
+    if is_empty.all():
+        raise ValueError(f"Every barcode is empty according to celltypes file {celltypes_path}, so there are no cells to denoise.")
+    if "is_empty" in adata.obs.columns:
+        logger.warning(f"Existing column 'is_empty' of the input AnnData will be replaced based on {celltypes_path}")
+    # cellsweep averages celltype profiles by label alone, so an empty droplet
+    # must not carry a celltype.
+    celltypes[is_empty] = None
+    adata.obs[celltype_key] = celltypes.values
+    adata.obs["is_empty"] = is_empty
+    return True
 
 
 @logger.namespaced("sweep")
@@ -102,7 +213,7 @@ def sweep(
     keep_empties: bool = False,
     threads: int = 1,
     freeze_ambient_profile: bool = True,
-    empty_droplet_method: str = "mx_filter",
+    empty_droplet_method: str = "kneed",
     umi_cutoff: Optional[int] = None,
     expected_cells: Optional[int] = None,
     random_state: Optional[int] = 42,
@@ -139,9 +250,14 @@ def sweep(
         `counts_unfiltered/adata.h5ad` instead of the .mtx and associated files.
 
     celltypes_path : str | None, default None
-        Path to a text file mapping barcode to celltype (two columns, tab-separated).
-        Takes precedence over `celltype_column` and `leiden_resolution`. The celltypes
-        are stored in `adata.obs["celltype"]`.
+        Path to a tab-separated text file with columns barcode, celltype and,
+        optionally, empty status (true/false). Takes precedence over `celltype_column`
+        and `leiden_resolution`. The celltypes are stored in `adata.obs["celltype"]`.
+        Barcodes of the count matrix missing from the file are treated as empty
+        droplets (with a warning), and barcodes in the file missing from the count
+        matrix are ignored (with a warning). The empty status is stored in
+        `adata.obs["is_empty"]`, unless the file has no third column and lists every
+        barcode, in which case empty droplets are inferred as usual.
 
     celltype_column : str, default "celltype"
         Column of the input AnnData's `obs` holding celltypes (h5ad input only).
@@ -171,9 +287,12 @@ def sweep(
         re-estimated from them only. If False, the ambient profile is modeled as a
         mixture of cell-type profiles whose weights are updated during training.
 
-    empty_droplet_method : str, default "mx_filter"
+    empty_droplet_method : str, default "kneed"
         Strategy to infer empty droplets if `adata.obs["is_empty"]` is not present.
-        Options include "threshold" (knee plot thresholding) and "mx_filter" (see https://github.com/cellatlas/mx).
+        "kneed" and "mx_filter" (see https://github.com/cellatlas/mx, requires
+        scikit-learn) detect the UMI cutoff automatically. "manual" requires
+        `umi_cutoff` or `expected_cells`, and is selected automatically when
+        either is given.
 
     umi_cutoff : int | None, default None
         Optional absolute UMI count threshold for classifying droplets as empty.
@@ -287,18 +406,9 @@ def sweep(
     if celltypes_path is not None:
         logger.info(f"Assigning celltypes from {celltypes_path}")
         celltype_key = "celltype"
-        if celltype_key in adata.obs.columns:
-            logger.warning(f"Existing column '{celltype_key}' of the input AnnData will be replaced by the celltypes from {celltypes_path}")
-        celltypes = read_celltypes(celltypes_path)
-        adata.obs[celltype_key] = celltypes.reindex(adata.obs_names).values
-        n_unmapped = adata.obs[celltype_key].isna().sum()
-        if n_unmapped == adata.n_obs:
-            raise ValueError(f"No barcodes in the count matrix were found in celltypes file {celltypes_path}.")
-        if n_unmapped > 0:
-            logger.warning(
-                f"{n_unmapped} of {adata.n_obs} barcodes have no celltype in {celltypes_path}. "
-                "This is expected for empty droplets, but every real cell should have a celltype."
-            )
+        empties_from_file = assign_celltypes_from_file(adata, celltypes_path, celltype_key)
+        if empties_from_file and (umi_cutoff is not None or expected_cells is not None):
+            logger.warning(f"Ignoring umi_cutoff and expected_cells, since {celltypes_path} determines the empty droplets.")
     elif h5ad and celltype_column in adata.obs.columns:
         logger.info(f"Using celltypes from column '{celltype_column}' of the input AnnData")
         celltype_key = celltype_column
