@@ -12,9 +12,9 @@ jobs:
       - name: Checkout branch
         uses: actions/checkout@master
       - name: Setup python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.9'
+          python-version: '3.10.20'
           architecture: x64
       - name: Install dependencies
         run: pip install -r dev-requirements.txt

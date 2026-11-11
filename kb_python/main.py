@@ -812,6 +812,7 @@ def parse_extract(
         numreads=args.N
     )
 
+
 def parse_sweep(
     parser: argparse.ArgumentParser,
     args: argparse.Namespace,
@@ -1853,6 +1854,7 @@ def setup_extract_args(
 
     return parser_extract
 
+
 def setup_sweep_args(
     parser: argparse.ArgumentParser, parent: argparse.ArgumentParser
 ) -> argparse.ArgumentParser:
@@ -1866,21 +1868,15 @@ def setup_sweep_args(
     Returns:
         The newly added parser
     """
-    kallisto_path = get_kallisto_binary_path()
-    bustools_path = get_bustools_binary_path()
-
     parser_sweep = parser.add_parser(
         'sweep',
         description=(
             'remove ambient counts from the count matrix with cellsweep.'
         ),
-        help=(
-            'remove ambient counts from the count matrix with cellsweep.'
-        ),
+        help=('remove ambient counts from the count matrix with cellsweep.'),
         parents=[parent]
     )
-    parser_sweep._actions[0].help = parser_sweep._actions[
-        0].help.capitalize()
+    parser_sweep._actions[0].help = parser_sweep._actions[0].help.capitalize()
 
     required_sweep = parser_sweep.add_argument_group('required arguments')
     required_sweep.add_argument(
@@ -1891,7 +1887,8 @@ def setup_sweep_args(
 
     # ---- output ----
     parser_sweep.add_argument(
-        "-o", "--out",
+        "-o",
+        "--out",
         type=str,
         default=None,
         help="Path to write denoised AnnData (.h5ad).",
@@ -1907,7 +1904,8 @@ def setup_sweep_args(
         ),
     )
     parser_sweep.add_argument(
-        "-c", "--celltypes",
+        "-c",
+        "--celltypes",
         dest="c",
         metavar="CELLTYPES",
         type=str,
@@ -2064,6 +2062,7 @@ def setup_sweep_args(
     )
 
     return parser_sweep
+
 
 @logger.namespaced('main')
 def main():

@@ -146,7 +146,9 @@ def read_celltypes(celltypes_path: str) -> pd.DataFrame:
 
 
 def assign_celltypes_from_file(
-    adata: ad.AnnData, celltypes_path: str, celltype_key: str = "celltype"
+    adata: ad.AnnData,
+    celltypes_path: str,
+    celltype_key: str = "celltype"
 ) -> bool:
     """Set the celltypes and empty droplets of an AnnData from a celltypes file.
 
@@ -167,18 +169,28 @@ def assign_celltypes_from_file(
         ValueError: If no barcode is in both, or no barcode is a real cell
     """
     if celltype_key in adata.obs.columns:
-        logger.warning(f"Existing column '{celltype_key}' of the input AnnData will be replaced by the celltypes from {celltypes_path}")
+        logger.warning(
+            f"Existing column '{celltype_key}' of the input AnnData will be "
+            f"replaced by the celltypes from {celltypes_path}"
+        )
     table = read_celltypes(celltypes_path)
 
     listed = adata.obs_names.isin(table.index)
     if not listed.any():
-        raise ValueError(f"No barcodes in the count matrix were found in celltypes file {celltypes_path}.")
+        raise ValueError(
+            f"No barcodes in the count matrix were found in celltypes file {celltypes_path}."
+        )
     n_ignored = int((~table.index.isin(adata.obs_names)).sum())
     if n_ignored > 0:
-        logger.warning(f"Ignoring {n_ignored} of {len(table)} barcodes in {celltypes_path} that are not in the count matrix.")
+        logger.warning(
+            f"Ignoring {n_ignored} of {len(table)} barcodes in {celltypes_path} that are not in the count matrix."
+        )
     n_missing = int((~listed).sum())
     if n_missing > 0:
-        logger.warning(f"{n_missing} of {adata.n_obs} barcodes in the count matrix are not in {celltypes_path} and will be treated as empty droplets.")
+        logger.warning(
+            f"{n_missing} of {adata.n_obs} barcodes in the count matrix are "
+            f"not in {celltypes_path} and will be treated as empty droplets."
+        )
 
     celltypes = table["celltype"].reindex(adata.obs_names)
     has_status = "is_empty" in table.columns
@@ -188,11 +200,16 @@ def assign_celltypes_from_file(
 
     is_empty = ~listed
     if has_status:
-        is_empty[listed] = table.loc[adata.obs_names[listed], "is_empty"].values.astype(bool)
+        is_empty[listed] = table.loc[adata.obs_names[listed],
+                                     "is_empty"].values.astype(bool)
     if is_empty.all():
-        raise ValueError(f"Every barcode is empty according to celltypes file {celltypes_path}, so there are no cells to denoise.")
+        raise ValueError(
+            f"Every barcode is empty according to celltypes file {celltypes_path}, so there are no cells to denoise."
+        )
     if "is_empty" in adata.obs.columns:
-        logger.warning(f"Existing column 'is_empty' of the input AnnData will be replaced based on {celltypes_path}")
+        logger.warning(
+            f"Existing column 'is_empty' of the input AnnData will be replaced based on {celltypes_path}"
+        )
     # cellsweep averages celltype profiles by label alone, so an empty droplet
     # must not carry a celltype.
     celltypes[is_empty] = None
@@ -361,59 +378,88 @@ def sweep(
             f"Supported EM keyword arguments are: {list(EM_KWARGS)}"
         )
 
-    #* load adata
+    # * load adata
     logger.info("Loading count matrix into AnnData object...")
     if not isinstance(kb_count_dir, str):
-        raise ValueError(f"kb_count_dir must be a string path to a directory or .h5ad file, but got {type(kb_count_dir)}")
+        raise ValueError(
+            f"kb_count_dir must be a string path to a directory or .h5ad file, but got {type(kb_count_dir)}"
+        )
     if os.path.isdir(kb_count_dir):
         counts_dir = os.path.join(kb_count_dir, "counts_unfiltered")
         if not os.path.exists(counts_dir):
-            raise ValueError(f"Provided kb_count_dir path {kb_count_dir} does not contain 'counts_unfiltered' directory.")
+            raise ValueError(
+                f"Provided kb_count_dir path {kb_count_dir} does not contain 'counts_unfiltered' directory."
+            )
         if h5ad:
             h5ad_path = os.path.join(counts_dir, "adata.h5ad")
             if not os.path.isfile(h5ad_path):
-                raise ValueError(f"--h5ad was specified but {h5ad_path} does not exist.")
+                raise ValueError(
+                    f"--h5ad was specified but {h5ad_path} does not exist."
+                )
             adata = ad.read_h5ad(h5ad_path)
         else:
             matrix_path = os.path.join(counts_dir, "cells_x_genes.mtx")
-            barcodes_path = os.path.join(counts_dir, "cells_x_genes.barcodes.txt")
-            genes_path = os.path.join(counts_dir, "cells_x_genes.genes.names.txt")
-            adata = import_matrix_as_anndata(matrix_path, barcodes_path, genes_path)
+            barcodes_path = os.path.join(
+                counts_dir, "cells_x_genes.barcodes.txt"
+            )
+            genes_path = os.path.join(
+                counts_dir, "cells_x_genes.genes.names.txt"
+            )
+            adata = import_matrix_as_anndata(
+                matrix_path, barcodes_path, genes_path
+            )
 
         if out is None:
             out = os.path.join(counts_dir, "adata_denoised.h5ad")
     elif os.path.isfile(kb_count_dir):
         if not kb_count_dir.endswith(".h5ad"):
-            raise ValueError(f"Provided kb_count_dir file {kb_count_dir} is not an .h5ad file.")
+            raise ValueError(
+                f"Provided kb_count_dir file {kb_count_dir} is not an .h5ad file."
+            )
         h5ad = True
         adata = ad.read_h5ad(kb_count_dir)
 
         if out is None:
             out = kb_count_dir[:-len(".h5ad")] + "_denoised.h5ad"
     else:
-        raise ValueError(f"Provided kb_count_dir path {kb_count_dir} is neither a directory nor a file.")
+        raise ValueError(
+            f"Provided kb_count_dir path {kb_count_dir} is neither a directory nor a file."
+        )
 
     if not out.endswith(".h5ad"):
         raise ValueError(f"Output path {out} must end with '.h5ad'.")
     if os.path.exists(out):
         if overwrite:
-            logger.warning(f"Output file {out} already exists and will be overwritten.")
+            logger.warning(
+                f"Output file {out} already exists and will be overwritten."
+            )
         else:
-            raise FileExistsError(f"Output file {out} already exists. Set overwrite=True to overwrite it.")
+            raise FileExistsError(
+                f"Output file {out} already exists. Set overwrite=True to overwrite it."
+            )
 
-    #* assign celltypes: (1) celltypes file, (2) h5ad obs column, (3) leiden clustering
+    # * assign celltypes: (1) celltypes file, (2) h5ad obs column, (3) leiden clustering
     # `celltype_key` is the obs column cellsweep reads the celltypes from.
     if celltypes_path is not None:
         logger.info(f"Assigning celltypes from {celltypes_path}")
         celltype_key = "celltype"
-        empties_from_file = assign_celltypes_from_file(adata, celltypes_path, celltype_key)
-        if empties_from_file and (umi_cutoff is not None or expected_cells is not None):
-            logger.warning(f"Ignoring umi_cutoff and expected_cells, since {celltypes_path} determines the empty droplets.")
+        empties_from_file = assign_celltypes_from_file(
+            adata, celltypes_path, celltype_key
+        )
+        if empties_from_file and (umi_cutoff is not None
+                                  or expected_cells is not None):
+            logger.warning(
+                f"Ignoring umi_cutoff and expected_cells, since {celltypes_path} determines the empty droplets."
+            )
     elif h5ad and celltype_column in adata.obs.columns:
-        logger.info(f"Using celltypes from column '{celltype_column}' of the input AnnData")
+        logger.info(
+            f"Using celltypes from column '{celltype_column}' of the input AnnData"
+        )
         celltype_key = celltype_column
     elif leiden_resolution is not None:
-        logger.info("Preprocessing and clustering with Scanpy to assign cell types...")
+        logger.info(
+            "Preprocessing and clustering with Scanpy to assign cell types..."
+        )
         celltype_key = "celltype"
         # Pass a copy: the preprocessing function mutates adata in place
         # (normalize_total, log1p, gene filtering). We only want the leiden
@@ -435,7 +481,9 @@ def sweep(
             verbose=verbose,
             quiet=quiet
         )
-        adata.obs[celltype_key] = adata_processed_tmp.obs["leiden"].reindex(adata.obs.index)
+        adata.obs[celltype_key] = adata_processed_tmp.obs["leiden"].reindex(
+            adata.obs.index
+        )
         del adata_processed_tmp
     else:
         if h5ad:
@@ -448,7 +496,7 @@ def sweep(
             "an h5ad input with a celltype column (--h5ad), or --leiden-resolution to cluster."
         )
 
-    #* run cellsweep
+    # * run cellsweep
     logger.info("Running CellSweep denoising...")
     adata_cellsweep = cellsweep.denoise_count_matrix(
         adata=adata,
