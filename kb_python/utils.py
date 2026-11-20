@@ -539,6 +539,8 @@ def collapse_anndata(
 
     new_layers = {}
     for layer, mat in adata.layers.items():
+        if layer is None:
+            continue
         new_layers[layer] = sparse.csr_matrix(mat) @ S
 
     return anndata.AnnData(
